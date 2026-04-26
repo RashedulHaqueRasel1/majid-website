@@ -1,5 +1,6 @@
 "use client";
 
+import React, { useState } from "react";
 import {
   LayoutDashboard,
   Settings,
@@ -8,13 +9,16 @@ import {
   CreditCard,
   Tag,
   Package,
-  ChevronRight,
   Mail,
-  CheckCircle2,
+  ChevronDown,
+  ShieldCheck,
+  HelpCircle,
+  Phone,
 } from "lucide-react";
 import Link from "next/link";
-import { usePathname } from "next/navigation";
+import { usePathname, useRouter } from "next/navigation";
 import Image from "next/image";
+import { motion, AnimatePresence } from "framer-motion";
 
 const navItems = [
   {
@@ -32,13 +36,17 @@ const navItems = [
     icon: <CreditCard size={20} />,
     label: "Payment",
     href: "/shpokeeper/payment",
-    hasSubmenu: true,
+    submenu: [
+      { label: "Payment History", href: "/shpokeeper/payment/history" },
+      { label: "Add funds", href: "/shpokeeper/payment/add-funds" },
+      { label: "Invoices", href: "/shpokeeper/payment/invoices" },
+    ],
   },
-  {
-    icon: <Tag size={20} />,
-    label: "Pricing Plane",
-    href: "/shpokeeper/pricing",
-  },
+  // {
+  //   icon: <Tag size={20} />,
+  //   label: "Pricing Plan",
+  //   href: "/shpokeeper/pricing",
+  // },
   {
     icon: <Package size={20} />,
     label: "Inventory",
@@ -53,116 +61,301 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
+  const router = useRouter();
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>("Payment"); // Default open as in screenshot
+  const [showLogoutModal, setShowLogoutModal] = useState(false);
+
+  const handleLogout = () => {
+    // Perform any logout logic here (e.g., clearing tokens)
+    router.push("/auth/login");
+  };
 
   return (
-    <aside className="w-[280px] bg-white h-screen border-r border-gray-100 flex flex-col sticky top-0 font-poppins">
-      {/* Logo */}
-      <div className="p-8 flex items-center justify-center">
-        <Link href="/" className="flex items-center gap-1">
-          <Image src="/images/logo.png" alt="Logo" width={150} height={50} />
-        </Link>
-      </div>
-
-      {/* Navigation */}
-      <nav className="flex-1 px-0 space-y-1 overflow-y-auto">
-        {navItems.map((item) => {
-          const isActive = pathname === item.href;
-
-          if (item.isSpecial) {
-            return (
-              <Link
-                key={item.href}
-                href={item.href}
-                className="flex items-center gap-3 px-6 py-4 bg-[#84CC16] text-white font-bold transition-all hover:bg-[#76b813]"
-              >
-                {item.icon}
-                <span className="text-[15px]">{item.label}</span>
-              </Link>
-            );
-          }
-
-          return (
-            <Link
-              key={item.href}
-              href={item.href}
-              className={`flex items-center justify-between px-6 py-4 transition-all group ${
-                isActive ? "text-[#0F172A]" : "text-[#1E293B]"
-              } hover:bg-gray-50`}
-            >
-              <div className="flex items-center gap-3">
-                <span
-                  className={`${isActive ? "text-[#0F172A]" : "text-[#1E293B]"}`}
-                >
-                  {item.icon}
-                </span>
-                <span className="text-[15px] font-semibold">{item.label}</span>
-              </div>
-              {item.hasSubmenu && (
-                <ChevronRight size={18} className="text-gray-400" />
-              )}
-            </Link>
-          );
-        })}
-      </nav>
-
-      {/* Support Section */}
-      <div className="px-6 py-6 border-t border-gray-50 bg-gray-50/30">
-        <h3 className="text-[15px] font-black text-[#0F172A] mb-4">Support</h3>
-        <div className="space-y-3">
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
-              <svg
-                viewBox="0 0 24 24"
-                className="w-5 h-5 fill-[#25D366]"
-                xmlns="http://www.w3.org/2000/svg"
-              >
-                <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.371-.025-.52-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.625.712.227 1.36.195 1.871.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347m-5.421 7.403h-.004a9.87 9.87 0 01-5.031-1.378l-.361-.214-3.741.982.998-3.648-.235-.374a9.86 9.86 0 01-1.51-5.26c.001-5.45 4.436-9.884 9.888-9.884 2.64 0 5.122 1.03 6.988 2.898a9.825 9.825 0 012.893 6.994c-.003 5.45-4.437 9.884-9.885 9.884m8.413-18.297A11.815 11.815 0 0012.05 0C5.495 0 .16 5.335.157 11.892c0 2.096.547 4.142 1.588 5.945L0 24l6.335-1.662c1.72.94 3.659 1.437 5.634 1.437h.005c6.554 0 11.89-5.335 11.893-11.893a11.821 11.821 0 00-3.48-8.413z" />
-              </svg>
-            </div>
-            <span className="text-[14px] font-bold text-[#64748B] group-hover:text-[#0F172A] transition">
-              +447777787771
-            </span>
-          </div>
-          <div className="flex items-center gap-3 group cursor-pointer">
-            <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
-              <Mail size={16} className="text-[#EA4335]" />
-            </div>
-            <span className="text-[14px] font-bold text-[#64748B] group-hover:text-[#0F172A] transition line-clamp-1">
-              reports@imoscan.com
-            </span>
-          </div>
-        </div>
-      </div>
-
-      {/* User Profile & Logout */}
-      <div className="p-6 space-y-4">
-        <div className="flex items-center gap-3">
-          <div className="relative w-12 h-12 rounded-full overflow-hidden border-2 border-gray-100">
+    <>
+      <aside className="w-[300px] bg-white h-screen border-r border-gray-100 flex flex-col sticky top-0 font-poppins shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+        {/* Logo Section */}
+        <div className="p-8 pb-10 flex items-center justify-center">
+          <Link href="/" className="flex items-center gap-1.5 group">
             <Image
-              src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop"
-              alt="Profile"
-              fill
-              className="object-cover"
+              src="/images/logo.png"
+              alt="Logo"
+              width={100}
+              height={100}
+              className="w-50 h-10"
             />
+          </Link>
+        </div>
+
+        {/* Navigation */}
+        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
+          {navItems.map((item) => {
+            const isActive = pathname.startsWith(item.href);
+            const isSubmenuOpen = openSubmenu === item.label;
+
+            if (item.isSpecial) {
+              return (
+                <Link
+                  key={item.href}
+                  href={item.href}
+                  className={`flex items-center gap-3 px-6 py-4.5 font-black rounded-2xl transition-all mb-4 group ${
+                    isActive
+                      ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/25"
+                      : "text-[#475569] hover:bg-gray-50 hover:text-[#0F172A]"
+                  }`}
+                >
+                  <div
+                    className={`p-1.5 rounded-lg group-hover:rotate-12 transition-transform ${
+                      isActive
+                        ? "bg-white/20"
+                        : "text-[#94A3B8] group-hover:text-[#84CC16]"
+                    }`}
+                  >
+                    {item.icon}
+                  </div>
+                  <span className="text-[15px] font-black tracking-tight uppercase tracking-wider">
+                    {item.label}
+                  </span>
+                </Link>
+              );
+            }
+
+            return (
+              <div key={item.label} className="space-y-1">
+                {item.submenu ? (
+                  <button
+                    onClick={() =>
+                      setOpenSubmenu(isSubmenuOpen ? null : item.label)
+                    }
+                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
+                      isActive
+                        ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
+                        : "text-[#475569] hover:bg-gray-50 hover:text-[#0F172A]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4 relative z-10">
+                      <span
+                        className={`${isActive ? "text-white" : "text-[#94A3B8] group-hover:text-[#84CC16] transition-colors"}`}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-[15px] font-black tracking-tight">
+                        {item.label}
+                      </span>
+                    </div>
+
+                    <motion.div
+                      animate={{ rotate: isSubmenuOpen ? 180 : 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="relative z-10"
+                    >
+                      <ChevronDown
+                        size={18}
+                        className={isActive ? "text-white" : "text-[#94A3B8]"}
+                      />
+                    </motion.div>
+                  </button>
+                ) : (
+                  <Link
+                    href={item.href}
+                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
+                      isActive
+                        ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
+                        : "text-[#475569] hover:bg-gray-50 hover:text-[#0F172A]"
+                    }`}
+                  >
+                    <div className="flex items-center gap-4 relative z-10">
+                      <span
+                        className={`${isActive ? "text-white" : "text-[#94A3B8] group-hover:text-[#84CC16] transition-colors"}`}
+                      >
+                        {item.icon}
+                      </span>
+                      <span className="text-[15px] font-black tracking-tight">
+                        {item.label}
+                      </span>
+                    </div>
+
+                    {isActive && (
+                      <motion.div
+                        layoutId="active-pill"
+                        className="absolute right-0 top-0 bottom-0 w-1 bg-white rounded-l-full"
+                      />
+                    )}
+                  </Link>
+                )}
+
+                {/* Submenu rendering */}
+                <AnimatePresence>
+                  {item.submenu && isSubmenuOpen && (
+                    <motion.div
+                      initial={{ opacity: 0, height: 0 }}
+                      animate={{ opacity: 1, height: "auto" }}
+                      exit={{ opacity: 0, height: 0 }}
+                      transition={{ duration: 0.2 }}
+                      className="overflow-hidden bg-[#F7FEE7] rounded-2xl mt-1 mx-2"
+                    >
+                      <div className="py-2 flex flex-col">
+                        {item.submenu.map((sub) => (
+                          <Link
+                            key={sub.label}
+                            href={sub.href}
+                            className={`px-12 py-3 text-[14px] font-bold transition-all mx-2 rounded-xl ${
+                              pathname === sub.href
+                                ? "bg-white text-[#84CC16] shadow-sm"
+                                : "text-[#475569] hover:text-[#0F172A] hover:translate-x-1"
+                            }`}
+                          >
+                            {sub.label}
+                          </Link>
+                        ))}
+                      </div>
+                    </motion.div>
+                  )}
+                </AnimatePresence>
+              </div>
+            );
+          })}
+        </nav>
+
+        {/* Support Section - Premium Design */}
+        <div className="mx-4 mb-3 p-5 bg-[#F8FAFC] rounded-[24px] border border-gray-100 space-y-4">
+          <div className="flex items-center gap-2">
+            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+              <HelpCircle size={16} className="text-blue-600" />
+            </div>
+            <h3 className="text-[13px] font-black text-[#0F172A] uppercase tracking-widest">
+              Support
+            </h3>
           </div>
-          <div className="flex flex-col">
-            <span className="text-[15px] font-black text-[#0F172A] leading-tight">
-              Demo Name
-            </span>
-            <span className="text-[13px] font-bold text-[#64748B]">
-              Super Admin
-            </span>
+          <div className="space-y-3">
+            <Link
+              href="tel:+447777787771"
+              className="flex items-center gap-3 group transition-transform hover:translate-x-1"
+            >
+              <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
+                <Phone size={14} className="text-[#25D366]" />
+              </div>
+              <span className="text-[13px] font-bold text-[#64748B] group-hover:text-[#0F172A] transition">
+                +447777787771
+              </span>
+            </Link>
+            <Link
+              href="mailto:reports@imoscan.com"
+              className="flex items-center gap-3 group transition-transform hover:translate-x-1"
+            >
+              <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
+                <Mail size={14} className="text-[#EA4335]" />
+              </div>
+              <span className="text-[13px] font-bold text-[#64748B] group-hover:text-[#0F172A] transition truncate">
+                reports@imoscan.com
+              </span>
+            </Link>
           </div>
         </div>
 
-        <button className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl border border-red-100 text-[#EF4444] font-bold hover:bg-red-50 transition-all group">
-          <LogOut
-            size={20}
-            className="group-hover:-translate-x-1 transition-transform"
-          />
-          <span>Log out</span>
-        </button>
-      </div>
-    </aside>
+        {/* User Section */}
+        <div className="p-4 pt-0">
+          <div className="bg-[#F8FAFC] border border-gray-100 rounded-[28px] p-4 flex flex-col gap-4 shadow-sm">
+            <div className="flex items-center gap-3 px-1">
+              <div className="relative w-11 h-11 rounded-2xl overflow-hidden border-2 border-white/10">
+                <Image
+                  src="https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop"
+                  alt="Profile"
+                  fill
+                  className="object-cover"
+                />
+              </div>
+              <div className="flex flex-col">
+                <span className="text-[14px] font-black text-[#0F172A] leading-tight">
+                  Demo Name
+                </span>
+                <span className="text-[11px] font-bold text-[#64748B] uppercase tracking-widest">
+                  Super Admin
+                </span>
+              </div>
+            </div>
+
+            <button
+              onClick={() => setShowLogoutModal(true)}
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-white border border-gray-100 text-[#64748B] font-black text-xs hover:bg-red-50 hover:text-[#EF4444] hover:border-red-100 transition-all group uppercase tracking-widest"
+            >
+              <LogOut
+                size={16}
+                className="group-hover:-translate-x-1 transition-transform"
+              />
+              <span>Log out</span>
+            </button>
+          </div>
+        </div>
+
+        <style jsx global>{`
+          .custom-scrollbar::-webkit-scrollbar {
+            width: 4px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-track {
+            background: transparent;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb {
+            background: #e2e8f0;
+            border-radius: 10px;
+          }
+          .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+            background: #cbd5e1;
+          }
+        `}</style>
+      </aside>
+
+      <AnimatePresence>
+        {showLogoutModal && (
+          <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+            <motion.div
+              initial={{ opacity: 0 }}
+              animate={{ opacity: 1 }}
+              exit={{ opacity: 0 }}
+              onClick={() => setShowLogoutModal(false)}
+              className="absolute inset-0 bg-slate-900/60 backdrop-blur-md"
+            />
+            <motion.div
+              initial={{ opacity: 0, scale: 0.9, y: 20 }}
+              animate={{ opacity: 1, scale: 1, y: 0 }}
+              exit={{ opacity: 0, scale: 0.9, y: 20 }}
+              className="relative w-full max-w-sm bg-white rounded-[40px] p-10 shadow-2xl border border-gray-100 z-[10000]"
+            >
+              <div className="flex flex-col items-center text-center space-y-8">
+                <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center ring-8 ring-red-50/50">
+                  <div className="w-16 h-16 bg-red-100 rounded-full flex items-center justify-center">
+                    <LogOut size={32} className="text-red-600" />
+                  </div>
+                </div>
+
+                <div className="space-y-3">
+                  <h3 className="text-2xl font-black text-[#0F172A] tracking-tight">
+                    Confirm Logout
+                  </h3>
+                  <p className="text-sm font-medium text-[#64748B] leading-relaxed">
+                    Are you sure you want to log out of your account? You will
+                    need to login again to access your dashboard.
+                  </p>
+                </div>
+
+                <div className="flex flex-col w-full gap-3 pt-2">
+                  <button
+                    onClick={handleLogout}
+                    className="w-full py-4.5 text-white font-black text-[13px] rounded-2xl bg-red-600 transition-all shadow-xl shadow-gray-200 active:scale-[0.98] uppercase tracking-[0.1em] cursor-pointer"
+                  >
+                    Yes, Log me out
+                  </button>
+                  <button
+                    onClick={() => setShowLogoutModal(false)}
+                    className="w-full py-4.5 bg-white border border-gray-100 text-[#64748B] font-black text-[13px] rounded-2xl hover:bg-gray-50 transition-all active:scale-[0.98] uppercase tracking-[0.1em] cursor-pointer"
+                  >
+                    Cancel
+                  </button>
+                </div>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
+    </>
   );
 }
