@@ -7,11 +7,9 @@ import {
   LogOut,
   Scan,
   CreditCard,
-  Tag,
   Package,
   Mail,
   ChevronDown,
-  ShieldCheck,
   HelpCircle,
   Phone,
 } from "lucide-react";
@@ -40,7 +38,6 @@ const navItems = [
     submenu: [
       { label: "Payment History", href: "/shpokeeper/payment/history" },
       { label: "Add funds", href: "/shpokeeper/payment/add-funds" },
-      { label: "Invoices", href: "/shpokeeper/payment/invoices" },
     ],
   },
   // {
@@ -84,13 +81,14 @@ export default function Sidebar() {
         {/* Logo Section */}
         <div className="p-8 pb-10 flex items-center justify-center">
           <Link href="/" className="flex items-center gap-1.5 group">
-            <Image
-              src="/images/logo.png"
-              alt="Logo"
-              width={100}
-              height={100}
-              className="w-50 h-10"
-            />
+            <div className="relative w-[100px] shrink-0 sm:w-[128px] md:h-[50px] md:w-[200px] cursor-pointer">
+              <Image
+                src="/images/logo.png"
+                alt="Logo"
+                fill
+                className="object-contain dark:invert"
+              />
+            </div>
           </Link>
         </div>
 

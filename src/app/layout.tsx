@@ -4,6 +4,7 @@ import "./globals.css";
 import MainProviders from "@/Providers/MainProviders";
 import Provider from "@/Providers/Provider";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/Providers/ThemeProvider";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -25,11 +26,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} antialiased`}>
-        <MainProviders>
-          <Provider> {children} </Provider>
-        </MainProviders>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <MainProviders>
+            <Provider> {children} </Provider>
+          </MainProviders>
+        </ThemeProvider>
         <Toaster position="top-right" closeButton />
       </body>
     </html>

@@ -10,7 +10,6 @@ import {
   Check,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-import Image from "next/image";
 import { useRef, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
@@ -73,47 +72,53 @@ export default function Banner() {
     }
   };
 
+  const quickChecks = [
+    "iPhone all in one / best fee",
+    "Samsung full report / best before buy",
+    "Mac full check / best before buy",
+  ];
+
   return (
-    <section className="relative flex-1 flex items-center justify-center overflow-hidden ">
+    <section className="relative flex min-h-[680px] overflow-hidden lg:h-[778px] lg:min-h-0">
       {/* ================= BACKGROUND ================= */}
-      <div className="absolute inset-0 z-0">
-        <Image
-          src="/images/banner1.svg"
-          alt="Gradient Background"
-          fill
-          priority
-          className="object-cover"
-        />
-
-        <Image
-          src="/images/Rasel.svg"
-          alt="Lines Overlay"
-          fill
-          priority
-          className="object-cover opacity-15 mix-blend-overlay"
-        />
-
-        <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[300px] sm:w-[600px] md:w-[900px] h-[300px] sm:h-[600px] bg-white/50 blur-[80px] sm:blur-[120px] rounded-full" />
+      <div className="absolute inset-0 z-0 bg-background">
+        <div className="absolute left-1/2 top-[42%] h-[330px] w-[860px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,rgba(189,230,59,0.9)_0%,rgba(124,203,180,0.72)_48%,rgba(49,138,251,0.9)_100%)] blur-[82px] md:h-[520px] md:w-[1280px] lg:h-[658px] lg:w-[1520px]" />
+        <div className="absolute left-1/2 top-[42%] h-[230px] w-[560px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/20 blur-[60px] md:h-[420px] md:w-[900px] lg:h-[538px] lg:w-[1016px]" />
+        <div className="absolute inset-0 opacity-[0.08] [background-image:repeating-linear-gradient(90deg,var(--color-foreground),0,var(--color-foreground)_95px,var(--color-foreground)_96px,var(--color-foreground)_100px)]" />
+        <div className="absolute inset-x-0 bottom-0 h-[220px] bg-gradient-to-b from-background/0 via-background/75 to-background" />
       </div>
 
       {/* ================= CONTENT ================= */}
-      <div className="relative z-10 max-w-5xl w-full text-center px-4 md:px-6 py-10 md:py-0">
+      <div className="relative z-10 flex w-full flex-col items-center px-4 py-20 text-center sm:px-6 md:py-24 lg:px-[200px] lg:py-[120px]">
         <motion.h1
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="text-3xl sm:text-5xl md:text-7xl font-extrabold text-white mb-4 md:mb-6 leading-tight"
+          className="w-full max-w-[1100px] text-[28px] font-black leading-[1.12] text-white sm:text-5xl md:text-6xl lg:text-[72px] lg:leading-[1.2]"
         >
-          Verify Global <span className="text-[#BEFB6D]">IMEI</span>
-          <br />
-          <span className="text-[#BEFB6D]">Intelligence</span> in Real-Time
+          <span className="hidden whitespace-nowrap lg:block">
+            Verify Global <span className="text-brand-lime-soft">IMEI</span>
+          </span>
+          <span className="hidden whitespace-nowrap lg:block">
+            <span className="text-brand-lime-soft">Intelligence</span>{" "}
+            <span className="text-brand-blue-soft">in Real-Time</span>
+          </span>
+          <span className="block lg:hidden">
+            Verify Global <span className="text-brand-lime-soft">IMEI</span>
+          </span>
+          <span className="block text-brand-lime-soft lg:hidden">
+            Intelligence
+          </span>
+          <span className="block text-brand-blue-soft lg:hidden">
+            in Real-Time
+          </span>
         </motion.h1>
 
         <motion.p
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="text-white/80 text-base sm:text-lg md:text-xl mb-8 md:mb-12"
+          className="mt-3 max-w-[760px] text-base leading-7 text-muted-foreground sm:text-lg lg:text-xl"
         >
           Advanced AI-powered diagnostics and blacklisting checks for secure{" "}
           <br className="hidden md:block" />
@@ -125,14 +130,14 @@ export default function Banner() {
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
-          className="max-w-4xl mx-auto mb-4 md:mb-6 relative"
+          className="relative mt-12 w-full max-w-[672px] pt-6"
         >
-          <div className="absolute inset-0 -m-4 border-3 border-white/30 rounded-[40px] sm:rounded-full pointer-events-none" />
-          <div className="absolute inset-0 -m-8 border-2 border-white/20 rounded-[50px] sm:rounded-full pointer-events-none" />
+          <div className="pointer-events-none absolute inset-x-[-16px] bottom-[-16px] top-2 rounded-[200px] border-2 border-white/50" />
+          <div className="pointer-events-none absolute inset-x-[-32px] bottom-[-32px] top-[-8px] rounded-[216px] border-2 border-white/20" />
 
-          <div className="flex flex-col md:flex-row items-center bg-white/95 backdrop-blur-2xl rounded-[32px] md:rounded-full p-2.5 shadow-[0_25px_60px_rgba(0,0,0,0.15)] border border-white/50 relative z-10">
-            <div className="flex items-center flex-1 w-full px-5 sm:px-6 gap-4 border-b md:border-b-0 md:border-r border-gray-100">
-              <Search className="w-6 h-6 text-gray-400 shrink-0" />
+          <div className="relative z-10 flex min-h-[68px] items-center gap-4 rounded-full bg-background py-2 pl-6 pr-2 shadow-[0_20px_40px_rgba(0,0,0,0.4),0_0_20px_rgba(132,204,22,0.05)] max-md:flex-col max-md:rounded-[32px] max-md:px-4 border border-border">
+            <div className="flex min-w-0 flex-1 items-center gap-3 max-md:w-full">
+              <Search className="h-6 w-6 shrink-0 text-muted-foreground" />
 
               <input
                 type="text"
@@ -140,15 +145,15 @@ export default function Banner() {
                 onChange={(e) => setImei(e.target.value)}
                 onKeyDown={(e) => e.key === "Enter" && handleSearch()}
                 placeholder="Enter IMEI or Serial Number..."
-                className="w-full bg-transparent outline-none text-gray-800 py-4 placeholder:text-gray-400 text-base sm:text-lg font-medium"
+                className="min-w-0 flex-1 bg-transparent py-2 text-base font-medium text-foreground outline-none placeholder:text-muted-foreground"
               />
 
               <button
                 onClick={handleScanClick}
                 title="Scan IMEI"
-                className="p-3 hover:bg-gray-100 rounded-2xl transition-colors group cursor-pointer"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors hover:bg-muted"
               >
-                <QrCode className="w-6 h-6 text-gray-400 group-hover:text-[#84CC16]" />
+                <QrCode className="h-5 w-5 text-muted-foreground" />
               </button>
 
               <input
@@ -160,24 +165,18 @@ export default function Banner() {
               />
             </div>
 
-            <div className="relative w-full md:w-[320px]">
+            <div className="relative shrink-0 max-md:w-full">
               <button
                 onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="w-full flex items-center justify-between gap-4 px-6 py-4 rounded-2xl md:rounded-full transition-all cursor-pointer group hover:bg-gray-50"
+                className="flex h-[52px] cursor-pointer items-center justify-center gap-2 rounded-full bg-primary/80 px-8 text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:bg-primary max-md:w-full"
               >
-                <div className="flex flex-col items-start min-w-0">
-                  <span className="text-[10px] font-black text-gray-400 uppercase tracking-widest leading-none mb-1.5">
-                    Select Service
-                  </span>
-                  <span className="text-[15px] font-black text-[#0F172A] truncate w-full text-left">
-                    {selectedService ? selectedService.name : "Loading..."}
-                  </span>
-                </div>
-                <div
-                  className={`p-2 rounded-xl transition-all duration-300 ${isDropdownOpen ? "bg-[#84CC16] text-white rotate-180" : "bg-gray-100 text-gray-400"}`}
-                >
-                  <ChevronDown size={18} strokeWidth={3} />
-                </div>
+                <span className="whitespace-nowrap text-base font-extrabold leading-none">
+                  Choose Service
+                </span>
+                <ChevronDown
+                  className={`h-5 w-5 transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
+                  strokeWidth={3}
+                />
               </button>
 
               <AnimatePresence>
@@ -186,18 +185,18 @@ export default function Banner() {
                     initial={{ opacity: 0, y: 15, scale: 0.98 }}
                     animate={{ opacity: 1, y: 0, scale: 1 }}
                     exit={{ opacity: 0, y: 15, scale: 0.98 }}
-                    className="absolute right-0 top-full mt-4 w-full md:w-[450px] bg-white/95 backdrop-blur-xl rounded-[32px] shadow-[0_30px_70px_rgba(0,0,0,0.2)] border border-white/50 overflow-hidden z-[100]"
+                    className="absolute right-0 top-full z-[100] mt-4 w-[min(450px,calc(100vw-32px))] overflow-hidden rounded-[32px] border border-border bg-card/95 shadow-[0_30px_70px_rgba(0,0,0,0.2)] backdrop-blur-xl"
                   >
                     {/* Search inside Dropdown */}
-                    <div className="p-4 border-b border-gray-100 bg-gray-50/50">
+                    <div className="p-4 border-b border-border bg-muted/50">
                       <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-gray-400" />
+                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
                         <input
                           type="text"
                           placeholder="Search for a service..."
                           value={searchTerm}
                           onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-11 pr-4 py-3 bg-white border border-gray-100 rounded-2xl outline-none focus:border-[#84CC16] transition-all text-sm font-bold"
+                          className="w-full pl-11 pr-4 py-3 bg-background border border-border rounded-2xl outline-none focus:border-primary transition-all text-sm font-bold text-foreground"
                           autoFocus
                         />
                       </div>
@@ -223,8 +222,8 @@ export default function Banner() {
                               }}
                               className={`w-full flex items-center gap-4 p-4 rounded-[20px] transition-all mb-1.5 group ${
                                 selectedService?.service === svc.service
-                                  ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/30"
-                                  : "hover:bg-gray-50 border border-transparent hover:border-gray-100"
+                                  ? "bg-primary text-primary-foreground shadow-lg shadow-lime-500/30"
+                                  : "hover:bg-muted border border-transparent hover:border-border"
                               }`}
                             >
                               <div
@@ -232,10 +231,10 @@ export default function Banner() {
                                   selectedService?.service === svc.service
                                     ? "bg-white/20"
                                     : isApple
-                                      ? "bg-gray-100 text-gray-600"
+                                      ? "bg-muted text-muted-foreground"
                                       : isSamsung
-                                        ? "bg-blue-50 text-blue-600"
-                                        : "bg-green-50 text-green-600"
+                                        ? "bg-blue-500/10 text-blue-500"
+                                        : "bg-green-500/10 text-green-500"
                                 }`}
                               >
                                 <Info size={22} />
@@ -245,7 +244,7 @@ export default function Banner() {
                                   className={`text-[14px] font-black truncate w-full text-left ${
                                     selectedService?.service === svc.service
                                       ? "text-white"
-                                      : "text-[#0F172A]"
+                                      : "text-foreground"
                                   }`}
                                 >
                                   {svc.name}
@@ -255,7 +254,7 @@ export default function Banner() {
                                     className={`text-[10px] font-bold uppercase tracking-widest ${
                                       selectedService?.service === svc.service
                                         ? "text-white/70"
-                                        : "text-gray-400"
+                                        : "text-muted-foreground"
                                     }`}
                                   >
                                     Service ID: {svc.service}
@@ -265,7 +264,7 @@ export default function Banner() {
                                     className={`text-[12px] font-black ${
                                       selectedService?.service === svc.service
                                         ? "text-white"
-                                        : "text-[#84CC16]"
+                                        : "text-primary"
                                     }`}
                                   >
                                     ${svc.price}
@@ -282,21 +281,21 @@ export default function Banner() {
                         })
                       ) : (
                         <div className="p-10 text-center space-y-3">
-                          <div className="w-16 h-16 bg-gray-50 rounded-full flex items-center justify-center mx-auto text-gray-300">
+                          <div className="w-16 h-16 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground/60">
                             <Search size={30} />
                           </div>
-                          <p className="text-gray-400 font-bold text-sm">
+                          <p className="text-muted-foreground font-bold text-sm">
                             No services found for &quot;{searchTerm}&quot;
                           </p>
                         </div>
                       )}
                     </div>
 
-                    <div className="p-4 bg-gray-50 border-t border-gray-100 flex items-center justify-between">
-                      <span className="text-[11px] font-bold text-gray-400 uppercase tracking-widest">
+                    <div className="p-4 bg-muted border-t border-border flex items-center justify-between">
+                      <span className="text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                         {filteredServices.length} Services available
                       </span>
-                      <button className="text-[11px] font-black text-[#84CC16] uppercase tracking-widest hover:underline">
+                      <button className="text-[11px] font-black text-primary uppercase tracking-widest hover:underline">
                         View All
                       </button>
                     </div>
@@ -312,19 +311,15 @@ export default function Banner() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="flex flex-wrap justify-center gap-2 sm:gap-4 mt-8 sm:mt-10 mb-8 md:mb-10"
+          className="mt-12 flex w-full max-w-[1003px] flex-wrap justify-center gap-4"
         >
-          {[
-            "iPhone all in one / best fee",
-            "Samsung full report / best before buy",
-            "Mac full check / best before buy",
-          ].map((tag, i) => (
+          {quickChecks.map((tag, i) => (
             <button
               key={i}
               onClick={() => {
                 setImei("356782084912443");
               }}
-              className="px-3 sm:px-5 py-1.5 sm:py-2 rounded-full bg-[#84CC16]/20 text-white backdrop-blur-md border border-white/20 text-[10px] sm:text-sm transition cursor-pointer hover:bg-[#84CC16]/40"
+              className="h-[50px] cursor-pointer rounded-full bg-[linear-gradient(166.27deg,rgba(132,204,22,0.2)_5.25%,rgba(91,94,13,0.2)_137.31%)] px-8 text-base font-extrabold leading-none text-white shadow-[0_3px_8px_rgba(136,144,194,0.25),0_7px_21px_rgba(37,44,97,0.2)] transition hover:bg-primary/30 max-md:h-auto max-md:min-h-[44px] max-md:px-5 max-md:text-sm"
             >
               {tag}
             </button>
@@ -335,10 +330,11 @@ export default function Banner() {
           initial={{ opacity: 0, scale: 0.9 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.8 }}
+          className="mt-6"
         >
           <button
             onClick={handleSearch}
-            className="bg-[#A3E635] text-[#0F172A] px-12 sm:px-16 py-4 rounded-full font-black shadow-xl text-lg cursor-pointer hover:bg-[#BEFB6D] transition-all active:scale-95 uppercase tracking-widest"
+            className="h-12 cursor-pointer rounded-full bg-primary/80 px-8 text-base font-extrabold leading-none text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:bg-primary active:scale-95"
           >
             Free Checks
           </button>
@@ -360,27 +356,27 @@ export default function Banner() {
               initial={{ opacity: 0, scale: 0.95, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.95, y: 20 }}
-              className="relative w-full max-w-md bg-white rounded-[32px] p-8 shadow-2xl overflow-hidden"
+              className="relative w-full max-w-md bg-card rounded-[32px] p-8 shadow-2xl overflow-hidden border border-border"
             >
               <div className="absolute top-0 right-0 p-4">
                 <button
                   onClick={() => setShowLoginModal(false)}
-                  className="p-2 hover:bg-gray-100 rounded-full transition text-gray-400 hover:text-gray-900"
+                  className="p-2 hover:bg-muted rounded-full transition text-muted-foreground hover:text-foreground"
                 >
                   <X size={20} />
                 </button>
               </div>
 
               <div className="flex flex-col items-center text-center space-y-6 pt-4">
-                <div className="w-20 h-20 bg-[#84CC16]/10 rounded-3xl flex items-center justify-center text-[#84CC16]">
+                <div className="w-20 h-20 bg-primary/10 rounded-3xl flex items-center justify-center text-primary">
                   <LogIn size={40} strokeWidth={2.5} />
                 </div>
 
                 <div className="space-y-2">
-                  <h3 className="text-2xl font-black text-[#0F172A] tracking-tight">
+                  <h3 className="text-2xl font-black text-foreground tracking-tight">
                     Login Required
                   </h3>
-                  <p className="text-[#64748B] font-medium leading-relaxed">
+                  <p className="text-muted-foreground font-medium leading-relaxed">
                     To check device IMEI details and access advanced reports,
                     please login to your account first.
                   </p>
@@ -389,19 +385,19 @@ export default function Banner() {
                 <div className="w-full flex flex-col gap-3">
                   <button
                     onClick={() => router.push("/auth/login")}
-                    className="w-full py-4 bg-[#0F172A] text-white font-black rounded-2xl hover:bg-gray-800 transition shadow-xl active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-sm cursor-pointer"
+                    className="w-full py-4 bg-foreground text-background font-black rounded-2xl hover:opacity-90 transition shadow-xl active:scale-95 flex items-center justify-center gap-2 uppercase tracking-widest text-sm cursor-pointer"
                   >
                     Go to Login
                   </button>
                   <button
                     onClick={() => setShowLoginModal(false)}
-                    className="w-full py-4 bg-gray-100 text-[#64748B] font-black rounded-2xl hover:bg-gray-200 transition active:scale-95 text-sm uppercase tracking-widest cursor-pointer"
+                    className="w-full py-4 bg-muted text-muted-foreground font-black rounded-2xl hover:bg-muted/80 transition active:scale-95 text-sm uppercase tracking-widest cursor-pointer"
                   >
                     Cancel
                   </button>
                 </div>
 
-                <div className="flex items-center gap-2 text-[11px] font-bold text-blue-600 bg-blue-50 px-4 py-2 rounded-full">
+                <div className="flex items-center gap-2 text-[11px] font-bold text-brand-blue bg-brand-blue/10 px-4 py-2 rounded-full">
                   <Info size={14} />
                   <span>Only registered shopkeepers can verify devices.</span>
                 </div>

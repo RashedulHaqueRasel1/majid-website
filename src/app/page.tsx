@@ -13,15 +13,15 @@ import StartChecking from "@/features/Home/component/StartChecking";
 export default function Home() {
   return (
     <main className="">
-      <div className="min-h-screen flex flex-col pt-20 sm:pt-24">
+      <div className="pt-20 md:pt-[100px]">
         <Navbar />
         <Banner />
       </div>
       <VerifyAnyDevices />
-      <ExperienceSmarter />
       <ImportantWarning />
-      <ForTheSmartBuyer />
+      <ExperienceSmarter />
       <AIPoweredInsights />
+      <ForTheSmartBuyer />
       <Pricing />
       <Review />
       <StartChecking />
