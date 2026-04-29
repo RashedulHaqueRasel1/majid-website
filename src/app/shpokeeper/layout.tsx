@@ -1,6 +1,14 @@
 import Header from "@/components/sheard/shpokeeper/Header";
 import Sidebar from "@/components/sheard/shpokeeper/Sidebar";
+import { Metadata } from "next";
 
+export const metadata: Metadata = {
+  title: "IMOSCAN | Shopkeeper",
+  description: "Verify Global IMEI/EAN Intelligence in Real-Time",
+  icons: {
+    icon: "/images/logo.svg",
+  },
+};
 export default function ShopkeeperLayout({
   children,
 }: {

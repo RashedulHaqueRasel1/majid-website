@@ -4,6 +4,7 @@ import "./globals.css";
 import MainProviders from "@/Providers/MainProviders";
 import Provider from "@/Providers/Provider";
 import { Toaster } from "sonner";
+import { ThemeProvider } from "@/Providers/ThemeProvider";
 
 const poppins = Poppins({
   variable: "--font-poppins",
@@ -12,8 +13,11 @@ const poppins = Poppins({
 });
 
 export const metadata: Metadata = {
-  title: "IMOSCAN",
-  description: "Verify Global IMEI Intelligence in Real-Time",
+  title: "IMOSCAN | Verify Global IMEI/EAN in Real-Time",
+  description: "Verify Global IMEI/EAN Intelligence in Real-Time",
+  icons: {
+    icon: "/images/logo.svg",
+  },
 };
 
 export default function RootLayout({
@@ -22,11 +26,18 @@ export default function RootLayout({
   children: React.ReactNode;
 }>) {
   return (
-    <html lang="en">
+    <html lang="en" suppressHydrationWarning>
       <body className={`${poppins.variable} antialiased`}>
-        <MainProviders>
-          <Provider> {children} </Provider>
-        </MainProviders>
+        <ThemeProvider
+          attribute="class"
+          defaultTheme="system"
+          enableSystem
+          disableTransitionOnChange
+        >
+          <MainProviders>
+            <Provider> {children} </Provider>
+          </MainProviders>
+        </ThemeProvider>
         <Toaster position="top-right" closeButton />
       </body>
     </html>
