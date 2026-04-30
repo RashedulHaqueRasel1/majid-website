@@ -43,6 +43,10 @@ export interface RegisterPayload {
   lastName: string;
   email: string;
   password: string;
+  role: string;
+  shopName?: string;
+  shopAddress?: string;
+  whatsappNumber?: string;
 }
 
 export interface LoginPayload {

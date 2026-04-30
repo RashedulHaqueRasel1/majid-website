@@ -9,6 +9,8 @@ import {
   getShopkeeperSubtitle,
 } from "../shopkeeper/profile-utils";
 
+import NotificationDropdown from "@/features/notifications/component/NotificationDropdown";
+
 export default function Header() {
   const { data: profileData } = useMyProfile();
   const user = profileData?.data;
@@ -24,13 +26,7 @@ export default function Header() {
       {/* Right: Actions */}
       <div className="flex items-center gap-6">
         {/* Notifications */}
-        <button className="relative p-2.5 bg-gray-50 text-[#64748B] rounded-2xl hover:bg-gray-100 transition group cursor-pointer">
-          <Bell
-            size={20}
-            className="group-hover:rotate-12 transition-transform"
-          />
-          <span className="absolute top-2.5 right-2.5 w-2 h-2 bg-[#EF4444] rounded-full border-2 border-white" />
-        </button>
+        <NotificationDropdown role="customer" />
 
         {/* User Profile */}
         <div className="flex items-center gap-3 pl-6 border-l border-gray-100 cursor-pointer group">
