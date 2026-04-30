@@ -5,7 +5,6 @@ import {
   Plus,
   MoreVertical,
   Search,
-  Filter,
   Eye,
   Trash2,
   Edit2,
@@ -14,10 +13,15 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useMyInventory, useDeleteInventory } from "../hooks/useInventory";
+import {
+  useMySoldProducts,
+  useDeleteSoldProduct,
+} from "../hooks/useSoldProducts";
 import { InventorySkeleton } from "./skeletons/InventorySkeleton";
 import { InventoryFormModal } from "./modals/InventoryFormModal";
 import { InventoryDetailsModal } from "./modals/InventoryDetailsModal";
-import type { InventoryItem } from "../types";
+import { SoldProductFormModal } from "./modals/SoldProductFormModal";
+import type { InventoryItem, SoldProduct } from "../types";
 import { toast } from "sonner";
 import {
   DropdownMenu,
@@ -30,12 +34,17 @@ export default function Inventory() {
   const { data: inventoryData, isLoading, isError } = useMyInventory();
   const { mutate: deleteItem } = useDeleteInventory();
 
+  const { data: soldData, isLoading: isSoldLoading } = useMySoldProducts();
+  const { mutate: deleteSold } = useDeleteSoldProduct();
+
   const [searchQuery, setSearchQuery] = useState("");
   const [selectedItem, setSelectedItem] = useState<InventoryItem | null>(null);
   const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isSoldFormOpen, setIsSoldFormOpen] = useState(false);
   const [editingItem, setEditingItem] = useState<InventoryItem | null>(null);
 
   const items = useMemo(() => inventoryData?.data || [], [inventoryData]);
+  const soldItems = useMemo(() => soldData?.data || [], [soldData]);
 
   const filteredItems = useMemo(() => {
     return items.filter(
@@ -45,10 +54,7 @@ export default function Inventory() {
     );
   }, [items, searchQuery]);
 
-  // Separate stock and sold for the UI demo (assuming some logic for sold)
-  // For now, let's just display what's in the inventory.
   const stockItems = filteredItems;
-  const soldItems = useMemo(() => [], []); // Placeholder if the API doesn't distinguish yet
 
   const totalValue = useMemo(() => {
     return items.reduce(
@@ -66,7 +72,16 @@ export default function Inventory() {
     }
   };
 
-  if (isLoading) return <InventorySkeleton />;
+  const handleDeleteSold = (id: string) => {
+    if (window.confirm("Are you sure you want to delete this sold record?")) {
+      deleteSold(id, {
+        onSuccess: () => toast.success("Sold record deleted"),
+        onError: () => toast.error("Delete failed"),
+      });
+    }
+  };
+
+  if (isLoading || isSoldLoading) return <InventorySkeleton />;
   if (isError)
     return (
       <div className="p-10 text-center">
@@ -80,7 +95,7 @@ export default function Inventory() {
     );
 
   return (
-    <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-12 font-poppins relative">
+    <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-16 font-poppins relative">
       {/* Inventory Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
@@ -235,6 +250,135 @@ export default function Inventory() {
         )}
       </div>
 
+      {/* Sold Items Section */}
+      <div className="space-y-8">
+        <div className="flex items-center justify-between">
+          <div>
+            <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
+              Sold Items
+            </h2>
+            <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-widest mt-1">
+              History of your sales and pending payments
+            </p>
+          </div>
+          <button
+            onClick={() => setIsSoldFormOpen(true)}
+            className="flex items-center gap-2 px-6 py-3 bg-[#84CC16] text-white font-black rounded-xl hover:bg-[#76b813] transition shadow-lg shadow-lime-500/20 active:scale-95 cursor-pointer"
+          >
+            <Plus size={18} strokeWidth={3} />
+            <span>Add Sold Items</span>
+          </button>
+        </div>
+
+        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
+          <table className="w-full text-left border-collapse min-w-[1000px]">
+            <thead>
+              <tr className="bg-gray-50/50">
+                <th className="px-8 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                  Item Name
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                  IMEI Number
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                  Due Date
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                  Purchase Price
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                  Expected Price
+                </th>
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest text-center">
+                  Quantity
+                </th>
+                <th className="px-8 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest text-right">
+                  Actions
+                </th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-gray-50">
+              {soldItems.length > 0 ? (
+                soldItems.map((item: SoldProduct) => (
+                  <tr
+                    key={item._id}
+                    className="hover:bg-gray-50/50 transition-colors group"
+                  >
+                    <td className="px-8 py-5">
+                      <div className="flex items-center gap-4">
+                        <div className="w-12 h-12 rounded-xl bg-slate-50 border border-gray-100 overflow-hidden relative flex-shrink-0">
+                          {item.image?.url ? (
+                            <Image
+                              src={item.image.url}
+                              alt={item.name}
+                              fill
+                              className="object-cover"
+                            />
+                          ) : (
+                            <div className="w-full h-full flex items-center justify-center text-slate-200">
+                              <Package size={20} />
+                            </div>
+                          )}
+                        </div>
+                        <div>
+                          <p className="text-sm font-black text-[#0F172A]">
+                            {item.name}
+                          </p>
+                          <p className="text-[10px] font-bold text-[#94A3B8] uppercase">
+                            {item.model}
+                          </p>
+                        </div>
+                      </div>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-xs font-bold text-[#64748B]">
+                        {item.imeiNumber}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-xs font-bold text-[#64748B]">
+                        {new Date(item.dueDate).toLocaleDateString()}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-xs font-black text-[#64748B]">
+                        ${item.purchasePrice}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5">
+                      <span className="text-sm font-black text-[#84CC16]">
+                        ${item.expectedPrice}
+                      </span>
+                    </td>
+                    <td className="px-6 py-5 text-center">
+                      <span className="text-xs font-black text-[#0F172A]">
+                        {item.quantity}
+                      </span>
+                    </td>
+                    <td className="px-8 py-5 text-right">
+                      <button
+                        onClick={() => handleDeleteSold(item._id)}
+                        className="p-2 text-slate-300 hover:text-red-500 hover:bg-red-50 rounded-xl transition cursor-pointer"
+                      >
+                        <Trash2 size={16} />
+                      </button>
+                    </td>
+                  </tr>
+                ))
+              ) : (
+                <tr>
+                  <td colSpan={7} className="px-8 py-20 text-center">
+                    <p className="text-slate-400 font-bold text-sm">
+                      No sold items recorded yet.
+                    </p>
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
       {/* Details Modal */}
       <AnimatePresence>
         {selectedItem && (
@@ -245,7 +389,7 @@ export default function Inventory() {
         )}
       </AnimatePresence>
 
-      {/* Form Modal */}
+      {/* Form Modals */}
       <InventoryFormModal
         isOpen={isFormOpen}
         onClose={() => {
@@ -253,6 +397,11 @@ export default function Inventory() {
           setEditingItem(null);
         }}
         item={editingItem}
+      />
+
+      <SoldProductFormModal
+        isOpen={isSoldFormOpen}
+        onClose={() => setIsSoldFormOpen(false)}
       />
     </div>
   );
