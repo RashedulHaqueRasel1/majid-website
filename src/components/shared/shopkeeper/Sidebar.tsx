@@ -9,9 +9,12 @@ import {
   CreditCard,
   Package,
   Mail,
+  Tag,
   ChevronDown,
   HelpCircle,
   Phone,
+  Wrench,
+  Bell,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -46,15 +49,25 @@ const navItems = [
       { label: "Add funds", href: "/shopkeeper/payment/add-funds" },
     ],
   },
-  // {
-  //   icon: <Tag size={20} />,
-  //   label: "Pricing Plan",
-  //   href: "/shopkeeper/pricing",
-  // },
+  {
+    icon: <Tag size={20} />,
+    label: "Pricing Plane",
+    href: "/shopkeeper/pricing",
+  },
   {
     icon: <Package size={20} />,
     label: "Inventory",
     href: "/shopkeeper/inventory",
+  },
+  {
+    icon: <Bell size={20} />,
+    label: "Notifications",
+    href: "/shopkeeper/notifications",
+  },
+  {
+    icon: <Wrench size={20} />,
+    label: "Repair Requests",
+    href: "/shopkeeper/repair-requests",
   },
   {
     icon: <Settings size={20} />,

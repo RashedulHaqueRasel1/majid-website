@@ -32,7 +32,6 @@ export function RepairRequestFormModal({
   const [deviceModel, setDeviceModel] = useState("");
   const [imeiNumber, setImeiNumber] = useState("");
   const [problemDescription, setProblemDescription] = useState("");
-  const [problemFile, setProblemFile] = useState<File | null>(null);
 
   const { data: profileData } = useMyProfile();
   const createRepairRequest = useCreateRepairRequest();
@@ -82,14 +81,12 @@ export function RepairRequestFormModal({
         deviceModel,
         IMEINumber: imeiNumber,
         description: problemDescription,
-        images: problemFile ? [problemFile] : undefined,
       },
       {
         onSuccess: () => {
           setDeviceModel("");
           setImeiNumber("");
           setProblemDescription("");
-          setProblemFile(null);
           onClose();
         },
       },
@@ -184,24 +181,6 @@ export function RepairRequestFormModal({
               className="w-full p-4 rounded-xl border border-border bg-background text-foreground font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10 resize-none"
               placeholder="Describe the issue in detail..."
             />
-          </div>
-
-          <div className="space-y-2">
-            <label className="text-sm font-bold text-foreground uppercase tracking-wider">
-              Upload Media (Optional)
-            </label>
-            <label className="flex h-12 cursor-pointer items-center gap-3 rounded-xl border border-dashed border-border bg-surface px-4 text-sm font-medium text-muted-foreground transition hover:border-primary hover:bg-primary/5">
-              <Paperclip size={18} className="text-primary" />
-              <span className="truncate">
-                {problemFile?.name || "Upload photo or video of the problem"}
-              </span>
-              <input
-                type="file"
-                accept="video/*,image/*"
-                className="sr-only"
-                onChange={(e) => setProblemFile(e.target.files?.[0] || null)}
-              />
-            </label>
           </div>
 
           <div className="flex justify-end gap-3 pt-4">

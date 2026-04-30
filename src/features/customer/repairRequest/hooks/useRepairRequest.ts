@@ -6,7 +6,54 @@ import {
   getShopkeepers,
   getRepairRequestDetails,
   updateRepairQuoteStatus,
+  getShopkeeperRepairRequests,
+  updateRepairRequestStatusByShopkeeper,
+  addRepairRequestNote,
 } from "../api/repair-request.api";
+
+export function useShopkeeperRepairRequests(page = 1, limit = 10) {
+  return useQuery({
+    queryKey: ["repair-requests", "shopkeeper", page, limit],
+    queryFn: () => getShopkeeperRepairRequests({ page, limit }),
+  });
+}
+
+export function useUpdateRepairRequestStatusByShopkeeper() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: updateRepairRequestStatusByShopkeeper,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["repair-request", data.data._id],
+      });
+      queryClient.invalidateQueries({
+        queryKey: ["repair-requests", "shopkeeper"],
+      });
+      toast.success("Status updated successfully");
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(error.response?.data?.message || "Failed to update status");
+    },
+  });
+}
+
+export function useAddRepairRequestNote() {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: addRepairRequestNote,
+    onSuccess: (data) => {
+      queryClient.invalidateQueries({
+        queryKey: ["repair-request", data.data._id],
+      });
+      toast.success("Note added successfully");
+    },
+    onError: (error: { response?: { data?: { message?: string } } }) => {
+      toast.error(error.response?.data?.message || "Failed to add note");
+    },
+  });
+}
 
 export function useShopkeepers(search: string, minRating?: number) {
   return useQuery({

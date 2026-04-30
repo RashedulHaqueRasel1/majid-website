@@ -2,7 +2,13 @@
 
 import Image from "next/image";
 import { format } from "date-fns";
-import { CheckCircle2, Clock3, Loader2, PlayCircle } from "lucide-react";
+import {
+  CheckCircle2,
+  Clock3,
+  Loader2,
+  PlayCircle,
+  Smartphone,
+} from "lucide-react";
 import {
   useRepairRequestDetails,
   useUpdateRepairQuoteStatus,
@@ -26,7 +32,7 @@ const timelineSteps = [
     id: "quote_sent",
     label: "Quote Sent",
     description: "Quote will appear once review is complete",
-    statuses: ["quote_sent", "quote_accepted", "quote_rejected"],
+    statuses: ["quote_sent", "approved", "rejected"],
   },
   {
     id: "repair_in_progress",
@@ -89,22 +95,21 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
         {/* Header Section */}
         <div className="flex flex-wrap items-center justify-between gap-6 rounded-3xl border border-border bg-card p-6 shadow-sm">
           <div className="flex items-center gap-6">
-            <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-surface border-2 border-border/50">
-              {request.images && request.images.length > 0 ? (
-                <Image
-                  src={request.images[0].url}
-                  alt={request.deviceModel}
-                  fill
-                  className="object-cover"
-                />
-              ) : (
-                <Image
-                  src="/no-image.jpg"
-                  alt={request.deviceModel}
-                  fill
-                  className="object-cover"
-                />
-              )}
+            <div className="relative h-20 w-20 overflow-hidden rounded-2xl bg-surface border-2 border-border/50 flex items-center justify-center text-muted-foreground/40">
+              {(() => {
+                const headerImages =
+                  request.shopkeeperNotes?.flatMap((n) => n.images || []) || [];
+                return headerImages.length > 0 ? (
+                  <Image
+                    src={headerImages[0].url}
+                    alt={request.deviceModel}
+                    fill
+                    className="object-cover"
+                  />
+                ) : (
+                  <Smartphone size={32} />
+                );
+              })()}
             </div>
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
@@ -248,9 +253,23 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                             {format(new Date(note.date), "MMM dd, hh:mm a")}
                           </p>
                         </div>
-                        <div className="rounded-2xl rounded-tl-none bg-surface p-4 text-sm font-medium text-foreground/80 leading-relaxed">
-                          {note.message}
-                        </div>
+                        {/* <div className="rounded-2xl rounded-tl-none bg-surface p-4 text-sm font-medium text-foreground/80 leading-relaxed space-y-3">
+                          <p>{note.message}</p>
+                          {note.images && note.images.length > 0 && (
+                            <div className="grid grid-cols-2 gap-2 pt-1">
+                              {note.images.map((img, i) => (
+                                <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-border/50">
+                                  <Image 
+                                    src={img.url} 
+                                    alt="Proof" 
+                                    fill 
+                                    className="object-cover" 
+                                  />
+                                </div>
+                              ))}
+                            </div>
+                          )}
+                        </div> */}
                       </div>
                     </div>
                   ))}
@@ -290,27 +309,35 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
               </div>
             </div>
 
-            {/* Issue Video/Image */}
-            {request.images && request.images.length > 0 && (
-              <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
-                <h3 className="text-base font-black text-foreground mb-4">
-                  Issue Media
-                </h3>
-                <div className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black">
-                  <Image
-                    src={request.images[0].url}
-                    alt="Issue Media"
-                    fill
-                    className="object-cover opacity-80 transition-opacity group-hover:opacity-100"
-                  />
-                  <div className="absolute inset-0 flex items-center justify-center">
-                    <div className="flex h-12 w-12 items-center justify-center rounded-full bg-black/50 text-white backdrop-blur-md transition-transform group-hover:scale-110">
-                      <PlayCircle size={24} fill="currentColor" />
-                    </div>
+            {/* Repair Proof Gallery */}
+            {(() => {
+              const proofImages =
+                request.shopkeeperNotes?.flatMap((n) => n.images || []) || [];
+              if (proofImages.length === 0) return null;
+
+              return (
+                <div className="rounded-3xl border border-border bg-card p-6 shadow-sm">
+                  <h3 className="text-base font-black text-foreground mb-4">
+                    Repair Proof
+                  </h3>
+                  <div className="grid grid-cols-1 gap-3">
+                    {proofImages.slice(0, 3).map((img, idx) => (
+                      <div
+                        key={idx}
+                        className="group relative aspect-video w-full overflow-hidden rounded-2xl bg-black border border-border shadow-sm"
+                      >
+                        <Image
+                          src={img.url}
+                          alt="Proof Media"
+                          fill
+                          className="object-cover opacity-90 transition-opacity group-hover:opacity-100"
+                        />
+                      </div>
+                    ))}
                   </div>
                 </div>
-              </div>
-            )}
+              );
+            })()}
 
             {/* Approval Required */}
             {currentStatus === "quote_sent" && latestQuote && (
@@ -344,7 +371,11 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                     variant="outline"
                     className="flex-1 rounded-full font-bold h-11"
                     onClick={() =>
-                      updateQuote.mutate({ id, status: "quote_rejected" })
+                      updateQuote.mutate({
+                        id,
+                        status: "rejected",
+                        shopkeeperNotesId: latestQuote?._id,
+                      })
                     }
                     disabled={updateQuote.isPending}
                   >
@@ -353,7 +384,11 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                   <Button
                     className="flex-1 rounded-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                     onClick={() =>
-                      updateQuote.mutate({ id, status: "quote_accepted" })
+                      updateQuote.mutate({
+                        id,
+                        status: "approved",
+                        shopkeeperNotesId: latestQuote?._id,
+                      })
                     }
                     disabled={updateQuote.isPending}
                   >
@@ -367,7 +402,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
               </div>
             )}
 
-            {currentStatus === "quote_accepted" && latestQuote && (
+            {currentStatus === "approved" && latestQuote && (
               <div className="rounded-3xl border border-green-200 bg-green-50/50 p-6 shadow-sm dark:bg-green-900/10 dark:border-green-900/50">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-black text-foreground">
@@ -389,7 +424,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
               </div>
             )}
 
-            {currentStatus === "quote_rejected" && latestQuote && (
+            {currentStatus === "rejected" && latestQuote && (
               <div className="rounded-3xl border border-red-200 bg-red-50/50 p-6 shadow-sm dark:bg-red-900/10 dark:border-red-900/50">
                 <div className="flex items-center justify-between mb-4">
                   <h3 className="text-base font-black text-foreground">

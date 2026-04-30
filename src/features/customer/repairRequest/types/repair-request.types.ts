@@ -37,6 +37,7 @@ export type RepairRequestStatus =
   | "quote_sent"
   | "quote_accepted"
   | "quote_rejected"
+  | "approved"
   | "rejected"
   | "repair_in_progress"
   | "completed";
@@ -47,7 +48,16 @@ export interface ShopkeeperNote {
   date: string;
   cost?: number;
   estimatedDays?: number;
-  status: string;
+  status?: string;
+  images?: { public_id: string; url: string }[];
+}
+
+export interface ShopkeeperNotePayload {
+  message: string;
+  date?: string;
+  cost?: number;
+  estimatedDays?: number;
+  images?: File[];
 }
 
 export interface RepairRequest {
@@ -59,7 +69,16 @@ export interface RepairRequest {
         shopName?: string;
         shopAddress?: string;
       };
-  userId: string;
+  userId:
+    | string
+    | {
+        _id: string;
+        firstName: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+        location?: string;
+      };
   firstName: string;
   email: string;
   deviceModel: string;

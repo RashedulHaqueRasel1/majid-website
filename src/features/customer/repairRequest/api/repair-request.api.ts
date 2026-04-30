@@ -58,12 +58,66 @@ export const getRepairRequestDetails = async (
 export const updateRepairQuoteStatus = async ({
   id,
   status,
+  shopkeeperNotesId,
 }: {
   id: string;
-  status: "quote_accepted" | "quote_rejected";
+  status: "approved" | "rejected";
+  shopkeeperNotesId?: string;
 }): Promise<ApiResponse<RepairRequest>> => {
   const response = await api.put(`/repair-requests/quote-status/${id}`, {
     status,
+    shopkeeperNotesId,
   });
+  return response.data;
+};
+
+export const getShopkeeperRepairRequests = async (params?: {
+  page?: number;
+  limit?: number;
+}): Promise<ApiResponse<RepairRequest[]>> => {
+  const response = await api.get("/repair-requests/shopkeepers-history", {
+    params,
+  });
+  return response.data;
+};
+
+export const updateRepairRequestStatusByShopkeeper = async ({
+  id,
+  status,
+}: {
+  id: string;
+  status: string;
+}): Promise<ApiResponse<RepairRequest>> => {
+  const response = await api.put(`/repair-requests/update-status/${id}`, {
+    status,
+  });
+  return response.data;
+};
+
+export const addRepairRequestNote = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: {
+    message: string;
+    cost?: number;
+    estimatedDays?: number;
+    date?: string;
+    images?: File[];
+  };
+}): Promise<ApiResponse<RepairRequest>> => {
+  const formData = new FormData();
+  formData.append("message", payload.message);
+  if (payload.cost) formData.append("cost", payload.cost.toString());
+  if (payload.estimatedDays)
+    formData.append("estimatedDays", payload.estimatedDays.toString());
+  if (payload.date) formData.append("date", payload.date);
+
+  payload.images?.forEach((file) => {
+    formData.append("images", file);
+  });
+
+  const response = await api.put(`/repair-requests/add-note/${id}`, formData);
   return response.data;
 };

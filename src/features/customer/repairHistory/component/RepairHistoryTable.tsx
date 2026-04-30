@@ -16,6 +16,7 @@ const getStatusStyles = (status: string) => {
     case "in_review":
     case "reviewing":
     case "quote_accepted":
+    case "approved":
       return "bg-[#DBEAFE] text-[#2563EB]"; // Blue
     case "repair_in_progress":
     case "in_progress":
@@ -41,7 +42,10 @@ const getStatusLabel = (status: string) => {
     case "quote_sent":
       return "Pending Quote";
     case "quote_accepted":
+    case "approved":
       return "Approved";
+    case "rejected":
+      return "Rejected";
     case "repair_in_progress":
       return "Repairing";
     case "completed":
