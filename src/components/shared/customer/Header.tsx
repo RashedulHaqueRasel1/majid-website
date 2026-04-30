@@ -2,12 +2,12 @@
 
 import { Bell, ChevronDown } from "lucide-react";
 import Image from "next/image";
-import { useMyProfile } from "@/features/shoopkeeper/settings/hooks/useSettings";
+import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
 import {
   getShopkeeperDisplayName,
   getShopkeeperImage,
   getShopkeeperSubtitle,
-} from "./profile-utils";
+} from "../shopkeeper/profile-utils";
 
 export default function Header() {
   const { data: profileData } = useMyProfile();

@@ -1,15 +1,16 @@
-import Header from "@/components/shared/shopkeeper/Header";
-import Sidebar from "@/components/shared/shopkeeper/Sidebar";
+import Header from "@/components/shared/customer/Header";
+import Sidebar from "@/components/shared/customer/Sidebar";
 import { Metadata } from "next";
 
 export const metadata: Metadata = {
-  title: "IMOSCAN | Shopkeeper",
-  description: "Verify Global IMEI/EAN Intelligence in Real-Time",
+  title: "IMOSCAN | Customer",
+  description: "Customer Dashboard for IMOSCAN",
   icons: {
     icon: "/images/logo.svg",
   },
 };
-export default function ShopkeeperLayout({
+
+export default function CustomerLayout({
   children,
 }: {
   children: React.ReactNode;

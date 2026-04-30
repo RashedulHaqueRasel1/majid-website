@@ -1,4 +1,4 @@
-import AddFunds from "@/features/shoopkeeper/payment/component/AddFunds";
+import AddFunds from "@/features/shopkeeper/payment/component/AddFunds";
 
 export const metadata = {
   title: "Pricing Plan | Shopkeeper Dashboard",

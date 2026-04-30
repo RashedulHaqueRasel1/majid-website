@@ -1,4 +1,4 @@
-import type { UserProfile } from "@/features/shoopkeeper/settings/types";
+import type { UserProfile } from "@/features/shopkeeper/settings/types";
 
 export const DEFAULT_SHOPKEEPER_PROFILE_IMAGE =
   "https://images.unsplash.com/photo-1535713875002-d1d0cf377fde?q=80&w=150&auto=format&fit=crop";

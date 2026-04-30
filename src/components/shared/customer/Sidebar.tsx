@@ -18,48 +18,38 @@ import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
 import { signOut } from "next-auth/react";
-import { useMyProfile } from "@/features/shoopkeeper/settings/hooks/useSettings";
+import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
 import {
   getShopkeeperDisplayName,
   getShopkeeperImage,
   getShopkeeperSubtitle,
-} from "./profile-utils";
+} from "../shopkeeper/profile-utils";
 
 const navItems = [
   {
     icon: <Scan size={20} />,
     label: "Scan Device",
-    href: "/shopkeeper/scan-device",
+    href: "/customer/scan-device",
     isSpecial: true,
   },
   {
     icon: <LayoutDashboard size={20} />,
     label: "Dashboard Overview",
-    href: "/shopkeeper/dashboard",
+    href: "/customer/dashboard",
   },
   {
     icon: <CreditCard size={20} />,
     label: "Payment",
-    href: "/shopkeeper/payment",
+    href: "/customer/payment",
     submenu: [
-      { label: "Payment History", href: "/shopkeeper/payment/history" },
-      { label: "Add funds", href: "/shopkeeper/payment/add-funds" },
+      { label: "Payment History", href: "/customer/payment/history" },
+      { label: "Add funds", href: "/customer/payment/add-funds" },
     ],
-  },
-  // {
-  //   icon: <Tag size={20} />,
-  //   label: "Pricing Plan",
-  //   href: "/shopkeeper/pricing",
-  // },
-  {
-    icon: <Package size={20} />,
-    label: "Inventory",
-    href: "/shopkeeper/inventory",
   },
   {
     icon: <Settings size={20} />,
     label: "Settings",
-    href: "/shopkeeper/settings",
+    href: "/customer/settings",
   },
 ];
 

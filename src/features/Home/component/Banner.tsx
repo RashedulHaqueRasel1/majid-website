@@ -13,8 +13,8 @@ import { motion, AnimatePresence } from "framer-motion";
 import { useRef, useState, useEffect } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
-import { getServicesApi } from "@/features/shoopkeeper/scanDevice/api/scanDevice.api";
-import { IMEIService } from "@/features/shoopkeeper/scanDevice/types/scanDevice.types";
+import { getServicesApi } from "@/features/shopkeeper/scanDevice/api/scanDevice.api";
+import { IMEIService } from "@/features/shopkeeper/scanDevice/types/scanDevice.types";
 
 export default function Banner() {
   const fileInputRef = useRef<HTMLInputElement>(null);

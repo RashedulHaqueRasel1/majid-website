@@ -7,20 +7,54 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const userRole = (token?.role as string)?.toUpperCase();
-  const isAdmin = userRole === "ADMIN";
+  const isShopkeeper = userRole === "SHOPKEEPER";
+  const isUser = userRole === "USER" || userRole === "CUSTOMER";
   const isGuest = !token;
 
-  // Example: Block guests from /dashboard
-  if (isGuest && pathname.startsWith("/dashboard")) {
-    const callbackUrl = encodeURIComponent(pathname);
-    return NextResponse.redirect(
-      new URL(`/login?callbackUrl=${callbackUrl}`, request.url),
-    );
+  // Protect shopkeeper routes
+  if (pathname.startsWith("/shopkeeper")) {
+    if (isGuest) {
+      const callbackUrl = encodeURIComponent(pathname);
+      return NextResponse.redirect(
+        new URL(`/auth/login?callbackUrl=${callbackUrl}`, request.url),
+      );
+    }
+    if (isUser) {
+      const newPath = pathname.replace(/^\/shopkeeper/, "/customer");
+      return NextResponse.redirect(new URL(newPath, request.url));
+    }
   }
 
-  // Example: Block non-admins from /dashboard
-  if (!isAdmin && pathname.startsWith("/dashboard")) {
-    return NextResponse.redirect(new URL("/", request.url));
+  // Protect customer routes
+  if (pathname.startsWith("/customer")) {
+    if (isGuest) {
+      const callbackUrl = encodeURIComponent(pathname);
+      return NextResponse.redirect(
+        new URL(`/auth/login?callbackUrl=${callbackUrl}`, request.url),
+      );
+    }
+    if (isShopkeeper) {
+      const newPath = pathname.replace(/^\/customer/, "/shopkeeper");
+      return NextResponse.redirect(new URL(newPath, request.url));
+    }
+  }
+
+  // General dashboard protection
+  if (pathname.startsWith("/dashboard")) {
+    if (isGuest) {
+      const callbackUrl = encodeURIComponent(pathname);
+      return NextResponse.redirect(
+        new URL(`/auth/login?callbackUrl=${callbackUrl}`, request.url),
+      );
+    }
+    // Redirect generic dashboard based on role
+    if (isShopkeeper) {
+      return NextResponse.redirect(
+        new URL("/shopkeeper/dashboard", request.url),
+      );
+    } else if (isUser) {
+      return NextResponse.redirect(new URL("/customer/dashboard", request.url));
+    }
   }
 
   return NextResponse.next();

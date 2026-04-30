@@ -1,7 +1,12 @@
 import ScanDevice from "@/features/shopkeeper/scanDevice/component/ScanDevice";
 import { Suspense } from "react";
 
-export default function page() {
+export const metadata = {
+  title: "Scan Device | Customer Dashboard",
+  description: "Scan your devices seamlessly.",
+};
+
+export default function ScanDevicePage() {
   return (
     <Suspense
       fallback={

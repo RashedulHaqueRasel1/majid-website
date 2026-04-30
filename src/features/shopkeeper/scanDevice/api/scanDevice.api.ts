@@ -1,4 +1,4 @@
-// src/features/shoopkeeper/scanDevice/api/scanDevice.api.ts
+// src/features/shopkeeper/scanDevice/api/scanDevice.api.ts
 
 import axiosInstance from "@/lib/instance/axios-instance";
 import { ApiResponse } from "@/features/auth/types/auth.types";

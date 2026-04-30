@@ -1,4 +1,4 @@
-// src/features/shoopkeeper/scanDevice/types/scanDevice.types.ts
+// src/features/shopkeeper/scanDevice/types/scanDevice.types.ts
 
 export interface RiskMeter {
   riskLevel: string;

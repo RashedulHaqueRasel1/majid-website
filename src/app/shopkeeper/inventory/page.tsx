@@ -1,4 +1,4 @@
-import Inventory from "@/features/shoopkeeper/inventory/component/Inventory";
+import Inventory from "@/features/shopkeeper/inventory/component/Inventory";
 
 export const metadata = {
   title: "Inventory Management | Shopkeeper Dashboard",
