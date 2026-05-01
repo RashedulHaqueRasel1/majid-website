@@ -16,7 +16,7 @@ export default function CustomerLayout({
   children: React.ReactNode;
 }) {
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen bg-surface">
       {/* Sidebar */}
       <Sidebar />
 

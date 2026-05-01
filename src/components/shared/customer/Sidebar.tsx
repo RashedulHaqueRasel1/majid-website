@@ -7,9 +7,9 @@ import {
   LogOut,
   Scan,
   CreditCard,
-  Package,
   Mail,
   ChevronDown,
+  History,
   HelpCircle,
   Phone,
 } from "lucide-react";
@@ -48,6 +48,21 @@ const navItems = [
   },
   {
     icon: <Settings size={20} />,
+    label: "Repair Requests",
+    href: "/customer/repair-request",
+  },
+  {
+    icon: <History size={20} />,
+    label: "Repair History",
+    href: "/customer/repair-history",
+  },
+  //  {
+  // icon: <Settings size={20} />,
+  // label: "Settings",
+  // href: "/customer/settings",
+  // },
+  {
+    icon: <Settings size={20} />,
     label: "Settings",
     href: "/customer/settings",
   },
@@ -77,7 +92,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-[300px] bg-white h-screen border-r border-gray-100 flex flex-col sticky top-0 font-poppins shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside className="w-[300px] bg-card h-screen border-r border-border flex flex-col sticky top-0 font-poppins shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         {/* Logo Section */}
         <div className="p-8 pb-10 flex items-center justify-center">
           <Link href="/" className="flex items-center gap-1.5 group">
@@ -106,7 +121,7 @@ export default function Sidebar() {
                   className={`flex items-center gap-3 px-6 py-4.5 font-black rounded-2xl transition-all mb-4 group ${
                     isActive
                       ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/25"
-                      : "text-[#475569] hover:bg-gray-50 hover:text-[#0F172A]"
+                      : "text-muted-foreground hover:bg-surface hover:text-foreground"
                   }`}
                 >
                   <div
@@ -135,7 +150,7 @@ export default function Sidebar() {
                     className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
                       isActive
                         ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
-                        : "text-[#475569] hover:bg-gray-50 hover:text-[#0F172A]"
+                        : "text-muted-foreground hover:bg-surface hover:text-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-4 relative z-10">
@@ -166,7 +181,7 @@ export default function Sidebar() {
                     className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
                       isActive
                         ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
-                        : "text-[#475569] hover:bg-gray-50 hover:text-[#0F172A]"
+                        : "text-muted-foreground hover:bg-surface hover:text-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-4 relative z-10">
@@ -197,7 +212,7 @@ export default function Sidebar() {
                       animate={{ opacity: 1, height: "auto" }}
                       exit={{ opacity: 0, height: 0 }}
                       transition={{ duration: 0.2 }}
-                      className="overflow-hidden bg-[#F7FEE7] rounded-2xl mt-1 mx-2"
+                      className="overflow-hidden bg-brand-lime/10 rounded-2xl mt-1 mx-2"
                     >
                       <div className="py-2 flex flex-col">
                         {item.submenu.map((sub) => (
@@ -207,7 +222,7 @@ export default function Sidebar() {
                             className={`px-12 py-3 text-[14px] font-bold transition-all mx-2 rounded-xl ${
                               pathname === sub.href
                                 ? "bg-white text-[#84CC16] shadow-sm"
-                                : "text-[#475569] hover:text-[#0F172A] hover:translate-x-1"
+                                : "text-muted-foreground hover:text-foreground hover:translate-x-1"
                             }`}
                           >
                             {sub.label}
@@ -223,12 +238,12 @@ export default function Sidebar() {
         </nav>
 
         {/* Support Section - Premium Design */}
-        <div className="mx-4 mb-3 p-5 bg-[#F8FAFC] rounded-[24px] border border-gray-100 space-y-4">
+        <div className="mx-4 mb-3 p-5 bg-surface rounded-[24px] border border-border space-y-4">
           <div className="flex items-center gap-2">
             <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
               <HelpCircle size={16} className="text-blue-600" />
             </div>
-            <h3 className="text-[13px] font-black text-[#0F172A] uppercase tracking-widest">
+            <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">
               Support
             </h3>
           </div>
@@ -240,7 +255,7 @@ export default function Sidebar() {
               <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
                 <Phone size={14} className="text-[#25D366]" />
               </div>
-              <span className="text-[13px] font-bold text-[#64748B] group-hover:text-[#0F172A] transition">
+              <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition">
                 +447777787771
               </span>
             </Link>
@@ -251,7 +266,7 @@ export default function Sidebar() {
               <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
                 <Mail size={14} className="text-[#EA4335]" />
               </div>
-              <span className="text-[13px] font-bold text-[#64748B] group-hover:text-[#0F172A] transition truncate">
+              <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition truncate">
                 reports@imoscan.com
               </span>
             </Link>
@@ -260,7 +275,7 @@ export default function Sidebar() {
 
         {/* User Section */}
         <div className="p-4 pt-0">
-          <div className="bg-[#F8FAFC] border border-gray-100 rounded-[28px] p-4 flex flex-col gap-4 shadow-sm">
+          <div className="bg-surface border border-border rounded-[28px] p-4 flex flex-col gap-4 shadow-sm">
             <div className="flex items-center gap-3 px-1">
               <div className="relative w-11 h-11 rounded-2xl overflow-hidden border-2 border-white/10">
                 <Image
@@ -271,10 +286,10 @@ export default function Sidebar() {
                 />
               </div>
               <div className="flex min-w-0 flex-col">
-                <span className="truncate text-[14px] font-black text-[#0F172A] leading-tight">
+                <span className="truncate text-[14px] font-black text-foreground leading-tight">
                   {profileName}
                 </span>
-                <span className="truncate text-[11px] font-bold text-[#64748B] uppercase tracking-widest">
+                <span className="truncate text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
                   {profileSubtitle}
                 </span>
               </div>
@@ -282,7 +297,7 @@ export default function Sidebar() {
 
             <button
               onClick={() => setShowLogoutModal(true)}
-              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-white border border-gray-100 text-[#64748B] font-black text-xs hover:bg-red-50 hover:text-[#EF4444] hover:border-red-100 transition-all group uppercase tracking-widest"
+              className="flex items-center justify-center gap-2 w-full py-3 px-4 rounded-xl bg-card border border-border text-muted-foreground font-black text-xs hover:bg-destructive/10 hover:text-destructive hover:border-destructive/20 transition-all group uppercase tracking-widest"
             >
               <LogOut
                 size={16}
@@ -324,7 +339,7 @@ export default function Sidebar() {
               initial={{ opacity: 0, scale: 0.9, y: 20 }}
               animate={{ opacity: 1, scale: 1, y: 0 }}
               exit={{ opacity: 0, scale: 0.9, y: 20 }}
-              className="relative w-full max-w-sm bg-white rounded-[40px] p-10 shadow-2xl border border-gray-100 z-[10000]"
+              className="relative w-full max-w-sm bg-card rounded-[40px] p-10 shadow-2xl border border-border z-[10000]"
             >
               <div className="flex flex-col items-center text-center space-y-8">
                 <div className="w-24 h-24 bg-red-50 rounded-full flex items-center justify-center ring-8 ring-red-50/50">
@@ -334,10 +349,10 @@ export default function Sidebar() {
                 </div>
 
                 <div className="space-y-3">
-                  <h3 className="text-2xl font-black text-[#0F172A] tracking-tight">
+                  <h3 className="text-2xl font-black text-foreground tracking-tight">
                     Confirm Logout
                   </h3>
-                  <p className="text-sm font-medium text-[#64748B] leading-relaxed">
+                  <p className="text-sm font-medium text-muted-foreground leading-relaxed">
                     Are you sure you want to log out of your account? You will
                     need to login again to access your dashboard.
                   </p>
@@ -352,7 +367,7 @@ export default function Sidebar() {
                   </button>
                   <button
                     onClick={() => setShowLogoutModal(false)}
-                    className="w-full py-4.5 bg-white border border-gray-100 text-[#64748B] font-black text-[13px] rounded-2xl hover:bg-gray-50 transition-all active:scale-[0.98] uppercase tracking-[0.1em] cursor-pointer"
+                    className="w-full py-4.5 bg-card border border-border text-muted-foreground font-black text-[13px] rounded-2xl hover:bg-surface transition-all active:scale-[0.98] uppercase tracking-[0.1em] cursor-pointer"
                   >
                     Cancel
                   </button>

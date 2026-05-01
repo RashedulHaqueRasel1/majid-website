@@ -924,7 +924,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "// {\r\n//     \"email\": \"sajjad@gmail.com\",\r\n//     \"password\": \"123456\"\r\n// }\r\n\r\n// {\r\n//     \"email\": \"shopkeeper2@gmail.com\",\r\n//     \"password\": \"123456\"\r\n// }\r\n\r\n{\r\n    \"email\": \"admin@gmail.com\",\r\n    \"password\": \"123456\"\r\n}\r\n\r\n\r\n// {\r\n//     \"email\": \"zwdtdwdku3@jkotypc.com\",\r\n//     \"password\": \"Pa$$w0rd!\"\r\n// }",
+              "raw": "// {\r\n//     \"email\": \"sajjad@gmail.com\",\r\n//     \"password\": \"123456\"\r\n// }\r\n\r\n{\r\n    \"email\": \"shopkeeper2@gmail.com\",\r\n    \"password\": \"123456\"\r\n}\r\n\r\n// {\r\n//     \"email\": \"admin@gmail.com\",\r\n//     \"password\": \"123456\"\r\n// }\r\n\r\n\r\n// {\r\n//     \"email\": \"zwdtdwdku3@jkotypc.com\",\r\n//     \"password\": \"Pa$$w0rd!\"\r\n// }",
               "options": {
                 "raw": {
                   "language": "json"
@@ -2051,6 +2051,16 @@
         {
           "name": "Get My Inventory",
           "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJfaWQiOiI2OWVmZTM3Zjc3NGEwNWVlOTFmZjcyNDQiLCJlbWFpbCI6InNob3BrZWVwZXIyQGdtYWlsLmNvbSIsInJvbGUiOiJzaG9wa2VlcGVyIiwiaWF0IjoxNzc3NTAzMDQzLCJleHAiOjE3NzgxMDc4NDN9.SHjpf9lA_c3IgRlKCTtMw9KJ8-Q6zTRbjoqblusdQwY",
+                  "type": "string"
+                }
+              ]
+            },
             "method": "GET",
             "header": [
               {
@@ -2780,21 +2790,45 @@
             "method": "PUT",
             "header": [],
             "body": {
-              "mode": "raw",
-              "raw": "{\n    \"message\": \"Initial inspection completed. Replacement parts required for repair.\",\n    \"date\": \"2026-04-10T09:30:00.000Z\",\n    \"cost\": 120,\n    \"estimatedDays\": 3\n}",
-              "options": {
-                "raw": {
-                  "language": "json"
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "message",
+                  "value": "Initial inspection completed. Replacement parts required for repair.",
+                  "type": "text"
+                },
+                {
+                  "key": "date",
+                  "value": "2026-04-10T09:30:00.000Z",
+                  "type": "text"
+                },
+                {
+                  "key": "cost",
+                  "value": "120",
+                  "type": "text"
+                },
+                {
+                  "key": "estimatedDays",
+                  "value": "3",
+                  "type": "text"
+                },
+                {
+                  "key": "images",
+                  "type": "file",
+                  "src": [
+                    "/home/sajjad/Downloads/mobile-2.jpg",
+                    "/home/sajjad/Downloads/mobile-4.jpeg"
+                  ]
                 }
-              }
+              ]
             },
             "url": {
-              "raw": "{{base_url}}/repair-requests/add-note/69f102b31588348e249c1162",
+              "raw": "{{base_url}}/repair-requests/add-note/69f25941d9283cc64936ce4c",
               "host": ["{{base_url}}"],
               "path": [
                 "repair-requests",
                 "add-note",
-                "69f102b31588348e249c1162"
+                "69f25941d9283cc64936ce4c"
               ]
             }
           },
@@ -3356,7 +3390,7 @@
             "header": [],
             "body": {
               "mode": "raw",
-              "raw": "{\n    \"title\": \"Updated Privacy Policy\",\n    \"message\": \"We have updated our privacy policy to improve transparency and security. Please review the updated terms in your account settings. Continued use of our service means you accept the updated policy.\"\n}",
+              "raw": "{\n    \"title\": \"Updated Privacy Policy\",\n    \"message\": \"We have updated our privacy policy to improve transparency and security. Please review the updated terms in your account settings. Continued use of our service means you accept the updated policy.\"\n}\n",
               "options": {
                 "raw": {
                   "language": "json"
@@ -3442,13 +3476,14 @@
             "method": "GET",
             "header": [],
             "url": {
-              "raw": "{{base_url}}/announcements/all?search=Service Alert",
+              "raw": "{{base_url}}/announcements/all",
               "host": ["{{base_url}}"],
               "path": ["announcements", "all"],
               "query": [
                 {
                   "key": "search",
-                  "value": "Service Alert"
+                  "value": "Service Alert",
+                  "disabled": true
                 }
               ]
             }

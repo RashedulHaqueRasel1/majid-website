@@ -1,57 +1,21 @@
 "use client";
 
-import { Bell, ChevronDown } from "lucide-react";
-import Image from "next/image";
-import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
-import {
-  getShopkeeperDisplayName,
-  getShopkeeperImage,
-  getShopkeeperSubtitle,
-} from "../shopkeeper/profile-utils";
-
 import NotificationDropdown from "@/features/notifications/component/NotificationDropdown";
+import { ModeToggle } from "../website/ModeToggle";
 
 export default function Header() {
-  const { data: profileData } = useMyProfile();
-  const user = profileData?.data;
-  const profileName = getShopkeeperDisplayName(user);
-  const profileImage = getShopkeeperImage(user);
-  const profileSubtitle = getShopkeeperSubtitle(user);
-
   return (
-    <header className="h-20 bg-white/80 backdrop-blur-md border-b border-gray-100 px-8 flex items-center justify-between sticky top-0 z-30">
+    <header className="h-20 bg-background/80 backdrop-blur-md border-b border-border px-8 flex items-center justify-between sticky top-0 z-30">
       {/* Left: Search */}
       <div className="flex-1 max-w-xl"></div>
 
       {/* Right: Actions */}
-      <div className="flex items-center gap-6">
+      <div className="flex items-center gap-4">
+        {/* Theme Toggle */}
+        <ModeToggle />
+
         {/* Notifications */}
         <NotificationDropdown role="customer" />
-
-        {/* User Profile */}
-        <div className="flex items-center gap-3 pl-6 border-l border-gray-100 cursor-pointer group">
-          <div className="max-w-48 text-right">
-            <p className="truncate text-sm font-black text-[#0F172A] leading-none mb-1 group-hover:text-[#84CC16] transition">
-              {profileName}
-            </p>
-            <p className="truncate text-[10px] font-bold text-[#94A3B8] uppercase tracking-wider">
-              {profileSubtitle}
-            </p>
-          </div>
-          <div className="relative h-10 w-10 rounded-2xl overflow-hidden ring-2 ring-gray-50">
-            <Image
-              src={profileImage}
-              alt={profileName}
-              fill
-              sizes="40px"
-              className="object-cover"
-            />
-          </div>
-          <ChevronDown
-            size={16}
-            className="text-gray-400 group-hover:text-[#0F172A] transition"
-          />
-        </div>
       </div>
     </header>
   );
