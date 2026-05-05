@@ -33,6 +33,7 @@ import {
   Camera,
   CheckCircle2,
   Search,
+  FileUp,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -57,6 +58,7 @@ import {
   useCreateInventory,
   useUpdateInventory,
   useCreateFromBarcode,
+  useCreateFromBarcodeBulk,
 } from "../../hooks/useInventory";
 import { ScanResultModal } from "./ScanResultModal";
 
@@ -77,19 +79,29 @@ export function InventoryFormModal({
   const [isCameraActive, setIsCameraActive] = useState(false);
   const html5QrCodeRef = useRef<Html5Qrcode | null>(null);
   const barcodeImageInputRef = useRef<HTMLInputElement>(null);
+  const fileUploadInputRef = useRef<HTMLInputElement>(null);
   const [barcodeImagePreview, setBarcodeImagePreview] = useState<string | null>(
     null,
   );
+  const [bulkFile, setBulkFile] = useState<File | null>(null);
 
   const { mutate: createItem, isPending: isCreating } = useCreateInventory();
   const { mutate: updateItem, isPending: isUpdating } = useUpdateInventory();
   const { mutate: handleCreateFromBarcode, isPending: isCreatingFromBarcode } =
     useCreateFromBarcode();
+  const {
+    mutate: handleCreateFromBarcodeBulk,
+    isPending: isCreatingFromBarcodeBulk,
+  } = useCreateFromBarcodeBulk();
   const { data: session } = useSession();
   const [scanResultModalData, setScanResultModalData] =
     useState<ScanResultData | null>(null);
 
-  const isPending = isCreating || isUpdating || isCreatingFromBarcode;
+  const isPending =
+    isCreating ||
+    isUpdating ||
+    isCreatingFromBarcode ||
+    isCreatingFromBarcodeBulk;
 
   const form = useForm<CreateInventoryInput>({
     resolver: zodResolver(CreateInventorySchema),
@@ -290,6 +302,12 @@ export function InventoryFormModal({
       // Cleanup
       html5QrCode.clear();
     }
+  };
+
+  const handleBulkFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setBulkFile(file);
   };
 
   const renderFormContent = () => (
@@ -605,20 +623,30 @@ export function InventoryFormModal({
           <div className="p-8 bg-white overflow-y-auto flex-1 custom-scrollbar">
             {!isEditMode ? (
               <Tabs defaultValue="single" className="w-full">
-                <TabsList className="grid w-full max-w-sm grid-cols-2 bg-slate-100/70 p-1.5 h-[56px] rounded-[20px] mb-8 mx-auto relative z-10">
+                <TabsList className="grid w-full max-w-lg grid-cols-3 bg-slate-100/70 p-1.5 h-[56px] rounded-[20px] mb-8 mx-auto relative z-10">
                   <TabsTrigger
                     value="single"
                     className="rounded-[14px] font-bold uppercase tracking-wider text-[11px] h-full data-[state=active]:bg-white data-[state=active]:text-[#84CC16] data-[state=active]:shadow-sm transition-all"
                   >
                     <Smartphone className="w-4 h-4 mr-2" />
-                    Manual Entry
+                    <span className="hidden sm:inline">Manual Entry</span>
+                    <span className="sm:hidden">Manual</span>
                   </TabsTrigger>
                   <TabsTrigger
                     value="barcode"
                     className="rounded-[14px] font-bold uppercase tracking-wider text-[11px] h-full data-[state=active]:bg-white data-[state=active]:text-[#84CC16] data-[state=active]:shadow-sm transition-all"
                   >
                     <Barcode className="w-4 h-4 mr-2" />
-                    Scan Barcode
+                    <span className="hidden sm:inline">Scan Barcode</span>
+                    <span className="sm:hidden">Scan</span>
+                  </TabsTrigger>
+                  <TabsTrigger
+                    value="upload"
+                    className="rounded-[14px] font-bold uppercase tracking-wider text-[11px] h-full data-[state=active]:bg-white data-[state=active]:text-[#84CC16] data-[state=active]:shadow-sm transition-all"
+                  >
+                    <FileUp className="w-4 h-4 mr-2" />
+                    <span className="hidden sm:inline">File Upload</span>
+                    <span className="sm:hidden">Upload</span>
                   </TabsTrigger>
                 </TabsList>
 
@@ -729,6 +757,104 @@ export function InventoryFormModal({
                         >
                           Stop Scanning
                         </Button>
+                      </div>
+                    )}
+                  </div>
+                </TabsContent>
+
+                <TabsContent
+                  value="upload"
+                  className="mt-0 border-none p-0 outline-none focus-visible:ring-0"
+                >
+                  <div className="flex flex-col items-center justify-center py-16 border-2 border-dashed border-slate-200 rounded-[32px] bg-slate-50/50 relative overflow-hidden min-h-[400px]">
+                    <div className="absolute top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 w-[400px] h-[400px] bg-[#84CC16]/5 rounded-full blur-[80px] pointer-events-none" />
+
+                    <div className="relative w-24 h-24 rounded-[28px] bg-white shadow-xl shadow-slate-200/50 flex items-center justify-center mb-8 border border-slate-100 z-10 group">
+                      <FileUp className="w-10 h-10 text-slate-400 group-hover:text-[#84CC16] transition-colors" />
+                      <div className="absolute inset-0 border-2 border-transparent group-hover:border-[#84CC16] rounded-[28px] transition-all" />
+                    </div>
+
+                    <h3 className="text-xl font-black uppercase tracking-tight text-slate-900 mb-3 z-10">
+                      Upload Inventory File
+                    </h3>
+                    <p className="text-slate-500 font-medium text-center max-w-[320px] text-sm leading-relaxed mb-8 z-10">
+                      Upload a CSV or Excel file containing multiple inventory
+                      items to add them in bulk.
+                    </p>
+
+                    {bulkFile ? (
+                      <div className="flex flex-col items-center gap-4 z-10 w-full max-w-sm px-4">
+                        <div className="flex items-center justify-between p-4 bg-white rounded-[20px] border border-slate-200 w-full shadow-sm">
+                          <div className="flex items-center gap-3 overflow-hidden">
+                            <div className="w-10 h-10 rounded-[12px] bg-[#84CC16]/10 flex items-center justify-center shrink-0">
+                              <FileUp className="w-5 h-5 text-[#84CC16]" />
+                            </div>
+                            <div className="truncate">
+                              <p className="text-sm font-bold text-slate-900 truncate">
+                                {bulkFile.name}
+                              </p>
+                              <p className="text-[11px] font-semibold text-slate-400">
+                                {(bulkFile.size / 1024).toFixed(1)} KB
+                              </p>
+                            </div>
+                          </div>
+                          <button
+                            onClick={() => setBulkFile(null)}
+                            className="p-2 hover:bg-red-50 text-slate-400 hover:text-red-500 rounded-full transition-colors shrink-0 ml-2"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        </div>
+                        <div className="flex gap-3 w-full">
+                          <Button
+                            type="button"
+                            disabled={isCreatingFromBarcodeBulk}
+                            onClick={() => {
+                              if (!bulkFile) return;
+                              handleCreateFromBarcodeBulk(bulkFile, {
+                                onSuccess: (data) => {
+                                  toast.success("Bulk upload successful");
+                                  setBulkFile(null);
+                                  onClose();
+                                },
+                                onError: (error: unknown) => {
+                                  const apiError = error as {
+                                    response?: { data?: { message?: string } };
+                                  };
+                                  toast.error(
+                                    apiError?.response?.data?.message ||
+                                      "Failed to process bulk file",
+                                  );
+                                },
+                              });
+                            }}
+                            className="flex-1 bg-slate-900 hover:bg-slate-800 text-white rounded-[16px] h-12 font-black uppercase tracking-widest shadow-xl shadow-slate-900/10 active:scale-95 transition-all"
+                          >
+                            {isCreatingFromBarcodeBulk ? (
+                              <Loader2 className="w-5 h-5 animate-spin" />
+                            ) : (
+                              "Process File"
+                            )}
+                          </Button>
+                        </div>
+                      </div>
+                    ) : (
+                      <div className="relative z-10">
+                        <Button
+                          onClick={() => fileUploadInputRef.current?.click()}
+                          type="button"
+                          className="px-8 py-6 bg-slate-900 hover:bg-slate-800 text-white rounded-[20px] font-black text-[12px] uppercase tracking-widest shadow-xl shadow-slate-900/20 transition-all active:scale-95 flex items-center gap-3"
+                        >
+                          <Upload className="w-5 h-5" />
+                          Choose File
+                        </Button>
+                        <input
+                          ref={fileUploadInputRef}
+                          type="file"
+                          accept=".csv, application/vnd.openxmlformats-officedocument.spreadsheetml.sheet, application/vnd.ms-excel"
+                          className="hidden"
+                          onChange={handleBulkFileUpload}
+                        />
                       </div>
                     )}
                   </div>

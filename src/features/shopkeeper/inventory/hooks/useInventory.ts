@@ -5,6 +5,7 @@ import {
   updateInventory,
   deleteInventory,
   createFromBarcode,
+  createFromBarcodeBulk,
 } from "../api/inventory.api";
 import type { CreateInventoryInput, UpdateInventoryInput } from "../types";
 
@@ -61,3 +62,12 @@ export function useCreateFromBarcode() {
     },
   });
 }
+export const useCreateFromBarcodeBulk = () => {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: (file: File) => createFromBarcodeBulk(file),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: INVENTORY_KEYS.all });
+    },
+  });
+};

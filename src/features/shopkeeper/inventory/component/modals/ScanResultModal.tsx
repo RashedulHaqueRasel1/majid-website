@@ -60,9 +60,9 @@ export function ScanResultModal({
               <h4 className="text-xl font-black text-slate-900 mb-1">
                 {data?.itemName || "Device Added"}
               </h4>
-              <p className="text-sm font-bold text-[#84CC16] uppercase tracking-wider">
+              {/* <p className="text-sm font-bold text-[#84CC16] uppercase tracking-wider">
                 IMEI: {data?.imeiNumber || "N/A"}
-              </p>
+              </p> */}
             </div>
 
             <div className="flex items-center gap-3 bg-blue-50/50 rounded-2xl p-4 border border-blue-100/50">
