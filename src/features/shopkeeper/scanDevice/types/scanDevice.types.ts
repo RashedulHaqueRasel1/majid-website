@@ -99,3 +99,30 @@ export interface ServiceListResponse {
     totalCategories: number;
   };
 }
+
+// ─── Batch IMEI Check Types ──────────────────────────────────────────────────
+
+export interface BatchImeiItemResult {
+  rowNumber: number;
+  imei: string;
+  ok: boolean;
+  message: string;
+  cached?: boolean;
+  serviceId?: number;
+  provider?: string;
+  data?: IMEIResult;
+}
+
+export interface BatchImeiSummary {
+  total: number;
+  successCount: number;
+  failedCount: number;
+  sourceFile: string;
+}
+
+export interface BatchImeiResponse {
+  success: boolean;
+  message: string;
+  summary: BatchImeiSummary;
+  data: BatchImeiItemResult[];
+}

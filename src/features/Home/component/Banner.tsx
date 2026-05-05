@@ -8,6 +8,7 @@ import {
   X,
   Info,
   Check,
+  Upload,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import { useState, useEffect } from "react";
@@ -19,6 +20,7 @@ import {
   ServiceCategory,
 } from "@/features/shopkeeper/scanDevice/types/scanDevice.types";
 import { ScannerModal } from "@/components/shared/website/ScannerModal";
+import { BulkImeiUploadModal } from "@/components/shared/website/BulkImeiUploadModal";
 
 export default function Banner() {
   const [imei, setImei] = useState("");
@@ -33,6 +35,7 @@ export default function Banner() {
   );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const { status } = useSession();
   const router = useRouter();
 
@@ -353,12 +356,21 @@ export default function Banner() {
           transition={{ delay: 0.8 }}
           className="mt-6"
         >
-          <button
-            onClick={handleSearch}
-            className="h-12 cursor-pointer rounded-full bg-primary/80 px-8 text-base font-extrabold leading-none text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:bg-primary active:scale-95"
-          >
-            Free Checks
-          </button>
+          <div className="flex items-center gap-4">
+            <button
+              onClick={handleSearch}
+              className="h-12 cursor-pointer rounded-full bg-primary/80 px-8 text-base font-extrabold leading-none text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:bg-primary active:scale-95"
+            >
+              Free Checks
+            </button>
+            <button
+              onClick={() => setIsBulkModalOpen(true)}
+              className="h-12 cursor-pointer rounded-full bg-white/10 border border-white/20 px-8 text-base font-extrabold leading-none text-white shadow-xl backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 flex items-center gap-2"
+            >
+              <Upload size={18} />
+              Bulk Check
+            </button>
+          </div>
         </motion.div>
       </div>
 
@@ -432,6 +444,11 @@ export default function Banner() {
         isOpen={isScannerOpen}
         onClose={() => setIsScannerOpen(false)}
         onScan={(imei) => setImei(imei)}
+      />
+      <BulkImeiUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        serviceId={selectedService?.serviceId || 6}
       />
     </section>
   );
