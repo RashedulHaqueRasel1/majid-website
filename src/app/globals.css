@@ -181,4 +181,9 @@
     padding-inline: 1.5rem;
     font-family: "Poppins", sans-serif;
   }
+
+  @keyframes scan {
+    0%, 100% { top: 0%; }
+    50% { top: 100%; }
+  }
 }
