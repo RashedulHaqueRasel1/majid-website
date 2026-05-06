@@ -22,6 +22,7 @@ import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
+import RepairOfferModal from "./RepairOfferModal";
 // import RepairOfferModal from "./RepairOfferModal";
 // import { set } from "idb-keyval";
 
@@ -61,7 +62,9 @@ const timelineSteps = [
 export default function RepairHistoryDetails({ id }: { id: string }) {
   const { data: detailsData, isLoading } = useRepairRequestDetails(id);
   const updateQuote = useUpdateRepairQuoteStatus();
-  // const [isCounterOffer, setCounterOffer] = useState(false);
+  const [showOfferModal, setShowOfferModal] = useState(false);
+  const [counterOfferId, setCounterOfferId] = useState<string | null>(null);
+  const [shopkeeperId, setShopkeeperId] = useState<string | null>(null);
 
   const [lightbox, setLightbox] = useState<{
     urls: string[];
@@ -385,9 +388,12 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
     doc.save(`Invoice_${request.deviceModel}_${request._id.slice(-5)}.pdf`);
   };
 
-  // const isCounterOfferFunc = (id: string | undefined) => {
-  //   setCounterOffer(true);
-  // };
+  const isCounterOfferFunc = (shopkeeperId: string) => {
+    if (!shopkeeperId) return;
+    setCounterOfferId(id);
+    setShowOfferModal(true);
+    setShopkeeperId(shopkeeperId);
+  };
 
   return (
     <>
@@ -693,12 +699,18 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                     <Button
                       variant="outline"
                       className="flex-1 rounded-full hover:text-white font-bold h-11"
-
-                      // onClick={() => isCounterOfferFunc(latestQuote._id)}
-                      // disabled={updateQuote.isPending}
+                      onClick={() =>
+                        latestQuote._id && isCounterOfferFunc(latestQuote._id)
+                      }
                     >
                       Counter Offer
                     </Button>
+                    <RepairOfferModal
+                      isOpen={showOfferModal}
+                      onClose={() => setShowOfferModal(false)}
+                      id={counterOfferId}
+                      shopkeeperId={shopkeeperId}
+                    />
                     <Button
                       className="flex-1 rounded-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                       onClick={() =>
@@ -835,10 +847,6 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
               <X size={16} />
             </button>
           </div>
-          {/* <RepairOfferModal
-            isOpen={isCounterOffer}
-            onClose={() => setCounterOffer(false)}
-          /> */}
         </div>
       )}
     </>

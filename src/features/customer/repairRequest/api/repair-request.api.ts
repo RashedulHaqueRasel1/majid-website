@@ -121,3 +121,22 @@ export const addRepairRequestNote = async ({
   const response = await api.put(`/repair-requests/add-note/${id}`, formData);
   return response.data;
 };
+
+export const resentRepairRequestNote = async ({
+  id,
+  payload,
+}: {
+  id: string;
+  payload: {
+    message: string;
+    cost?: number;
+    estimatedDays?: number;
+  };
+}): Promise<ApiResponse<RepairRequest>> => {
+  const response = await api.put(`/repair-requests/resent-quote/${id}`, {
+    message: payload.message,
+    cost: payload.cost,
+    estimatedDays: payload.estimatedDays,
+  });
+  return response.data;
+};
