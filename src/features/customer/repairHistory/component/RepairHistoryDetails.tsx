@@ -355,7 +355,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
 
     // QR Code Generation (Left Side)
     try {
-      const qrLink = `https://majid-website-two.vercel.app/my-invoice/${request._id}`;
+      const qrLink = `http://187.77.187.56:4897/my-invoice/${request._id}`;
       const qrDataUrl = await QRCode.toDataURL(qrLink, {
         margin: 1,
         width: 100,
