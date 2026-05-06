@@ -9,13 +9,10 @@ import {
   Mail,
   Phone,
   MapPin,
-  PlayCircle,
   Clock,
   DollarSign,
-  FileText,
   Paperclip,
   X,
-  ZoomIn,
   ChevronLeft,
   ChevronRight,
 } from "lucide-react";
@@ -24,6 +21,7 @@ import {
   useRepairRequestDetails,
   useUpdateRepairRequestStatusByShopkeeper,
   useAddRepairRequestNote,
+  useUpdateResentRepairQuoteStatus,
 } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { Button } from "@/components/ui/button";
 
@@ -31,7 +29,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   const { data: detailsData, isLoading } = useRepairRequestDetails(id);
   const updateStatus = useUpdateRepairRequestStatusByShopkeeper();
   const addNote = useAddRepairRequestNote();
-
+  const updateResentQuote = useUpdateResentRepairQuoteStatus();
   const [noteMessage, setNoteMessage] = useState("");
   const [noteCost, setNoteCost] = useState("");
   const [noteDays, setNoteDays] = useState("");
@@ -50,6 +48,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   }
 
   const request = detailsData?.data;
+
   if (!request) {
     return (
       <div className="flex h-[80vh] items-center justify-center font-bold text-lg text-muted-foreground">
@@ -57,6 +56,16 @@ export default function RepairRequestDetails({ id }: { id: string }) {
       </div>
     );
   }
+
+  // Quote info
+  const quoteNotes = request?.userNotes?.filter((n) => n.cost) || [];
+
+  // latest ta nibo (last item)
+  const latestQuote =
+    quoteNotes.length > 0 ? quoteNotes[quoteNotes.length - 1] : null;
+
+  // status check
+  const isQuoteAvailable = request?.status === "quote-resent" && latestQuote;
 
   const handleStatusUpdate = (status: string) => {
     updateStatus.mutate({ id, status });
@@ -312,58 +321,54 @@ export default function RepairRequestDetails({ id }: { id: string }) {
               )}
 
               {/* Sent Notes & Quotes History */}
-              {request.shopkeeperNotes &&
-                request.shopkeeperNotes.length > 0 && (
-                  <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
-                    <div className="flex items-center justify-between">
-                      <h3 className="text-xl font-black text-foreground">
-                        Notes & Quotes History
-                      </h3>
-                      <span className="px-3 py-1 bg-surface rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                        {request.shopkeeperNotes.length} Entries
-                      </span>
-                    </div>
-                    <div className="space-y-4">
-                      {request.shopkeeperNotes
-                        .slice()
-                        .reverse()
-                        .map((note, idx) => (
-                          <div
-                            key={note._id || idx}
-                            className="bg-surface rounded-2xl p-5 border border-border/50 space-y-3"
-                          >
-                            <div className="flex items-center justify-between mb-2">
-                              <div className="flex items-center gap-2">
-                                <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
-                                  {idx + 1}
-                                </span>
-                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                  {format(
-                                    new Date(note.date),
-                                    "MMM dd, hh:mm a",
-                                  )}
-                                </span>
-                              </div>
-                              {(note.cost || note.estimatedDays) && (
-                                <div className="flex items-center gap-3">
-                                  {note.cost && (
-                                    <span className="text-sm font-black text-foreground">
-                                      {"$"}
-                                      {note.cost.toFixed(2)}
-                                    </span>
-                                  )}
-                                  {note.estimatedDays && (
-                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase">
-                                      {note.estimatedDays} Days
-                                    </span>
-                                  )}
-                                </div>
-                              )}
+              {request.userNotes && request.userNotes.length > 0 && (
+                <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
+                  <div className="flex items-center justify-between">
+                    <h3 className="text-xl font-black text-foreground">
+                      Notes & Quotes History
+                    </h3>
+                    <span className="px-3 py-1 bg-surface rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                      {request.userNotes.length} Entries
+                    </span>
+                  </div>
+                  <div className="space-y-4">
+                    {request.userNotes
+                      .slice()
+                      .reverse()
+                      .map((note, idx) => (
+                        <div
+                          key={note._id || idx}
+                          className="bg-surface rounded-2xl p-5 border border-border/50 space-y-3"
+                        >
+                          <div className="flex items-center justify-between mb-2">
+                            <div className="flex items-center gap-2">
+                              <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
+                                {idx + 1}
+                              </span>
+                              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                {format(new Date(note.date), "MMM dd, hh:mm a")}
+                              </span>
                             </div>
-                            <p className="text-sm font-medium text-foreground/80 leading-relaxed">
-                              {note.message}
-                            </p>
-                            {note.images && note.images.length > 0 && (
+                            {(note.cost || note.estimatedDays) && (
+                              <div className="flex items-center gap-3">
+                                {note.cost && (
+                                  <span className="text-sm font-black text-foreground">
+                                    {"$"}
+                                    {note.cost.toFixed(2)}
+                                  </span>
+                                )}
+                                {note.estimatedDays && (
+                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase">
+                                    {note.estimatedDays} Days
+                                  </span>
+                                )}
+                              </div>
+                            )}
+                          </div>
+                          <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                            {note.message}
+                          </p>
+                          {/* {note.images && note.images.length > 0 && (
                               <div className="flex gap-2 pt-2">
                                 {note.images.map((img, i) => (
                                   <div
@@ -379,63 +384,17 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                                   </div>
                                 ))}
                               </div>
-                            )}
-                          </div>
-                        ))}
-                    </div>
+                            )} */}
+                        </div>
+                      ))}
                   </div>
-                )}
+                </div>
+              )}
             </div>
 
             {/* Right Column */}
             <div className="space-y-6">
               {/* Device Proof Images Card */}
-              <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-4">
-                <h3 className="text-xl font-black text-foreground">
-                  Device Proof Images
-                </h3>
-                <div className="grid grid-cols-2 gap-3">
-                  {request.shopkeeperNotes?.flatMap((n) => n.images || [])
-                    .length ? (
-                    request.shopkeeperNotes
-                      .flatMap((n) => n.images || [])
-                      .slice(0, 4)
-                      .map((img, idx) => (
-                        <div
-                          key={idx}
-                          onClick={() => {
-                            const allUrls =
-                              request.shopkeeperNotes
-                                ?.flatMap((n) => n.images || [])
-                                .map((i) => i.url) ?? [];
-                            setLightbox({ urls: allUrls, index: idx });
-                          }}
-                          className="relative aspect-square rounded-2xl overflow-hidden border border-border group cursor-zoom-in"
-                        >
-                          <Image
-                            src={img.url}
-                            alt={`Proof ${idx}`}
-                            fill
-                            className="object-cover transition-transform group-hover:scale-105"
-                          />
-                          <div className="absolute inset-0 bg-black/0 group-hover:bg-black/20 transition-colors flex items-center justify-center">
-                            <ZoomIn
-                              className="text-white opacity-0 group-hover:opacity-100 transition-opacity drop-shadow-lg"
-                              size={24}
-                            />
-                          </div>
-                        </div>
-                      ))
-                  ) : (
-                    <div className="col-span-2 aspect-video rounded-3xl bg-surface border border-dashed border-border flex flex-col items-center justify-center text-muted-foreground gap-3">
-                      <FileText className="opacity-20 w-12 h-12" />
-                      <p className="text-xs font-bold uppercase tracking-widest opacity-40">
-                        No proof images uploaded yet
-                      </p>
-                    </div>
-                  )}
-                </div>
-              </div>
 
               {/* Shopkeeper Notes Card */}
               <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
@@ -550,6 +509,68 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                   )}
                 </Button>
               </div>
+
+              {/* Approval Required */}
+              {isQuoteAvailable && (
+                <div className="rounded-3xl border border-yellow-200 bg-yellow-50/50 p-6 shadow-sm dark:bg-yellow-900/10 dark:border-yellow-900/50">
+                  <div className="flex items-center justify-between mb-6">
+                    <h3 className="text-base font-black text-foreground">
+                      Approval Required
+                    </h3>
+                    <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-[10px] font-bold text-yellow-700 uppercase tracking-wider dark:bg-yellow-900/50 dark:text-yellow-400">
+                      Pending
+                    </span>
+                  </div>
+
+                  <div className="mb-6">
+                    <div className="flex items-baseline gap-1">
+                      <span className="text-3xl font-black text-foreground">
+                        ${latestQuote.cost?.toFixed(2)}
+                      </span>
+                      <span className="text-sm font-bold text-muted-foreground">
+                        quote total
+                      </span>
+                    </div>
+                    <p className="mt-2 text-xs font-medium text-muted-foreground leading-relaxed">
+                      {latestQuote.message}
+                    </p>
+                  </div>
+
+                  <div className="flex gap-3">
+                    <Button
+                      onClick={() => {
+                        updateResentQuote.mutate({
+                          id: id!,
+                          status: "rejected",
+                          userNotesId: latestQuote._id,
+                        });
+                      }}
+                      variant="outline"
+                      className="flex-1 rounded-full hover:text-white font-bold h-11"
+                    >
+                      Reject Repair
+                    </Button>
+
+                    <Button
+                      className="flex-1 rounded-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
+                      onClick={() =>
+                        updateResentQuote.mutate({
+                          id,
+                          status: "approved",
+                          userNotesId: latestQuote?._id,
+                        })
+                      }
+                      disabled={updateResentQuote.isPending}
+                    >
+                      {updateResentQuote.isPending ? (
+                        <Loader2 className="h-4 w-4 animate-spin" />
+                      ) : (
+                        "Approve Repair"
+                      )}
+                    </Button>
+                  </div>
+                </div>
+              )}
             </div>
           </div>
         </div>

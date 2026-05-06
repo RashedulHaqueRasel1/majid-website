@@ -140,3 +140,22 @@ export const resentRepairRequestNote = async ({
   });
   return response.data;
 };
+
+export const updateRepairReSentQuoteStatus = async ({
+  id,
+  status,
+  userNotesId,
+}: {
+  id: string;
+  status: "approved" | "rejected";
+  userNotesId?: string;
+}): Promise<ApiResponse<RepairRequest>> => {
+  const response = await api.put(
+    `/repair-requests/quote-status-shopkeeper/${id}`,
+    {
+      status,
+      userNotesId,
+    },
+  );
+  return response.data;
+};

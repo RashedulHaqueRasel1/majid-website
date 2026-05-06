@@ -41,7 +41,8 @@ export type RepairRequestStatus =
   | "approved"
   | "rejected"
   | "repair_in_progress"
-  | "completed";
+  | "completed"
+  | "quote-resent";
 
 export interface ShopkeeperNote {
   _id?: string;
@@ -51,6 +52,14 @@ export interface ShopkeeperNote {
   estimatedDays?: number;
   status?: string;
   images?: { public_id: string; url: string }[];
+}
+export interface UserNote {
+  _id?: string;
+  message: string;
+  date: string;
+  cost?: number;
+  estimatedDays?: number;
+  status?: string;
 }
 
 export interface ShopkeeperNotePayload {
@@ -91,4 +100,5 @@ export interface RepairRequest {
   shopkeeperNotes?: ShopkeeperNote[];
   createdAt: string;
   updatedAt: string;
+  userNotes?: UserNote[];
 }
