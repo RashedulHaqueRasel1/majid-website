@@ -12,19 +12,13 @@ import {
   AlertTriangle,
   FileText,
   Download,
-  Smartphone,
   Cpu,
-  Battery,
-  HardDrive,
-  Globe,
-  Radio,
-  History,
-  BadgeCheck,
   Wallet,
   ChevronDown,
+  Upload,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect, useCallback } from "react";
 import {
   checkIMEIApi,
   getServicesApi,
@@ -37,6 +31,8 @@ import {
 import { CertificatePDF } from "./CertificatePDF";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
+import { ScannerModal } from "@/components/shared/website/ScannerModal";
+import { BulkImeiUploadModal } from "@/components/shared/website/BulkImeiUploadModal";
 
 export default function ScanDevice() {
   const [imei, setImei] = useState("");
@@ -53,6 +49,8 @@ export default function ScanDevice() {
     null,
   );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
+  const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
   const certificateRef = useRef<HTMLDivElement>(null);
   const searchParams = useSearchParams();
 
@@ -83,7 +81,7 @@ export default function ScanDevice() {
       }
     };
     fetchServices();
-  }, []);
+  }, [searchParams]);
 
   useEffect(() => {
     const queryImei = searchParams.get("imei");
@@ -100,6 +98,57 @@ export default function ScanDevice() {
     }
   }, [searchParams, services]);
 
+  const steps = [
+    { id: 1, label: "Fetching Data", progress: 100 },
+    { id: 2, label: "Analyzing Components", progress: 100 },
+    { id: 3, label: "Generating Report", progress: 100 },
+  ];
+
+  const handleScan = useCallback(
+    async (manualImei?: string) => {
+      const imeiToScan = manualImei || imei;
+      if (!imeiToScan || !selectedService) return;
+      setIsScanning(true);
+      setScanResult(null);
+      setError(null);
+      setCurrentStep(1);
+
+      try {
+        // Simulate progress steps
+        setTimeout(() => setCurrentStep(2), 1500);
+        setTimeout(() => setCurrentStep(3), 3000);
+
+        const response = await checkIMEIApi(
+          imeiToScan,
+          selectedService.serviceId || 6,
+        );
+
+        if (response.success && response.data) {
+          // Wait for animations to finish before showing results
+          setTimeout(() => {
+            setScanResult(response.data!);
+            setIsScanning(false);
+          }, 4500);
+        } else {
+          setError(response.message || "Failed to check IMEI");
+          setIsScanning(false);
+        }
+      } catch (err: unknown) {
+        const error = err as {
+          response?: { data?: { message?: string } };
+          message?: string;
+        };
+        setError(
+          error.response?.data?.message ||
+            error.message ||
+            "Something went wrong",
+        );
+        setIsScanning(false);
+      }
+    },
+    [imei, selectedService],
+  );
+
   // A separate effect to trigger scan once imei is set from query
   useEffect(() => {
     const queryImei = searchParams.get("imei");
@@ -114,51 +163,7 @@ export default function ScanDevice() {
     ) {
       handleScan();
     }
-  }, [imei, selectedService, searchParams]);
-
-  const steps = [
-    { id: 1, label: "Fetching Data", progress: 100 },
-    { id: 2, label: "Analyzing Components", progress: 100 },
-    { id: 3, label: "Generating Report", progress: 100 },
-  ];
-
-  const handleScan = async () => {
-    if (!imei || !selectedService) return;
-    setIsScanning(true);
-    setScanResult(null);
-    setError(null);
-    setCurrentStep(1);
-
-    try {
-      // Simulate progress steps
-      setTimeout(() => setCurrentStep(2), 1500);
-      setTimeout(() => setCurrentStep(3), 3000);
-
-      const response = await checkIMEIApi(imei, selectedService.serviceId || 6);
-
-      if (response.success && response.data) {
-        // Wait for animations to finish before showing results
-        setTimeout(() => {
-          setScanResult(response.data!);
-          setIsScanning(false);
-        }, 4500);
-      } else {
-        setError(response.message || "Failed to check IMEI");
-        setIsScanning(false);
-      }
-    } catch (err: unknown) {
-      const error = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      setError(
-        error.response?.data?.message ||
-          error.message ||
-          "Something went wrong",
-      );
-      setIsScanning(false);
-    }
-  };
+  }, [imei, selectedService, searchParams, handleScan, isScanning, scanResult]);
 
   const handleDownloadPDF = async () => {
     if (!scanResult) return;
@@ -455,7 +460,7 @@ export default function ScanDevice() {
                 label: "Activation",
                 value: scanResult.technicalBreakdown.activation.label,
               },
-            ].map((item, i) => (
+            ].map((item) => (
               <div key={item.label} className="space-y-2">
                 <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest block">
                   {item.label}
@@ -614,25 +619,40 @@ export default function ScanDevice() {
               disabled={isScanning}
               className="w-full px-8 py-6 rounded-full border border-gray-100 bg-[#FBFBFB] focus:border-[#84CC16] focus:bg-white focus:ring-4 focus:ring-[#84CC16]/5 outline-none transition-all text-lg font-semibold text-[#0F172A] placeholder:text-gray-400 disabled:opacity-50"
             />
-            <div className="absolute right-6 top-[70%] -translate-y-1/2 p-2 text-gray-400">
+            <button
+              onClick={() => setIsScannerOpen(true)}
+              disabled={isScanning}
+              title="Scan Barcode/QR"
+              className="absolute right-6 top-[70%] -translate-y-1/2 p-2 text-gray-400 hover:text-[#84CC16] hover:bg-[#84CC16]/5 rounded-xl transition-all cursor-pointer disabled:opacity-50"
+            >
               <QrCode size={24} />
-            </div>
+            </button>
           </div>
 
-          <button
-            onClick={handleScan}
-            disabled={isScanning || !imei || !selectedService}
-            className="w-full bg-[#84CC16] hover:bg-[#76b813] text-white font-black py-4 rounded-full shadow-lg shadow-lime-500/20 transition-all text-xl active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
-          >
-            {isScanning ? (
-              <>
-                <Loader2 size={24} className="animate-spin" />
-                Scanning...
-              </>
-            ) : (
-              "Scan Now"
-            )}
-          </button>
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+            <button
+              onClick={() => handleScan()}
+              disabled={isScanning || !imei || !selectedService}
+              className="w-full bg-[#84CC16] hover:bg-[#76b813] text-white font-black py-4 rounded-full shadow-lg shadow-lime-500/20 transition-all text-xl active:scale-[0.98] disabled:opacity-70 disabled:cursor-not-allowed flex items-center justify-center gap-3 cursor-pointer"
+            >
+              {isScanning ? (
+                <>
+                  <Loader2 size={24} className="animate-spin" />
+                  Scanning...
+                </>
+              ) : (
+                "Scan Now"
+              )}
+            </button>
+            <button
+              onClick={() => setIsBulkModalOpen(true)}
+              disabled={isScanning}
+              className="w-full bg-white border-2 border-gray-100 text-[#0F172A] hover:border-[#84CC16]/30 hover:bg-gray-50 font-black py-4 rounded-full transition-all text-xl active:scale-[0.98] disabled:opacity-50 flex items-center justify-center gap-3 cursor-pointer"
+            >
+              <Upload size={24} />
+              Bulk Check
+            </button>
+          </div>
 
           {error && (
             <div className="p-4 bg-red-50 border border-red-100 text-red-600 rounded-2xl text-sm font-semibold text-center">
@@ -762,6 +782,23 @@ export default function ScanDevice() {
           ))}
         </div>
       )}
+
+      <ScannerModal
+        isOpen={isScannerOpen}
+        onClose={() => setIsScannerOpen(false)}
+        onScan={(scannedImei) => {
+          setImei(scannedImei);
+          // Automatically trigger scan if service is selected
+          if (selectedService) {
+            handleScan(scannedImei);
+          }
+        }}
+      />
+      <BulkImeiUploadModal
+        isOpen={isBulkModalOpen}
+        onClose={() => setIsBulkModalOpen(false)}
+        serviceId={selectedService?.serviceId || 6}
+      />
     </div>
   );
 }
