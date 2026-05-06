@@ -9,19 +9,24 @@ import {
   CheckCircle2,
   XCircle,
   AlertCircle,
-  ChevronDown,
-  ChevronUp,
   RotateCcw,
   Download,
   Loader2,
+  ChevronLeft,
+  ChevronRight,
 } from "lucide-react";
 import { checkImeiBatchApi } from "@/features/shopkeeper/scanDevice/api/scanDevice.api";
-import type {
-  BatchImeiResponse,
-  BatchImeiItemResult,
-} from "@/features/shopkeeper/scanDevice/types/scanDevice.types";
+import type { BatchImeiResponse } from "@/features/shopkeeper/scanDevice/types/scanDevice.types";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { ImeiReportDetails } from "@/features/shopkeeper/scanDevice/component/ImeiReportDetails";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
@@ -35,6 +40,7 @@ interface BulkImeiUploadModalProps {
   isOpen: boolean;
   onClose: () => void;
   serviceId?: number;
+  onBatchComplete?: (result: BatchImeiResponse) => void;
 }
 
 type UploadPhase = "idle" | "selected" | "uploading" | "done";
@@ -98,86 +104,13 @@ function SummaryCard({
   );
 }
 
-function ResultRow({
-  row,
-  index,
-}: {
-  row: BatchImeiItemResult;
-  index: number;
-}) {
-  const [expanded, setExpanded] = useState(false);
-  const hasData = row.ok && row.data;
-
-  return (
-    <motion.div
-      initial={{ opacity: 0, x: -10 }}
-      animate={{ opacity: 1, x: 0 }}
-      transition={{ delay: index * 0.03, duration: 0.25 }}
-      className={`rounded-xl border ${
-        row.ok ? "bg-lime-50/60 border-lime-100" : "bg-red-50/60 border-red-100"
-      }`}
-    >
-      <div
-        className="flex items-center justify-between px-4 py-3 cursor-pointer"
-        onClick={() => hasData && setExpanded((v) => !v)}
-      >
-        <div className="flex items-center gap-3 min-w-0">
-          {row.ok ? (
-            <CheckCircle2 className="w-4 h-4 text-lime-500 flex-shrink-0" />
-          ) : (
-            <XCircle className="w-4 h-4 text-red-500 flex-shrink-0" />
-          )}
-          <div className="flex flex-col">
-            <span className="text-[10px] font-black text-slate-400 leading-none">
-              Row {row.rowNumber} • {row.imei}
-            </span>
-            <span
-              className={`text-xs font-bold truncate mt-0.5 ${
-                row.ok ? "text-lime-700" : "text-red-600"
-              }`}
-            >
-              {row.message}
-            </span>
-          </div>
-        </div>
-        {hasData && (
-          <button className="flex-shrink-0 ml-2 text-slate-400 hover:text-slate-600 transition">
-            {expanded ? (
-              <ChevronUp className="w-4 h-4" />
-            ) : (
-              <ChevronDown className="w-4 h-4" />
-            )}
-          </button>
-        )}
-      </div>
-
-      <AnimatePresence>
-        {expanded && hasData && (
-          <motion.div
-            initial={{ height: 0, opacity: 0 }}
-            animate={{ height: "auto", opacity: 1 }}
-            exit={{ height: 0, opacity: 0 }}
-            transition={{ duration: 0.2 }}
-            className="overflow-hidden"
-          >
-            <div className="px-4 pb-4 pt-0">
-              <pre className="text-[10px] font-mono bg-white rounded-lg p-3 border border-lime-100 text-slate-600 overflow-auto max-h-40 whitespace-pre-wrap break-all">
-                {JSON.stringify(row.data, null, 2)}
-              </pre>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
-    </motion.div>
-  );
-}
-
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export function BulkImeiUploadModal({
   isOpen,
   onClose,
   serviceId = 6,
+  onBatchComplete,
 }: BulkImeiUploadModalProps) {
   const [phase, setPhase] = useState<UploadPhase>("idle");
   const [file, setFile] = useState<File | null>(null);
@@ -186,7 +119,7 @@ export function BulkImeiUploadModal({
   const [uploadResult, setUploadResult] = useState<BatchImeiResponse | null>(
     null,
   );
-  const [showAll, setShowAll] = useState(false);
+  const [selectedResultIndex, setSelectedResultIndex] = useState(0);
   const [isUploading, setIsUploading] = useState(false);
 
   const { status } = useSession();
@@ -198,7 +131,7 @@ export function BulkImeiUploadModal({
     setFile(null);
     setValidationError(null);
     setUploadResult(null);
-    setShowAll(false);
+    setSelectedResultIndex(0);
     setIsDragging(false);
     setIsUploading(false);
   };
@@ -255,7 +188,20 @@ export function BulkImeiUploadModal({
 
     try {
       const response = await checkImeiBatchApi(file, serviceId);
+
+      if (!response.success) {
+        throw new Error(response.message || "Failed to process IMEI batch.");
+      }
+
       setUploadResult(response);
+      setSelectedResultIndex(0);
+
+      if (onBatchComplete) {
+        onBatchComplete(response);
+        handleClose();
+        return;
+      }
+
       setPhase("done");
     } catch (err: unknown) {
       const error = err as {
@@ -273,18 +219,19 @@ export function BulkImeiUploadModal({
     }
   };
 
-  const visibleRows = showAll
-    ? (uploadResult?.data ?? [])
-    : (uploadResult?.data.slice(0, 8) ?? []);
+  const resultRows = Array.isArray(uploadResult?.data) ? uploadResult.data : [];
+  const selectedRow = resultRows[selectedResultIndex] ?? null;
 
   const overallStatus =
     uploadResult == null
       ? null
-      : uploadResult.summary.failedCount === 0
-        ? "success"
-        : uploadResult.summary.successCount > 0
-          ? "partial"
-          : "none";
+      : !uploadResult.success
+        ? "none"
+        : (uploadResult.summary?.failedCount ?? 0) === 0
+          ? "success"
+          : (uploadResult.summary?.successCount ?? 0) > 0
+            ? "partial"
+            : "none";
 
   return (
     <AnimatePresence>
@@ -539,8 +486,9 @@ export function BulkImeiUploadModal({
                                 : "text-amber-600"
                           }`}
                         >
-                          {uploadResult.summary.total} IMEIs processed from{" "}
-                          {uploadResult.summary.sourceFile}
+                          {uploadResult.summary?.total ?? 0} IMEIs processed
+                          from{" "}
+                          {uploadResult.summary?.sourceFile ?? "uploaded file"}
                         </p>
                       </div>
                     </div>
@@ -549,7 +497,7 @@ export function BulkImeiUploadModal({
                     <div className="grid grid-cols-3 gap-3">
                       <SummaryCard
                         label="Total"
-                        value={uploadResult.summary.total}
+                        value={uploadResult.summary?.total ?? 0}
                         color="slate"
                         icon={
                           <FileSpreadsheet className="w-5 h-5 text-slate-500" />
@@ -557,7 +505,7 @@ export function BulkImeiUploadModal({
                       />
                       <SummaryCard
                         label="Success"
-                        value={uploadResult.summary.successCount}
+                        value={uploadResult.summary?.successCount ?? 0}
                         color="lime"
                         icon={
                           <CheckCircle2 className="w-5 h-5 text-lime-500" />
@@ -565,43 +513,155 @@ export function BulkImeiUploadModal({
                       />
                       <SummaryCard
                         label="Failed"
-                        value={uploadResult.summary.failedCount}
+                        value={uploadResult.summary?.failedCount ?? 0}
                         color="red"
                         icon={<XCircle className="w-5 h-5 text-red-500" />}
                       />
                     </div>
 
-                    {/* Row breakdown */}
-                    <div className="space-y-3">
-                      <div className="flex items-center justify-between">
-                        <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
-                          Results Breakdown
-                        </h3>
+                    {/* Result viewer */}
+                    {selectedRow ? (
+                      <div className="space-y-4">
+                        <div className="rounded-[28px] border border-slate-100 bg-slate-50/70 p-4 md:p-5">
+                          <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                            <div>
+                              <h3 className="text-xs font-black uppercase tracking-widest text-slate-400">
+                                Results Breakdown
+                              </h3>
+                              <p className="mt-2 text-sm font-semibold text-slate-500">
+                                Showing one IMEI result at a time for a cleaner
+                                review flow.
+                              </p>
+                            </div>
+
+                            <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                              <Select
+                                value={String(selectedResultIndex)}
+                                onValueChange={(value) =>
+                                  setSelectedResultIndex(Number(value))
+                                }
+                              >
+                                <SelectTrigger className="w-full min-w-[260px] rounded-xl border-slate-200 bg-white">
+                                  <SelectValue placeholder="Select a result" />
+                                </SelectTrigger>
+                                <SelectContent>
+                                  {resultRows.map((row, index) => (
+                                    <SelectItem
+                                      key={`${row.rowNumber}-${row.imei}-${index}`}
+                                      value={String(index)}
+                                    >
+                                      {`Row ${row.rowNumber} - ${row.imei}`}
+                                    </SelectItem>
+                                  ))}
+                                </SelectContent>
+                              </Select>
+
+                              <button
+                                onClick={() =>
+                                  setSelectedResultIndex((current) =>
+                                    Math.max(current - 1, 0),
+                                  )
+                                }
+                                disabled={selectedResultIndex === 0}
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                <ChevronLeft className="h-4 w-4" />
+                                Prev
+                              </button>
+
+                              <button
+                                onClick={() =>
+                                  setSelectedResultIndex((current) =>
+                                    Math.min(
+                                      current + 1,
+                                      resultRows.length - 1,
+                                    ),
+                                  )
+                                }
+                                disabled={
+                                  selectedResultIndex === resultRows.length - 1
+                                }
+                                className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                              >
+                                Next
+                                <ChevronRight className="h-4 w-4" />
+                              </button>
+                            </div>
+                          </div>
+                        </div>
+
+                        <AnimatePresence mode="wait">
+                          <motion.div
+                            key={`${selectedRow.rowNumber}-${selectedRow.imei}-${selectedResultIndex}`}
+                            initial={{ opacity: 0, y: 8 }}
+                            animate={{ opacity: 1, y: 0 }}
+                            exit={{ opacity: 0, y: -8 }}
+                            transition={{ duration: 0.2 }}
+                          >
+                            {selectedRow.ok && selectedRow.data ? (
+                              <ImeiReportDetails
+                                result={selectedRow.data}
+                                heading="Reports"
+                                caption="Batch results are presented one report at a time so each scan stays readable."
+                                meta={{
+                                  provider: selectedRow.provider,
+                                  serviceId: selectedRow.serviceId,
+                                  cached: selectedRow.cached,
+                                  message: selectedRow.message,
+                                  rowNumber: selectedResultIndex + 1,
+                                  totalRows: resultRows.length,
+                                }}
+                              />
+                            ) : (
+                              <div className="rounded-[32px] border border-red-100 bg-red-50 p-8">
+                                <div className="flex items-start gap-3">
+                                  <XCircle className="mt-0.5 h-6 w-6 text-red-500" />
+                                  <div>
+                                    <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-500">
+                                      Failed Result
+                                    </p>
+                                    <h4 className="mt-2 text-xl font-black text-red-700">
+                                      Row {selectedRow.rowNumber} could not be
+                                      processed
+                                    </h4>
+                                    <p className="mt-3 text-sm font-semibold text-red-600">
+                                      {selectedRow.message}
+                                    </p>
+                                  </div>
+                                </div>
+
+                                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                                  <div className="rounded-2xl border border-red-100 bg-white px-4 py-4">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-400">
+                                      Row
+                                    </p>
+                                    <p className="mt-2 text-sm font-bold text-slate-900">
+                                      {selectedRow.rowNumber}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-2xl border border-red-100 bg-white px-4 py-4">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-400">
+                                      IMEI
+                                    </p>
+                                    <p className="mt-2 text-sm font-bold text-slate-900 break-all">
+                                      {selectedRow.imei}
+                                    </p>
+                                  </div>
+                                  <div className="rounded-2xl border border-red-100 bg-white px-4 py-4">
+                                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-400">
+                                      Service ID
+                                    </p>
+                                    <p className="mt-2 text-sm font-bold text-slate-900">
+                                      {selectedRow.serviceId ?? "N/A"}
+                                    </p>
+                                  </div>
+                                </div>
+                              </div>
+                            )}
+                          </motion.div>
+                        </AnimatePresence>
                       </div>
-                      <div className="space-y-2">
-                        {visibleRows.map((row, i) => (
-                          <ResultRow key={row.rowNumber} row={row} index={i} />
-                        ))}
-                      </div>
-                      {uploadResult.data.length > 8 && (
-                        <button
-                          onClick={() => setShowAll((v) => !v)}
-                          className="w-full py-3 text-xs font-black text-slate-500 hover:text-slate-700 hover:bg-slate-50 rounded-xl transition flex items-center justify-center gap-2"
-                        >
-                          {showAll ? (
-                            <>
-                              <ChevronUp className="w-4 h-4" />
-                              Show less
-                            </>
-                          ) : (
-                            <>
-                              <ChevronDown className="w-4 h-4" />
-                              Show all {uploadResult.data.length} results
-                            </>
-                          )}
-                        </button>
-                      )}
-                    </div>
+                    ) : null}
                   </motion.div>
                 )}
               </AnimatePresence>

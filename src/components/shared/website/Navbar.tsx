@@ -5,9 +5,14 @@ import { useSession } from "next-auth/react";
 import Image from "next/image";
 import { ModeToggle } from "./ModeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
+import { Badge } from "@/components/ui/badge";
+import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
+  const { data: profileData } = useMyProfile({
+    enabled: status === "authenticated",
+  });
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -37,10 +42,17 @@ export default function Navbar() {
     if (!name) return "U";
     return name
       .split(" ")
+      .filter(Boolean)
       .map((n) => n[0])
       .join("")
       .toUpperCase();
   };
+
+  const userImage = profileData?.data?.image?.url || session?.user?.image;
+  const userName =
+    profileData?.data?.firstName && profileData?.data?.lastName
+      ? `${profileData.data.firstName} ${profileData.data.lastName}`
+      : session?.user?.name;
 
   return (
     <header
@@ -65,6 +77,12 @@ export default function Navbar() {
 
         {/* Action buttons and Theme Toggle */}
         <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 md:gap-4">
+          {status === "authenticated" && (
+            <Badge variant={"outline"}>
+              <span>Credits: {profileData?.data?.balance}</span>
+            </Badge>
+          )}
+
           <ModeToggle />
 
           {/* Login button - Only show if NOT authenticated */}
@@ -85,9 +103,11 @@ export default function Navbar() {
                   : "/auth/sign-up"
               }
             >
-              <div className="flex h-10 min-w-[104px] cursor-pointer items-center justify-center rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:opacity-90 md:h-12 md:min-w-[147px] md:px-8 md:text-base">
-                {status === "authenticated" ? "Scan Now" : "Get Started"}
-              </div>
+              {status !== "authenticated" && (
+                <div className="flex h-10 min-w-[104px] cursor-pointer items-center justify-center rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:opacity-90 md:h-12 md:min-w-[147px] md:px-8 md:text-base">
+                  {"Get Started"}
+                </div>
+              )}
             </Link>
 
             {/* Avatar - Only show if authenticated */}
@@ -95,12 +115,12 @@ export default function Navbar() {
               <Link href={getDashboardUrl()}>
                 <Avatar className="h-10 w-10 cursor-pointer border-2 border-primary/20 transition-all hover:border-primary md:h-12 md:w-12">
                   <AvatarImage
-                    src={session?.user?.image}
-                    alt={session?.user?.name || "User"}
+                    src={userImage}
+                    alt={userName || "User"}
                     className="object-cover"
                   />
                   <AvatarFallback className="bg-primary/10 text-primary font-bold">
-                    {getInitials(session?.user?.name)}
+                    {getInitials(userName)}
                   </AvatarFallback>
                 </Avatar>
               </Link>

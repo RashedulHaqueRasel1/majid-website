@@ -1,15 +1,24 @@
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
+import {
+  useQuery,
+  useMutation,
+  useQueryClient,
+  UseQueryOptions,
+} from "@tanstack/react-query";
 import {
   getMyProfile,
   updateProfile,
   changePassword,
 } from "../api/settings.api";
 import { toast } from "sonner";
+import { ProfileResponse } from "../types";
 
-export function useMyProfile() {
-  return useQuery({
+export function useMyProfile(
+  options?: Partial<UseQueryOptions<ProfileResponse>>,
+) {
+  return useQuery<ProfileResponse>({
     queryKey: ["my-profile"],
     queryFn: getMyProfile,
+    ...options,
   });
 }
 

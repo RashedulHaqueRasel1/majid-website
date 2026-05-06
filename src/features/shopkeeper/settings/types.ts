@@ -44,6 +44,7 @@ export interface UserProfile {
     url: string;
     public_id: string;
   };
+  balance: number;
   createdAt: string;
   updatedAt: string;
 }

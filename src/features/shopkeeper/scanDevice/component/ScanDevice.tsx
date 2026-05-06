@@ -16,23 +16,56 @@ import {
   Wallet,
   ChevronDown,
   Upload,
+  ChevronLeft,
+  ChevronRight,
+  CheckCircle2,
+  XCircle,
+  FileSpreadsheet,
 } from "lucide-react";
 import { useSearchParams } from "next/navigation";
-import { useState, useRef, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback } from "react";
 import {
   checkIMEIApi,
   getServicesApi,
 } from "../../scanDevice/api/scanDevice.api";
 import {
+  BatchImeiResponse,
   IMEIResult,
   IMEIService,
   ServiceCategory,
 } from "../../scanDevice/types/scanDevice.types";
-import { CertificatePDF } from "./CertificatePDF";
 import html2canvas from "html2canvas";
 import { jsPDF } from "jspdf";
 import { ScannerModal } from "@/components/shared/website/ScannerModal";
 import { BulkImeiUploadModal } from "@/components/shared/website/BulkImeiUploadModal";
+import { ImeiReportDetails } from "./ImeiReportDetails";
+import {
+  CertificatePDF,
+  CERTIFICATE_PDF_HEIGHT,
+  CERTIFICATE_PDF_WIDTH,
+} from "./CertificatePDF";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+
+const LAST_REPORT_STORAGE_KEY = "imoscan:last-report:v1";
+
+type PersistedReportState = {
+  version: 1;
+  mode: "single" | "bulk";
+  savedAt: string;
+  singleResult?: IMEIResult | null;
+  singleMeta?: {
+    provider?: string;
+    serviceId?: number;
+  };
+  batchResult?: BatchImeiResponse | null;
+  selectedBatchIndex?: number;
+};
 
 export default function ScanDevice() {
   const [imei, setImei] = useState("");
@@ -51,7 +84,14 @@ export default function ScanDevice() {
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
-  const certificateRef = useRef<HTMLDivElement>(null);
+  const [batchResult, setBatchResult] = useState<BatchImeiResponse | null>(
+    null,
+  );
+  const [selectedBatchIndex, setSelectedBatchIndex] = useState(0);
+  const [singleReportMeta, setSingleReportMeta] = useState<{
+    provider?: string;
+    serviceId?: number;
+  } | null>(null);
   const searchParams = useSearchParams();
 
   useEffect(() => {
@@ -98,6 +138,41 @@ export default function ScanDevice() {
     }
   }, [searchParams, services]);
 
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    try {
+      const raw = window.localStorage.getItem(LAST_REPORT_STORAGE_KEY);
+      if (!raw) return;
+
+      const parsed = JSON.parse(raw) as PersistedReportState;
+      if (!parsed || parsed.version !== 1) return;
+
+      if (parsed.mode === "single" && parsed.singleResult) {
+        setScanResult(parsed.singleResult);
+        setBatchResult(null);
+        setSingleReportMeta(parsed.singleMeta ?? null);
+        return;
+      }
+
+      if (parsed.mode === "bulk" && parsed.batchResult) {
+        setBatchResult(parsed.batchResult);
+        setScanResult(null);
+        setSingleReportMeta(null);
+        const maxIndex = Math.max(
+          0,
+          (parsed.batchResult.data?.length ?? 1) - 1,
+        );
+        setSelectedBatchIndex(
+          Math.min(Math.max(parsed.selectedBatchIndex ?? 0, 0), maxIndex),
+        );
+      }
+    } catch (error) {
+      console.error("Failed to restore last IMEI report:", error);
+      window.localStorage.removeItem(LAST_REPORT_STORAGE_KEY);
+    }
+  }, []);
+
   const steps = [
     { id: 1, label: "Fetching Data", progress: 100 },
     { id: 2, label: "Analyzing Components", progress: 100 },
@@ -110,6 +185,7 @@ export default function ScanDevice() {
       if (!imeiToScan || !selectedService) return;
       setIsScanning(true);
       setScanResult(null);
+      setBatchResult(null);
       setError(null);
       setCurrentStep(1);
 
@@ -127,6 +203,10 @@ export default function ScanDevice() {
           // Wait for animations to finish before showing results
           setTimeout(() => {
             setScanResult(response.data!);
+            setSingleReportMeta({
+              provider: selectedService?.name,
+              serviceId: selectedService?.serviceId ?? undefined,
+            });
             setIsScanning(false);
           }, 4500);
         } else {
@@ -165,91 +245,157 @@ export default function ScanDevice() {
     }
   }, [imei, selectedService, searchParams, handleScan, isScanning, scanResult]);
 
-  const handleDownloadPDF = async () => {
-    if (!scanResult) return;
-    setIsDownloading(true);
+  useEffect(() => {
+    if (typeof window === "undefined" || !scanResult) return;
 
-    try {
-      console.log("Starting PDF generation process...");
+    const payload: PersistedReportState = {
+      version: 1,
+      mode: "single",
+      savedAt: new Date().toISOString(),
+      singleResult: scanResult,
+      singleMeta: singleReportMeta ?? undefined,
+    };
 
-      // Wait for elements to be ready
-      await new Promise((resolve) => setTimeout(resolve, 1000));
+    window.localStorage.setItem(
+      LAST_REPORT_STORAGE_KEY,
+      JSON.stringify(payload),
+    );
+  }, [scanResult, singleReportMeta]);
 
-      const element = document.getElementById("certificate-pdf-container");
-      if (!element) {
-        throw new Error(
-          "Target element 'certificate-pdf-container' not found in DOM",
-        );
-      }
+  useEffect(() => {
+    if (typeof window === "undefined" || !batchResult) return;
 
-      const styleSheets = Array.from(
-        document.querySelectorAll("style, link[rel='stylesheet']"),
-      ) as (HTMLStyleElement | HTMLLinkElement)[];
-      const originalMedias = styleSheets.map((s) => s.media || "");
+    const payload: PersistedReportState = {
+      version: 1,
+      mode: "bulk",
+      savedAt: new Date().toISOString(),
+      batchResult,
+      selectedBatchIndex,
+    };
 
-      console.log(
-        `Temporarily disabling ${styleSheets.length} stylesheets to avoid oklch error...`,
-      );
-      styleSheets.forEach((s) => (s.media = "none"));
+    window.localStorage.setItem(
+      LAST_REPORT_STORAGE_KEY,
+      JSON.stringify(payload),
+    );
+  }, [batchResult, selectedBatchIndex]);
 
-      let canvas;
+  const downloadCertificatePdf = useCallback(
+    async (elementIds: string[], filename: string) => {
+      if (elementIds.length === 0) return;
+      setIsDownloading(true);
+
       try {
-        canvas = await html2canvas(element, {
-          scale: 2,
-          useCORS: true,
-          logging: true,
-          backgroundColor: "#ffffff",
-          width: 800,
-          height: 1120,
-          onclone: (clonedDoc) => {
-            const clonedElement = clonedDoc.getElementById(
-              "certificate-pdf-container",
-            );
-            if (clonedElement) {
-              clonedElement.style.opacity = "1";
-              clonedElement.style.visibility = "visible";
-              clonedElement.style.position = "static";
-              clonedElement.style.display = "block";
-              clonedElement.style.backgroundColor = "#ffffff";
-            }
-          },
+        await new Promise((resolve) => setTimeout(resolve, 400));
+
+        const styleSheets = Array.from(
+          document.querySelectorAll("style, link[rel='stylesheet']"),
+        ) as (HTMLStyleElement | HTMLLinkElement)[];
+        const originalMedias = styleSheets.map((s) => s.media || "");
+
+        styleSheets.forEach((s) => (s.media = "none"));
+
+        const pdf = new jsPDF({
+          orientation: "portrait",
+          unit: "px",
+          format: [CERTIFICATE_PDF_WIDTH, CERTIFICATE_PDF_HEIGHT],
         });
+
+        try {
+          for (let index = 0; index < elementIds.length; index += 1) {
+            const element = document.getElementById(elementIds[index]);
+            if (!element) {
+              throw new Error(
+                `Certificate element "${elementIds[index]}" not found in DOM`,
+              );
+            }
+
+            const canvas = await html2canvas(element, {
+              scale: 2,
+              useCORS: true,
+              logging: false,
+              backgroundColor: "#ffffff",
+              width: CERTIFICATE_PDF_WIDTH,
+              height: CERTIFICATE_PDF_HEIGHT,
+            });
+
+            const imgData = canvas.toDataURL("image/png", 1.0);
+
+            if (index > 0) {
+              pdf.addPage(
+                [CERTIFICATE_PDF_WIDTH, CERTIFICATE_PDF_HEIGHT],
+                "portrait",
+              );
+            }
+
+            pdf.addImage(
+              imgData,
+              "PNG",
+              0,
+              0,
+              CERTIFICATE_PDF_WIDTH,
+              CERTIFICATE_PDF_HEIGHT,
+            );
+          }
+        } finally {
+          styleSheets.forEach((s, i) => (s.media = originalMedias[i]));
+        }
+
+        pdf.save(filename);
+      } catch (err: unknown) {
+        const error = err as Error;
+        console.error("Certificate PDF generation failed:", error);
+        alert(
+          `Failed to generate certificate PDF: ${error.message || "Unknown error"}.`,
+        );
       } finally {
-        console.log("Restoring stylesheets...");
-        styleSheets.forEach((s, i) => (s.media = originalMedias[i]));
+        setIsDownloading(false);
       }
+    },
+    [],
+  );
 
-      if (!canvas) throw new Error("Canvas capture failed");
+  const handleDownloadSingleCertificate = useCallback(() => {
+    if (!scanResult) return;
+    void downloadCertificatePdf(
+      ["certificate-pdf-single"],
+      `Certificate_${scanResult.imei}.pdf`,
+    );
+  }, [downloadCertificatePdf, scanResult]);
 
-      console.log("Canvas captured successfully. Generating PDF...");
-      const imgData = canvas.toDataURL("image/png", 1.0);
+  const batchRows = Array.isArray(batchResult?.data) ? batchResult.data : [];
+  const successfulBatchRows = batchRows.filter(
+    (row): row is typeof row & { data: IMEIResult } =>
+      Boolean(row.ok && row.data),
+  );
+  const selectedBatchRow = batchRows[selectedBatchIndex] ?? null;
 
-      const pdf = new jsPDF({
-        orientation: "portrait",
-        unit: "px",
-        format: [800, 1120],
-      });
+  const handleDownloadSelectedBulkCertificate = useCallback(() => {
+    if (!selectedBatchRow?.ok || !selectedBatchRow.data) return;
+    void downloadCertificatePdf(
+      [`certificate-pdf-bulk-${selectedBatchIndex}`],
+      `Certificate_${selectedBatchRow.imei}.pdf`,
+    );
+  }, [downloadCertificatePdf, selectedBatchIndex, selectedBatchRow]);
 
-      pdf.addImage(imgData, "PNG", 0, 0, 800, 1120);
-      pdf.save(`Certificate_${scanResult.imei}.pdf`);
-      console.log("PDF saved successfully.");
-    } catch (err: unknown) {
-      const error = err as Error;
-      console.error("Detailed PDF Generation Error:", error);
-      alert(
-        `Failed to generate PDF: ${error.message || "Unknown error"}. Please check the console for details.`,
-      );
-    } finally {
-      setIsDownloading(false);
-    }
-  };
+  const handleDownloadAllBulkCertificates = useCallback(() => {
+    if (successfulBatchRows.length === 0) return;
+    void downloadCertificatePdf(
+      successfulBatchRows.map(
+        (_, index) => `certificate-pdf-bulk-success-${index}`,
+      ),
+      `Bulk_IMEI_Certificates_${new Date().toISOString().slice(0, 10)}.pdf`,
+    );
+  }, [downloadCertificatePdf, successfulBatchRows]);
 
   if (scanResult) {
     return (
       <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 font-poppins">
         {/* Back Button */}
         <button
-          onClick={() => setScanResult(null)}
+          onClick={() => {
+            setScanResult(null);
+            setSingleReportMeta(null);
+          }}
           className="flex items-center gap-2 text-[#64748B] hover:text-[#0F172A] font-bold transition group cursor-pointer"
         >
           <ArrowLeft
@@ -402,7 +548,7 @@ export default function ScanDevice() {
                 Create Smart Invoice
               </button>
               <button
-                onClick={handleDownloadPDF}
+                onClick={handleDownloadSingleCertificate}
                 disabled={isDownloading}
                 className="w-full py-4 rounded-xl bg-[#84CC16] text-white font-black text-sm hover:bg-[#76b813] transition shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-70 disabled:cursor-wait"
               >
@@ -476,26 +622,48 @@ export default function ScanDevice() {
           </div>
         </motion.div>
 
+        <motion.div
+          initial={{ opacity: 0, y: 30 }}
+          animate={{ opacity: 1, y: 0 }}
+          transition={{ delay: 0.7 }}
+        >
+          <ImeiReportDetails
+            result={scanResult}
+            caption="The scan response is organized into readable report fields for quick review."
+            meta={{
+              provider: singleReportMeta?.provider || selectedService?.name,
+              serviceId:
+                singleReportMeta?.serviceId ??
+                selectedService?.serviceId ??
+                undefined,
+              message: "Single IMEI check completed successfully.",
+            }}
+          />
+        </motion.div>
+
         <div
-          id="certificate-pdf-container"
+          id="certificate-pdf-single-container"
           style={{
             position: "fixed",
             top: 0,
-            left: 0,
-            width: "800px",
-            height: "1120px",
+            left: "-10000px",
+            width: `${CERTIFICATE_PDF_WIDTH}px`,
+            minHeight: `${CERTIFICATE_PDF_HEIGHT}px`,
             backgroundColor: "white",
             pointerEvents: "none",
-            zIndex: -9999,
-            opacity: 0,
-            visibility: "hidden",
+            zIndex: -1,
             overflow: "hidden",
           }}
         >
           <CertificatePDF
             data={scanResult}
-            id="certificate-pdf"
-            ref={certificateRef}
+            id="certificate-pdf-single"
+            providerName={singleReportMeta?.provider || selectedService?.name}
+            serviceId={
+              singleReportMeta?.serviceId ??
+              selectedService?.serviceId ??
+              undefined
+            }
           />
         </div>
       </div>
@@ -503,7 +671,7 @@ export default function ScanDevice() {
   }
 
   return (
-    <div className="min-h-full p-4 md:p-10 flex flex-col items-center justify-center space-y-12 max-w-4xl mx-auto font-poppins">
+    <div className="min-h-full p-4 md:p-10 flex flex-col items-center justify-center space-y-12 mx-auto font-poppins">
       <div className="text-center space-y-4">
         <motion.h1
           initial={{ opacity: 0, y: -20 }}
@@ -527,7 +695,7 @@ export default function ScanDevice() {
         initial={{ opacity: 0, y: 20 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ delay: 0.3 }}
-        className="w-full bg-white rounded-[40px] p-6 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.05)] border border-gray-100"
+        className="w-full bg-white max-w-4xl rounded-[40px] p-6 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.05)] border border"
       >
         <div className="space-y-8">
           <div className="relative">
@@ -798,7 +966,273 @@ export default function ScanDevice() {
         isOpen={isBulkModalOpen}
         onClose={() => setIsBulkModalOpen(false)}
         serviceId={selectedService?.serviceId || 6}
+        onBatchComplete={(result) => {
+          setScanResult(null);
+          setBatchResult(result);
+          setSelectedBatchIndex(0);
+          setSingleReportMeta(null);
+          setError(null);
+        }}
       />
+
+      {batchResult && selectedBatchRow && (
+        <div className="w-full space-y-6 pb-10">
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            className="rounded-[32px] border border-gray-100 bg-white p-6 md:p-8 shadow-sm"
+          >
+            <div className="flex flex-col gap-6 xl:flex-row xl:items-end xl:justify-between">
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-[#84CC16]">
+                  Reports
+                </p>
+                <h2 className="mt-2 text-2xl md:text-3xl font-black text-[#0F172A]">
+                  Bulk IMEI Scan Results
+                </h2>
+                <p className="mt-2 text-sm font-medium text-[#64748B] max-w-2xl">
+                  Results are rendered directly on this page and organized one
+                  at a time for easier review.
+                </p>
+              </div>
+
+              <button
+                onClick={() => {
+                  setBatchResult(null);
+                  setSelectedBatchIndex(0);
+                  if (typeof window !== "undefined") {
+                    window.localStorage.removeItem(LAST_REPORT_STORAGE_KEY);
+                  }
+                }}
+                className="inline-flex items-center justify-center rounded-xl border border-gray-200 px-4 py-2.5 text-sm font-black text-[#64748B] transition hover:bg-gray-50 hover:text-[#0F172A]"
+              >
+                Clear Results
+              </button>
+            </div>
+
+            <div className="mt-6 grid grid-cols-1 gap-3 md:grid-cols-3">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4">
+                <div className="flex items-center gap-3">
+                  <FileSpreadsheet className="h-5 w-5 text-slate-500" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-slate-500">
+                    Total
+                  </span>
+                </div>
+                <p className="mt-3 text-2xl font-black text-slate-900">
+                  {batchResult.summary?.total ?? 0}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-lime-100 bg-lime-50 p-4">
+                <div className="flex items-center gap-3">
+                  <CheckCircle2 className="h-5 w-5 text-lime-600" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-lime-700">
+                    Success
+                  </span>
+                </div>
+                <p className="mt-3 text-2xl font-black text-lime-700">
+                  {batchResult.summary?.successCount ?? 0}
+                </p>
+              </div>
+              <div className="rounded-2xl border border-red-100 bg-red-50 p-4">
+                <div className="flex items-center gap-3">
+                  <XCircle className="h-5 w-5 text-red-500" />
+                  <span className="text-[11px] font-black uppercase tracking-[0.18em] text-red-600">
+                    Failed
+                  </span>
+                </div>
+                <p className="mt-3 text-2xl font-black text-red-600">
+                  {batchResult.summary?.failedCount ?? 0}
+                </p>
+              </div>
+            </div>
+
+            {successfulBatchRows.length > 0 ? (
+              <div className="mt-6 flex justify-end">
+                <button
+                  onClick={handleDownloadAllBulkCertificates}
+                  disabled={isDownloading}
+                  className="inline-flex items-center justify-center gap-2 rounded-xl bg-[#84CC16] px-5 py-3 text-sm font-black text-white transition hover:bg-[#76b813] disabled:cursor-wait disabled:opacity-70"
+                >
+                  {isDownloading ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <Download size={16} />
+                  )}
+                  Download All Certificates
+                </button>
+              </div>
+            ) : null}
+
+            <div className="mt-6 rounded-[28px] border border-gray-100 bg-[#F8FAFC] p-4 md:p-5">
+              <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+                <div>
+                  <h3 className="text-xs font-black uppercase tracking-widest text-[#94A3B8]">
+                    Navigate Results
+                  </h3>
+                  <p className="mt-2 text-sm font-semibold text-[#64748B]">
+                    Use the selector or next and previous controls to inspect
+                    each IMEI report.
+                  </p>
+                </div>
+
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-[minmax(0,1fr)_auto_auto] sm:items-center">
+                  <Select
+                    value={String(selectedBatchIndex)}
+                    onValueChange={(value) =>
+                      setSelectedBatchIndex(Number(value))
+                    }
+                  >
+                    <SelectTrigger className="w-full min-w-[260px] rounded-xl border-slate-200 bg-white">
+                      <SelectValue placeholder="Select a result" />
+                    </SelectTrigger>
+                    <SelectContent>
+                      {batchRows.map((row, index) => (
+                        <SelectItem
+                          key={`${row.rowNumber}-${row.imei}-${index}`}
+                          value={String(index)}
+                        >
+                          {`Row ${row.rowNumber} - ${row.imei}`}
+                        </SelectItem>
+                      ))}
+                    </SelectContent>
+                  </Select>
+
+                  <button
+                    onClick={() =>
+                      setSelectedBatchIndex((current) =>
+                        Math.max(current - 1, 0),
+                      )
+                    }
+                    disabled={selectedBatchIndex === 0}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    <ChevronLeft className="h-4 w-4" />
+                    Prev
+                  </button>
+
+                  <button
+                    onClick={() =>
+                      setSelectedBatchIndex((current) =>
+                        Math.min(current + 1, batchRows.length - 1),
+                      )
+                    }
+                    disabled={selectedBatchIndex === batchRows.length - 1}
+                    className="inline-flex h-10 items-center justify-center gap-2 rounded-xl border border-slate-200 bg-white px-4 text-sm font-black text-slate-700 transition hover:border-slate-300 hover:bg-slate-50 disabled:cursor-not-allowed disabled:opacity-40"
+                  >
+                    Next
+                    <ChevronRight className="h-4 w-4" />
+                  </button>
+                </div>
+              </div>
+            </div>
+          </motion.div>
+
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+          >
+            {selectedBatchRow.ok && selectedBatchRow.data ? (
+              <div className="space-y-4">
+                <div className="flex justify-end">
+                  <button
+                    onClick={handleDownloadSelectedBulkCertificate}
+                    disabled={isDownloading}
+                    className="inline-flex items-center justify-center gap-2 rounded-xl border border-gray-200 bg-white px-5 py-3 text-sm font-black text-[#0F172A] transition hover:bg-gray-50 disabled:cursor-wait disabled:opacity-70"
+                  >
+                    {isDownloading ? (
+                      <Loader2 size={16} className="animate-spin" />
+                    ) : (
+                      <Download size={16} />
+                    )}
+                    Download This Certificate
+                  </button>
+                </div>
+                <ImeiReportDetails
+                  result={selectedBatchRow.data}
+                  caption="Provider data is used as the primary source and organized into a clean report."
+                  meta={{
+                    provider: selectedBatchRow.provider,
+                    serviceId: selectedBatchRow.serviceId,
+                    cached: selectedBatchRow.cached,
+                    message: selectedBatchRow.message,
+                    rowNumber: selectedBatchIndex + 1,
+                    totalRows: batchRows.length,
+                  }}
+                />
+              </div>
+            ) : (
+              <div className="rounded-[32px] border border-red-100 bg-red-50 p-8 shadow-sm">
+                <p className="text-[11px] font-black uppercase tracking-[0.2em] text-red-500">
+                  Failed Result
+                </p>
+                <h3 className="mt-2 text-2xl font-black text-red-700">
+                  Row {selectedBatchRow.rowNumber} could not be processed
+                </h3>
+                <p className="mt-3 text-sm font-semibold text-red-600">
+                  {selectedBatchRow.message}
+                </p>
+                <div className="mt-6 grid grid-cols-1 gap-4 md:grid-cols-3">
+                  <div className="rounded-2xl border border-red-100 bg-white px-4 py-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-400">
+                      Row
+                    </p>
+                    <p className="mt-2 text-sm font-bold text-slate-900">
+                      {selectedBatchRow.rowNumber}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-red-100 bg-white px-4 py-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-400">
+                      IMEI
+                    </p>
+                    <p className="mt-2 text-sm font-bold text-slate-900 break-all">
+                      {selectedBatchRow.imei}
+                    </p>
+                  </div>
+                  <div className="rounded-2xl border border-red-100 bg-white px-4 py-4">
+                    <p className="text-[11px] font-black uppercase tracking-[0.18em] text-red-400">
+                      Service ID
+                    </p>
+                    <p className="mt-2 text-sm font-bold text-slate-900">
+                      {selectedBatchRow.serviceId ?? "N/A"}
+                    </p>
+                  </div>
+                </div>
+              </div>
+            )}
+          </motion.div>
+
+          <div
+            style={{
+              position: "fixed",
+              top: 0,
+              left: "-10000px",
+              width: `${CERTIFICATE_PDF_WIDTH}px`,
+              pointerEvents: "none",
+              zIndex: -1,
+              overflow: "hidden",
+            }}
+          >
+            {successfulBatchRows.map((row, index) => (
+              <CertificatePDF
+                key={`bulk-certificate-${row.rowNumber}-${row.imei}-${index}`}
+                data={row.data}
+                id={`certificate-pdf-bulk-success-${index}`}
+                providerName={row.provider}
+                serviceId={row.serviceId}
+              />
+            ))}
+            {selectedBatchRow?.ok && selectedBatchRow.data ? (
+              <CertificatePDF
+                key={`selected-bulk-certificate-${selectedBatchIndex}`}
+                data={selectedBatchRow.data}
+                id={`certificate-pdf-bulk-${selectedBatchIndex}`}
+                providerName={selectedBatchRow.provider}
+                serviceId={selectedBatchRow.serviceId}
+              />
+            ) : null}
+          </div>
+        </div>
+      )}
     </div>
   );
 }
