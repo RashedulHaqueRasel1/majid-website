@@ -105,7 +105,7 @@ export default function Sidebar() {
                 src="/images/logo.png"
                 alt="Logo"
                 fill
-                className="object-contain dark:invert"
+                className="object-contain "
               />
             </div>
           </Link>

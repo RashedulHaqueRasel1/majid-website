@@ -70,7 +70,7 @@ export default function Navbar() {
               src="/images/logo.png"
               alt="Logo"
               fill
-              className="object-contain dark:invert"
+              className="object-contain "
             />
           </div>
         </Link>
