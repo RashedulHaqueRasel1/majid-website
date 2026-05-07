@@ -91,26 +91,45 @@ export default function Banner() {
     {
       label: "iPhone all in one / best fee",
       keyword: "apple",
+      type: "premium",
     },
     {
       label: "Samsung full report / best before buy",
       keyword: "samsung",
+      type: "premium",
     },
     {
       label: "Mac full check / best before buy",
       keyword: "mac",
+      type: "premium",
     },
     {
       label: "FMI",
       keyword: "fmi",
+      type: "specialized",
+      description: "Find My iPhone Status",
+      icon: "🔒",
     },
     {
       label: "Carrier",
       keyword: "carrier",
+      type: "specialized",
+      description: "Carrier Info",
+      icon: "📡",
+    },
+    {
+      label: "MDM",
+      keyword: "mdm",
+      type: "specialized",
+      description: "Mobile Device Management",
+      icon: "🛡️",
     },
     {
       label: "GSX",
       keyword: "gsx",
+      type: "specialized",
+      description: "Global Service Exchange",
+      icon: "🌐",
     },
   ];
 
@@ -153,7 +172,7 @@ export default function Banner() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mt-3 max-w-[760px] text-base leading-7 text-muted-foreground text-white sm:text-lg lg:text-xl"
+          className="mt-3 max-w-[760px] text-base leading-7 text-muted-foreground text-black/60 dark:text-white sm:text-lg lg:text-xl"
         >
           Advanced AI-powered diagnostics and blacklisting checks for secure{" "}
           <br className="hidden md:block" />
@@ -356,25 +375,71 @@ export default function Banner() {
           </div>
         </motion.div>
 
-        {/* Tags */}
+        {/* Tags Section */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 flex w-full max-w-6xl flex-wrap justify-center gap-4"
+          className="mt-12 flex w-full max-w-6xl flex-col items-center gap-8"
         >
-          {quickChecks.map((tag, i) => (
-            <button
-              key={i}
-              onClick={() => {
-                setSearchTerm(tag.keyword);
-                setIsDropdownOpen(true);
-              }}
-              className="h-[50px] cursor-pointer rounded-full bg-[linear-gradient(166.27deg,rgba(132,204,22,0.2)_5.25%,rgba(91,94,13,0.2)_137.31%)] px-8 text-base font-extrabold leading-none text-white shadow-[0_3px_8px_rgba(136,144,194,0.25),0_7px_21px_rgba(37,44,97,0.2)] transition hover:bg-primary/30 max-md:h-auto max-md:min-h-[44px] max-md:px-5 max-md:text-sm border border-white"
-            >
-              {tag.label}
-            </button>
-          ))}
+          {/* Premium Buttons Row */}
+          <div className="flex flex-wrap justify-center gap-4">
+            {quickChecks
+              .filter((tag) => tag.type === "premium")
+              .map((tag, i) => (
+                <motion.button
+                  key={i}
+                  whileHover={{ scale: 1.05 }}
+                  whileTap={{ scale: 0.95 }}
+                  onClick={() => {
+                    setSearchTerm(tag.keyword);
+                    setIsDropdownOpen(true);
+                  }}
+                  className="group relative h-[50px] cursor-pointer overflow-hidden rounded-full bg-gradient-to-r from-[#4380b9] via-[#5196d7d2] to-[#4888c451] px-8 text-base font-extrabold leading-none text-white shadow-[#4380b942] transition-all hover:shadow-[0_10px_25px_rgba(132,204,22,0.4)] max-md:h-auto max-md:min-h-[44px] max-md:px-5 max-md:text-sm"
+                >
+                  <div className="absolute inset-0 bg-gradient-to-r from-white/20 via-transparent to-white/20 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+                  <div className="absolute inset-0 bg-gradient-to-t from-black/10 to-transparent" />
+
+                  <span className="relative flex items-center gap-2">
+                    {tag.label}
+                  </span>
+                </motion.button>
+              ))}
+          </div>
+
+          {/* Specialized Cards Row */}
+          <div className="flex flex-wrap justify-center gap-6">
+            {quickChecks
+              .filter((tag) => tag.type === "specialized")
+              .map((tag, i) => (
+                <motion.button
+                  key={i}
+                  whileHover={{ y: -5, scale: 1.02 }}
+                  whileTap={{ scale: 0.98 }}
+                  onClick={() => {
+                    setSearchTerm(tag.keyword);
+                    setIsDropdownOpen(true);
+                  }}
+                  className="group relative flex w-[100px] cursor-pointer flex-col items-center gap-2 rounded-2xl bg-white/20 p-4 backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:shadow-[0_8px_25px_rgba(132,204,22,0.2)] border border-white/20"
+                >
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
+
+                  <div className="relative z-10 flex h-12 w-12 items-center justify-center rounded-xl bg-gradient-to-br from-primary/20 to-primary/10 text-2xl shadow-lg transition-all duration-300 group-hover:from-primary/30 group-hover:to-primary/20 group-hover:shadow-primary/20">
+                    {tag.icon}
+                  </div>
+
+                  <div className="relative z-10 text-center">
+                    <div className="text-sm font-extrabold text-black/50 dark:text-white">
+                      {tag.label}
+                    </div>
+                  </div>
+
+                  <div className="absolute bottom-2 left-1/2 h-0.5 w-0 -translate-x-1/2 rounded-full bg-primary transition-all duration-300 group-hover:w-8" />
+                </motion.button>
+              ))}
+          </div>
         </motion.div>
 
         <motion.div
@@ -392,7 +457,7 @@ export default function Banner() {
             </button>
             <button
               onClick={() => setIsBulkModalOpen(true)}
-              className="h-12 cursor-pointer rounded-full bg-white/10 border border-white/20 px-8 text-base font-extrabold leading-none text-white shadow-xl backdrop-blur-md transition-all hover:bg-white/20 active:scale-95 flex items-center gap-2"
+              className="h-12 cursor-pointer rounded-full border-primary text-primary bg-white/20 border  px-8 text-base font-extrabold leading-none shadow-lg backdrop-blur-md transition-all active:scale-95 flex items-center gap-2 hover:bg-primary hover:text-white dark:text-white"
             >
               <Upload size={18} />
               Bulk Check
