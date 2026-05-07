@@ -84,6 +84,7 @@ export function InventoryFormModal({
     null,
   );
   const [bulkFile, setBulkFile] = useState<File | null>(null);
+  const [manualBarcode, setManualBarcode] = useState("");
 
   const { mutate: createItem, isPending: isCreating } = useCreateInventory();
   const { mutate: updateItem, isPending: isUpdating } = useUpdateInventory();
@@ -108,6 +109,8 @@ export function InventoryFormModal({
     defaultValues: {
       itemName: "",
       imeiNumber: "",
+      modelNumber: "",
+      quantity: 1,
       purchasePrice: undefined,
       expectedPrice: undefined,
       currentState: "new",
@@ -119,6 +122,8 @@ export function InventoryFormModal({
       form.reset({
         itemName: item.itemName,
         imeiNumber: item.imeiNumber ?? "",
+        modelNumber: item.modelNumber ?? "",
+        quantity: item.quantity ?? 1,
         purchasePrice: item.purchasePrice,
         expectedPrice: item.expectedPrice,
         currentState: item.currentState,
@@ -127,6 +132,8 @@ export function InventoryFormModal({
       form.reset({
         itemName: "",
         imeiNumber: "",
+        modelNumber: "",
+        quantity: 1,
         purchasePrice: undefined,
         expectedPrice: undefined,
         currentState: "new",
@@ -175,6 +182,7 @@ export function InventoryFormModal({
         },
       );
     } else {
+      console.log("Inventory add form values:", values);
       createItem(values, {
         onSuccess: () => {
           toast.success("Item added to inventory");
@@ -246,9 +254,40 @@ export function InventoryFormModal({
     setIsCameraActive(false);
   };
 
+  const handleManualBarcodeSubmit = () => {
+    if (!manualBarcode.trim()) {
+      toast.error("Please enter a barcode or IMEI");
+      return;
+    }
+
+    if (session?.user?.id) {
+      handleCreateFromBarcode(
+        { code: manualBarcode.trim(), userId: session.user.id },
+        {
+          onSuccess: (data) => {
+            setScanResultModalData(data);
+            toast.success("Device found and added successfully");
+            setManualBarcode("");
+          },
+          onError: (error: unknown) => {
+            const apiError = error as {
+              response?: { data?: { message?: string } };
+            };
+            toast.error(
+              apiError?.response?.data?.message || "Failed to process barcode",
+            );
+          },
+        },
+      );
+    } else {
+      toast.error("User not authenticated");
+    }
+  };
+
   useEffect(() => {
     if (!isOpen) {
       stopScanning();
+      setManualBarcode("");
     }
   }, [isOpen]);
 
@@ -312,7 +351,7 @@ export function InventoryFormModal({
 
   const renderFormContent = () => (
     <Form {...form}>
-      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8">
+      <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-8 ">
         <div className="flex flex-col gap-y-8">
           {/* Left Column: Basic Details */}
           <div className="space-y-6">
@@ -332,7 +371,7 @@ export function InventoryFormModal({
               render={({ field }) => (
                 <FormItem>
                   <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-1">
-                    Item Name <span className="text-red-500">*</span>
+                    Product Name <span className="text-red-500">*</span>
                   </FormLabel>
                   <FormControl>
                     <div className="relative group">
@@ -369,6 +408,35 @@ export function InventoryFormModal({
                         </div>
                         <Input
                           placeholder="Enter 15-digit code"
+                          className="pl-14 pr-4 bg-slate-50/80 border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-[20px] h-[56px] font-bold text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#84CC16]/15 focus-visible:border-[#84CC16] transition-all shadow-sm"
+                          {...field}
+                        />
+                      </div>
+                    </FormControl>
+                    <FormMessage className="text-[10px] uppercase tracking-wider font-bold" />
+                  </FormItem>
+                )}
+              />
+            )}
+
+            {/* Model Number */}
+            {!isEditMode && (
+              <FormField
+                control={form.control}
+                name="modelNumber"
+                render={({ field }) => (
+                  <FormItem>
+                    <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-">
+                      Model Number
+                      <span className="text-red-500">*</span>
+                    </FormLabel>
+                    <FormControl>
+                      <div className="relative group">
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-[14px] flex items-center justify-center shadow-sm border border-slate-100 group-focus-within:border-[#84CC16]/30 group-focus-within:bg-[#84CC16]/5 transition-all z-10">
+                          <Hash className="w-4 h-4 text-slate-400 group-focus-within:text-[#84CC16] transition-colors" />
+                        </div>
+                        <Input
+                          placeholder="Enter Model Number"
                           className="pl-14 pr-4 bg-slate-50/80 border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-[20px] h-[56px] font-bold text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#84CC16]/15 focus-visible:border-[#84CC16] transition-all shadow-sm"
                           {...field}
                         />
@@ -419,6 +487,33 @@ export function InventoryFormModal({
                       </SelectItem>
                     </SelectContent>
                   </Select>
+                  <FormMessage className="text-[10px] uppercase tracking-wider font-bold" />
+                </FormItem>
+              )}
+            />
+
+            <FormField
+              control={form.control}
+              name="quantity"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-500 mb-2 block ml-1">
+                    Quantity <span className="text-red-500">*</span>
+                  </FormLabel>
+                  <FormControl>
+                    <div className="relative group">
+                      <div className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-[14px] flex items-center justify-center shadow-sm border border-slate-100 group-focus-within:border-[#84CC16]/30 group-focus-within:bg-[#84CC16]/5 transition-all z-10">
+                        <Hash className="w-4 h-4 text-slate-400 group-focus-within:text-[#84CC16] transition-colors" />
+                      </div>
+                      <Input
+                        type="number"
+                        min={1}
+                        placeholder="Enter quantity"
+                        className="pl-14 pr-4 bg-slate-50/80 border-slate-200 hover:border-slate-300 hover:bg-slate-50 rounded-[20px] h-[56px] font-bold text-slate-900 placeholder:text-slate-400 focus-visible:bg-white focus-visible:ring-4 focus-visible:ring-[#84CC16]/15 focus-visible:border-[#84CC16] transition-all shadow-sm"
+                        {...field}
+                      />
+                    </div>
+                  </FormControl>
                   <FormMessage className="text-[10px] uppercase tracking-wider font-bold" />
                 </FormItem>
               )}
@@ -701,8 +796,45 @@ export function InventoryFormModal({
                         <p className="text-slate-500 font-medium text-center max-w-[320px] text-sm leading-relaxed mb-8 z-10">
                           {barcodeImagePreview
                             ? "Please wait while we extract the barcode data from your uploaded photo."
-                            : "Choose to scan via live camera or upload a clear photo of the barcode."}
+                            : "Choose to scan via live camera or upload a photo, or enter it manually below."}
                         </p>
+
+                        {/* Manual Barcode Input */}
+                        <div className="w-full max-w-sm mb-8 z-10 px-4">
+                          <div className="relative group">
+                            <div className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white rounded-[14px] flex items-center justify-center shadow-sm border border-slate-100 group-focus-within:border-[#84CC16]/30 group-focus-within:bg-[#84CC16]/5 transition-all z-10">
+                              <Hash className="w-4 h-4 text-slate-400 group-focus-within:text-[#84CC16] transition-colors" />
+                            </div>
+                            <input
+                              type="text"
+                              placeholder="Type barcode or IMEI..."
+                              value={manualBarcode}
+                              onChange={(e) => setManualBarcode(e.target.value)}
+                              onKeyDown={(e) => {
+                                if (e.key === "Enter") {
+                                  e.preventDefault();
+                                  handleManualBarcodeSubmit();
+                                }
+                              }}
+                              className="w-full pl-14 pr-14 bg-white border border-slate-200 hover:border-slate-300 rounded-[20px] h-[56px] font-bold text-slate-900 placeholder:text-slate-400 focus-visible:ring-4 focus-visible:ring-[#84CC16]/15 focus-visible:border-[#84CC16] outline-none transition-all shadow-sm"
+                            />
+                            <button
+                              type="button"
+                              onClick={handleManualBarcodeSubmit}
+                              disabled={
+                                isCreatingFromBarcode || !manualBarcode.trim()
+                              }
+                              className="absolute right-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-slate-900 text-white rounded-[14px] flex items-center justify-center hover:bg-slate-800 disabled:bg-slate-200 disabled:cursor-not-allowed transition-all z-10"
+                            >
+                              {isCreatingFromBarcode ? (
+                                <Loader2 className="w-4 h-4 animate-spin" />
+                              ) : (
+                                <Search className="w-4 h-4" />
+                              )}
+                            </button>
+                          </div>
+                        </div>
+
                         <div className="flex flex-wrap items-center justify-center gap-4 z-10">
                           <Button
                             onClick={startScanning}

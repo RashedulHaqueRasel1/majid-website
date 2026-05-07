@@ -34,6 +34,14 @@ export default function Inventory() {
   const { data: inventoryData, isLoading, isError } = useMyInventory();
   const { mutate: deleteItem } = useDeleteInventory();
 
+  console.log(inventoryData);
+
+  // Find the item by _id and access its quantity
+  const item = inventoryData?.data?.find(
+    (item) => item._id === "69fcb33db608bb878574aa04",
+  );
+  const quantity = item ? item.quantity : "Item not found";
+
   const { data: soldData, isLoading: isSoldLoading } = useMySoldProducts();
   const { mutate: deleteSold } = useDeleteSoldProduct();
 
@@ -64,12 +72,10 @@ export default function Inventory() {
   }, [items]);
 
   const handleDelete = (id: string) => {
-    if (window.confirm("Are you sure you want to delete this item?")) {
-      deleteItem(id, {
-        onSuccess: () => toast.success("Item deleted"),
-        onError: () => toast.error("Delete failed"),
-      });
-    }
+    deleteItem(id, {
+      onSuccess: () => toast.success("Item deleted"),
+      onError: () => toast.error("Delete failed"),
+    });
   };
 
   const handleDeleteSold = (id: string) => {
@@ -95,14 +101,14 @@ export default function Inventory() {
     );
 
   return (
-    <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-16 font-poppins relative">
+    <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-16 font-poppins relative dark:bg-background">
       {/* Inventory Header */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div className="space-y-1">
-          <h1 className="text-3xl font-black text-[#0F172A] tracking-tight">
+          <h1 className="text-3xl font-black dark:text-white text-[#0F172A] tracking-tight">
             Inventory
           </h1>
-          <p className="text-[#64748B] font-bold text-sm">
+          <p className="text-[#64748B] font-bold text-sm dark:text-white ">
             {items.length} Items in Stock - ${totalValue.toLocaleString()} Total
             Revenue Potential
           </p>
@@ -115,7 +121,7 @@ export default function Inventory() {
               placeholder="Search devices..."
               value={searchQuery}
               onChange={(e) => setSearchQuery(e.target.value)}
-              className="pl-12 pr-4 h-12 w-64 bg-white border border-slate-100 rounded-xl font-bold text-sm focus:ring-[#84CC16] focus:border-[#84CC16] outline-none transition"
+              className="pl-12 pr-4 h-12 w-64 bg-white border border-slate-100 dark:bg-slate-800 dark:border-slate-600 dark:text-white rounded-xl font-bold text-sm focus:ring-[#84CC16] focus:border-[#84CC16] outline-none transition"
             />
           </div>
           <button
@@ -132,7 +138,7 @@ export default function Inventory() {
       </div>
 
       {/* Stock Grid */}
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 ">
         {stockItems.length > 0 ? (
           stockItems.map((item: InventoryItem, i: number) => (
             <motion.div
@@ -140,7 +146,7 @@ export default function Inventory() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: i * 0.05 }}
-              className="bg-white rounded-[32px] p-6 border border-gray-100 shadow-sm hover:shadow-xl transition-all group relative"
+              className="bg-white rounded-[32px] p-6 border border-border shadow-sm hover:shadow-xl dark:bg-card transition-all group relative "
             >
               <div className="flex gap-6">
                 <div className="relative w-32 h-32 rounded-2xl overflow-hidden flex-shrink-0 border border-gray-50 bg-slate-50">
@@ -161,10 +167,10 @@ export default function Inventory() {
                 <div className="flex-1 space-y-3">
                   <div className="flex justify-between items-start">
                     <div>
-                      <h3 className="text-[15px] font-black text-[#0F172A] leading-tight">
+                      <h3 className="text-[15px] font-black text-[#0F172A] leading-tight dark:text-white">
                         {item.itemName}
                       </h3>
-                      <p className="text-[11px] font-bold text-[#94A3B8] mt-1">
+                      <p className="text-[11px] font-bold text-[#94A3B8] mt-1 dark:text-gray-400">
                         {item.imeiNumber || "No IMEI"}
                       </p>
                       <p className="text-[10px] font-medium text-[#CBD5E1] line-clamp-1">
@@ -225,11 +231,11 @@ export default function Inventory() {
                       <span className="text-[11px] font-bold text-gray-300 line-through">
                         ${(item.expectedPrice * 1.2).toFixed(0)}
                       </span>
-                      <span className="text-xl font-black text-[#0F172A]">
+                      <span className="text-xl font-black text-[#0F172A] dark:text-white">
                         ${item.expectedPrice.toLocaleString()}
                       </span>
                     </div>
-                    <span className="text-[10px] font-bold text-[#64748B]">
+                    <span className="text-[10px] font-bold text-[#64748B] dark:text-gray-400">
                       Qty : 1
                     </span>
                   </div>
@@ -254,10 +260,10 @@ export default function Inventory() {
       <div className="space-y-8">
         <div className="flex items-center justify-between">
           <div>
-            <h2 className="text-2xl font-black text-[#0F172A] tracking-tight">
+            <h2 className="text-2xl font-black text-[#0F172A] tracking-tight dark:text-white">
               Sold Items
             </h2>
-            <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-widest mt-1">
+            <p className="text-[11px] font-bold text-[#94A3B8] uppercase tracking-widest mt-1 dark:text-gray-400">
               History of your sales and pending payments
             </p>
           </div>
@@ -270,29 +276,29 @@ export default function Inventory() {
           </button>
         </div>
 
-        <div className="bg-white rounded-[40px] border border-gray-100 shadow-sm overflow-hidden overflow-x-auto">
-          <table className="w-full text-left border-collapse min-w-[1000px]">
+        <div className="bg-card  rounded-[40px] border border-border shadow-sm overflow-hidden overflow-x-auto ">
+          <table className="w-full text-left border-collapse min-w-[1000px] dark:text-white">
             <thead>
-              <tr className="bg-gray-50/50">
-                <th className="px-8 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+              <tr className=" border-b border-border bg-surface">
+                <th className="px-8 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest">
                   Item Name
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest">
                   IMEI Number
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest">
                   Due Date
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest">
                   Purchase Price
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest">
                   Expected Price
                 </th>
-                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest text-center">
+                <th className="px-6 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest text-center">
                   Quantity
                 </th>
-                <th className="px-8 py-5 text-[10px] font-black text-[#94A3B8] uppercase tracking-widest text-right">
+                <th className="px-8 py-5 text-[10px] font-black text-[#94A3B8] dark:text-white uppercase tracking-widest text-right">
                   Actions
                 </th>
               </tr>
@@ -306,7 +312,7 @@ export default function Inventory() {
                   >
                     <td className="px-8 py-5">
                       <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 rounded-xl bg-slate-50 border border-gray-100 overflow-hidden relative flex-shrink-0">
+                        <div className="w-12 h-12 rounded-xl bg-slate-50 border border-gray-100 overflow-hidden relative flex-shrink-0 dark:text-white">
                           {item.image?.url ? (
                             <Image
                               src={item.image.url}
@@ -321,38 +327,38 @@ export default function Inventory() {
                           )}
                         </div>
                         <div>
-                          <p className="text-sm font-black text-[#0F172A]">
+                          <p className="text-sm font-black text-[#0F172A] dark:text-white">
                             {item.name}
                           </p>
-                          <p className="text-[10px] font-bold text-[#94A3B8] uppercase">
+                          <p className="text-[10px] font-bold text-[#94A3B8] dark:text-white uppercase">
                             {item.model}
                           </p>
                         </div>
                       </div>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="text-xs font-bold text-[#64748B]">
+                      <span className="text-xs font-bold text-[#64748B] dark:text-gray-400">
                         {item.imeiNumber}
                       </span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="text-xs font-bold text-[#64748B]">
+                      <span className="text-xs font-bold text-[#64748B] dark:text-gray-400">
                         {new Date(item.dueDate).toLocaleDateString()}
                       </span>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <span className="text-xs font-black text-[#64748B]">
+                      <span className="text-xs font-black text-[#64748B] dark:text-gray-400">
                         ${item.purchasePrice}
                       </span>
                     </td>
                     <td className="px-6 py-5">
-                      <span className="text-sm font-black text-[#84CC16]">
+                      <span className="text-sm font-black text-[#84CC16] dark:text-green-400">
                         ${item.expectedPrice}
                       </span>
                     </td>
                     <td className="px-6 py-5 text-center">
-                      <span className="text-xs font-black text-[#0F172A]">
-                        {item.quantity}
+                      <span className="text-xs font-black text-[#0F172A] dark:text-white">
+                        {quantity}
                       </span>
                     </td>
                     <td className="px-8 py-5 text-right">

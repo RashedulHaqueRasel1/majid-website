@@ -6,6 +6,8 @@ export const InventoryItemSchema = z.object({
   _id: z.string(),
   itemName: z.string(),
   imeiNumber: z.string().optional(),
+  modelNumber: z.string().optional(),
+  quantity: z.number().optional(),
   purchasePrice: z.number().optional(),
   expectedPrice: z.number(),
   currentState: z.enum(["new", "good condition"]),
@@ -19,6 +21,8 @@ export const InventoryItemSchema = z.object({
   shopkeeper: z.string().optional(),
   createdAt: z.string(),
   updatedAt: z.string(),
+  productDetails: z.string().optional(),
+  aiDescription: z.string().optional(),
   // Extended fields for website UI if needed
   specs: z
     .object({
@@ -54,6 +58,8 @@ export const InventorySingleResponseSchema = z.object({
 export const CreateInventorySchema = z.object({
   itemName: z.string().min(1, "Item name is required"),
   imeiNumber: z.string().optional(),
+  modelNumber: z.string().min(1, "Model number is required"),
+  quantity: z.coerce.number().min(1, "Quantity must be at least 1"),
   purchasePrice: z.coerce.number().optional(),
   expectedPrice: z.coerce
     .number()

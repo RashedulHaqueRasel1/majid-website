@@ -14,14 +14,18 @@ export const getMyInventory = async (): Promise<InventoryListResponse> => {
 
 export const createInventory = async (input: CreateInventoryInput) => {
   const formData = new FormData();
-  formData.append("itemName", input.itemName);
-  if (input.imeiNumber) formData.append("imeiNumber", input.imeiNumber);
-  if (input.purchasePrice !== undefined)
-    formData.append("purchasePrice", String(input.purchasePrice));
-  formData.append("expectedPrice", String(input.expectedPrice));
-  formData.append("currentState", input.currentState);
-  if (input.image instanceof File) {
-    formData.append("image", input.image);
+
+  for (const [key, value] of Object.entries(input)) {
+    if (value === undefined || value === null || value === "") continue;
+
+    if (key === "image" && value instanceof File) {
+      formData.append(key, value);
+      continue;
+    }
+
+    if (key !== "image") {
+      formData.append(key, String(value));
+    }
   }
 
   const response = await api.post(`${BASE}/create`, formData, {

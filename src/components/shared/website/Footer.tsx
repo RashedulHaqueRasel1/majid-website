@@ -183,7 +183,7 @@ export default function Footer() {
               href="#"
               className="text-[11px] font-bold text-muted-foreground hover:text-foreground transition uppercase tracking-widest"
             >
-              Cookie Settings
+              Cookie Settings..
             </Link>
           </div>
         </div>
