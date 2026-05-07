@@ -200,15 +200,49 @@ export default function ScanDevice() {
         );
 
         if (response.success && response.data) {
-          // Wait for animations to finish before showing results
-          setTimeout(() => {
-            setScanResult(response.data!);
-            setSingleReportMeta({
-              provider: selectedService?.name,
-              serviceId: selectedService?.serviceId ?? undefined,
-            });
+          // Handle the response data which is an array
+          const responseData = response.data;
+          let imeiResult: IMEIResult | null = null;
+
+          // Check if response.data is an array (like your API returns)
+          if (Array.isArray(responseData) && responseData.length > 0) {
+            // Take the first item from the array
+            const firstItem = responseData[0];
+            if (firstItem.ok && firstItem.data) {
+              imeiResult = firstItem.data;
+            } else if (firstItem.data) {
+              imeiResult = firstItem.data;
+            }
+          }
+          // If it's a single object directly
+          else if (
+            responseData &&
+            typeof responseData === "object" &&
+            !Array.isArray(responseData)
+          ) {
+            // Check if it has the 'ok' and 'data' properties (bulk format)
+            if ("ok" in responseData && "data" in responseData) {
+              // eslint-disable-next-line @typescript-eslint/no-explicit-any
+              imeiResult = (responseData as any).data;
+            } else {
+              imeiResult = responseData as IMEIResult;
+            }
+          }
+
+          if (imeiResult) {
+            // Wait for animations to finish before showing results
+            setTimeout(() => {
+              setScanResult(imeiResult);
+              setSingleReportMeta({
+                provider: selectedService?.name,
+                serviceId: selectedService?.serviceId ?? undefined,
+              });
+              setIsScanning(false);
+            }, 4500);
+          } else {
+            setError("No valid IMEI data received");
             setIsScanning(false);
-          }, 4500);
+          }
         } else {
           setError(response.message || "Failed to check IMEI");
           setIsScanning(false);
@@ -387,7 +421,84 @@ export default function ScanDevice() {
     );
   }, [downloadCertificatePdf, successfulBatchRows]);
 
+  // Helper function to safely access nested properties
+  const getChecksArray = (result: IMEIResult) => {
+    if (!result.checks) return [];
+    // Convert checks object to array if it's an object
+    if (typeof result.checks === "object" && !Array.isArray(result.checks)) {
+      return Object.values(result.checks);
+    }
+    return Array.isArray(result.checks) ? result.checks : [];
+  };
+
+  const getTechnicalBreakdownItems = (result: IMEIResult) => {
+    const items = [];
+    if (result.technicalBreakdown) {
+      if (result.technicalBreakdown.processor) {
+        items.push({
+          label: "Processor",
+          value: result.technicalBreakdown.processor,
+        });
+      }
+      if (result.technicalBreakdown.batteryHealth) {
+        items.push({
+          label: "Battery Health",
+          value:
+            result.technicalBreakdown.batteryHealth.label ||
+            result.technicalBreakdown.batteryHealth,
+        });
+      }
+      if (result.technicalBreakdown.storage) {
+        items.push({
+          label: "Storage",
+          value:
+            result.technicalBreakdown.storage.label ||
+            result.technicalBreakdown.storage,
+        });
+      }
+      if (result.technicalBreakdown.modem) {
+        items.push({ label: "Modem", value: result.technicalBreakdown.modem });
+      }
+      if (result.technicalBreakdown.display) {
+        items.push({
+          label: "Display",
+          value: result.technicalBreakdown.display,
+        });
+      }
+      if (result.technicalBreakdown.warranty) {
+        items.push({
+          label: "Warranty",
+          value:
+            result.technicalBreakdown.warranty.label ||
+            result.technicalBreakdown.warranty.status ||
+            "Unknown",
+        });
+      }
+      if (result.technicalBreakdown.origin) {
+        items.push({
+          label: "Origin",
+          value:
+            result.technicalBreakdown.origin.label ||
+            result.technicalBreakdown.origin,
+        });
+      }
+      if (result.technicalBreakdown.activation) {
+        items.push({
+          label: "Activation",
+          value:
+            result.technicalBreakdown.activation.label ||
+            result.technicalBreakdown.activation.lockStatus ||
+            "Unknown",
+        });
+      }
+    }
+    return items;
+  };
+
   if (scanResult) {
+    const checksArray = getChecksArray(scanResult);
+    const technicalItems = getTechnicalBreakdownItems(scanResult);
+
     return (
       <div className="p-4 md:p-10 max-w-6xl mx-auto space-y-8 font-poppins">
         {/* Back Button */}
@@ -416,14 +527,22 @@ export default function ScanDevice() {
             <div className="flex justify-between items-start">
               <div>
                 <h1 className="text-3xl md:text-4xl font-black text-[#0F172A] mb-1">
-                  {scanResult.deviceName}
+                  {scanResult.deviceName || "Unknown Device"}
                 </h1>
                 <p className="text-[#64748B] font-bold text-sm">
                   IMEI: {scanResult.imei}
                 </p>
               </div>
-              <span className="px-6 py-2 bg-[#3B82F6] text-white text-[12px] font-black rounded-full uppercase tracking-widest shadow-lg shadow-blue-500/20">
-                {scanResult.deviceStatus}
+              <span
+                className={`px-6 py-2 text-white text-[12px] font-black rounded-full uppercase tracking-widest shadow-lg ${
+                  scanResult.deviceStatus === "clean"
+                    ? "bg-[#84CC16] shadow-lime-500/20"
+                    : scanResult.deviceStatus === "warning"
+                      ? "bg-orange-500 shadow-orange-500/20"
+                      : "bg-[#3B82F6] shadow-blue-500/20"
+                }`}
+              >
+                {scanResult.deviceStatus || "Unknown"}
               </span>
             </div>
 
@@ -434,17 +553,17 @@ export default function ScanDevice() {
                     Risk Meter
                   </span>
                   <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest">
-                    {scanResult.riskMeter?.score}/100
+                    {scanResult.riskMeter?.score || 0}/100
                   </span>
                 </div>
                 <div className="h-2 w-full bg-gray-100 rounded-full overflow-hidden">
                   <div
                     className="h-full bg-black rounded-full transition-all duration-1000"
-                    style={{ width: `${scanResult.riskMeter?.score}%` }}
+                    style={{ width: `${scanResult.riskMeter?.score || 0}%` }}
                   />
                 </div>
                 <p className="text-sm font-bold text-[#0F172A]">
-                  {scanResult.riskMeter?.label}
+                  {scanResult.riskMeter?.label || "Risk Unknown"}
                 </p>
               </div>
               <div className="text-right">
@@ -452,7 +571,7 @@ export default function ScanDevice() {
                   Market Value
                 </p>
                 <p className="text-3xl font-black text-[#0F172A]">
-                  ${scanResult.marketValue?.amount.toFixed(2)}
+                  ${scanResult.marketValue?.amount?.toFixed(2) || "0.00"}
                 </p>
               </div>
             </div>
@@ -470,12 +589,13 @@ export default function ScanDevice() {
                 <Zap size={18} className="text-[#0F172A]" />
               </div>
               <span className="text-[12px] font-black text-[#0F172A] uppercase tracking-widest">
-                {scanResult.aiInsight?.title}
+                {scanResult.aiInsight?.title || "AI INSIGHT"}
               </span>
             </div>
             <div className="bg-white rounded-2xl p-6 border border-gray-100 shadow-sm flex-1">
               <p className="text-[#64748B] text-[13px] font-semibold leading-relaxed italic">
-                &quot;{scanResult.aiInsight?.message}&quot;
+                &quot;{scanResult.aiInsight?.message || "No insight available"}
+                &quot;
               </p>
             </div>
           </motion.div>
@@ -484,15 +604,9 @@ export default function ScanDevice() {
         {/* Middle Section: Check Cards & Report Actions */}
         <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
           <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
-            {(
-              Object?.values(scanResult.checks) as Array<{
-                title: string;
-                description: string;
-                status: string;
-              }>
-            ).map((check, i) => (
+            {checksArray.map((check, i) => (
               <motion.div
-                key={check.title}
+                key={check.title || i}
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 transition={{ delay: 0.3 + i * 0.1 }}
@@ -500,7 +614,13 @@ export default function ScanDevice() {
               >
                 <div className="flex items-center gap-4">
                   <div
-                    className={`p-3 rounded-xl ${check.status === "passed" ? "bg-[#84CC16]/10 text-[#84CC16]" : "bg-red-50 text-red-500"}`}
+                    className={`p-3 rounded-xl ${
+                      check.status === "passed"
+                        ? "bg-[#84CC16]/10 text-[#84CC16]"
+                        : check.status === "warning"
+                          ? "bg-orange-50 text-orange-500"
+                          : "bg-red-50 text-red-500"
+                    }`}
                   >
                     {check?.title === "Global Blacklist" && (
                       <ShieldCheck size={20} />
@@ -510,18 +630,25 @@ export default function ScanDevice() {
                     )}
                     {check?.title === "Hardware Lock" && <Lock size={20} />}
                     {check?.title === "Part Authenticity" && <Cpu size={20} />}
+                    {!check?.title && <ShieldCheck size={20} />}
                   </div>
                   <div>
                     <h3 className="text-sm font-black text-[#0F172A]">
-                      {check?.title}
+                      {check?.title || "Check"}
                     </h3>
                     <p className="text-[12px] font-medium text-[#64748B]">
-                      {check?.description}
+                      {check?.description || "No description"}
                     </p>
                   </div>
                 </div>
                 <div
-                  className={`w-6 h-6 rounded-full flex items-center justify-center ${check.status === "passed" ? "bg-[#84CC16] text-white" : "bg-red-500 text-white"}`}
+                  className={`w-6 h-6 rounded-full flex items-center justify-center ${
+                    check.status === "passed"
+                      ? "bg-[#84CC16] text-white"
+                      : check.status === "warning"
+                        ? "bg-orange-500 text-white"
+                        : "bg-red-500 text-white"
+                  }`}
                 >
                   {check?.status === "passed" ? (
                     <Check size={14} strokeWidth={4} />
@@ -563,64 +690,33 @@ export default function ScanDevice() {
           </motion.div>
         </div>
 
-        <motion.div
-          initial={{ opacity: 0, y: 30 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ delay: 0.6 }}
-          className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-sm"
-        >
-          <h2 className="text-xl font-black text-[#0F172A] mb-10">
-            Technical Breakdown
-          </h2>
-          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-8">
-            {[
-              {
-                label: "Processor",
-                value: scanResult.technicalBreakdown.processor,
-              },
-              {
-                label: "Battery Health",
-                value: scanResult.technicalBreakdown.batteryHealth.label,
-              },
-              {
-                label: "Storage",
-                value: scanResult.technicalBreakdown.storage.label,
-              },
-              {
-                label: "Modem",
-                value: scanResult.technicalBreakdown.modem,
-              },
-              {
-                label: "Display",
-                value: scanResult.technicalBreakdown.display,
-              },
-              {
-                label: "Warranty",
-                value: scanResult.technicalBreakdown.warranty.label,
-              },
-              {
-                label: "Origin",
-                value: scanResult.technicalBreakdown.origin.label,
-              },
-              {
-                label: "Activation",
-                value: scanResult.technicalBreakdown.activation.label,
-              },
-            ].map((item) => (
-              <div key={item.label} className="space-y-2">
-                <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest block">
-                  {item.label}
-                </span>
-                <p
-                  className="text-sm font-bold text-[#0F172A] truncate"
-                  title={item.value}
-                >
-                  {item.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </motion.div>
+        {technicalItems.length > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: 30 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ delay: 0.6 }}
+            className="bg-white rounded-[32px] p-8 md:p-10 border border-gray-100 shadow-sm"
+          >
+            <h2 className="text-xl font-black text-[#0F172A] mb-10">
+              Technical Breakdown
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-y-10 gap-x-8">
+              {technicalItems.map((item) => (
+                <div key={item.label} className="space-y-2">
+                  <span className="text-[10px] font-black text-[#94A3B8] uppercase tracking-widest block">
+                    {item.label}
+                  </span>
+                  <p
+                    className="text-sm font-bold text-[#0F172A] truncate"
+                    // title={item.value}
+                  >
+                    {item.value as string}
+                  </p>
+                </div>
+              ))}
+            </div>
+          </motion.div>
+        )}
 
         <motion.div
           initial={{ opacity: 0, y: 30 }}
