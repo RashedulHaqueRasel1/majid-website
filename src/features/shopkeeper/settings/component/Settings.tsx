@@ -134,7 +134,7 @@ export default function Settings() {
   const user = profileData?.data;
 
   return (
-    <div className="p-4 md:p-10  mx-auto space-y-8 font-poppins">
+    <div className="p-4 md:p-10 bg-background  mx-auto space-y-8 font-poppins">
       {/* Profile Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}

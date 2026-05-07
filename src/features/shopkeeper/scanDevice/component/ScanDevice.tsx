@@ -671,7 +671,7 @@ export default function ScanDevice() {
   }
 
   return (
-    <div className="min-h-full p-4 md:p-10 space-y-12 mx-auto font-poppins">
+    <div className="min-h-full p-4 md:p-10 bg-background space-y-12 mx-auto  font-poppins">
       <div className=" space-y-4">
         <motion.h1
           initial={{ opacity: 0, y: -20 }}

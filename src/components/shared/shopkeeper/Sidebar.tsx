@@ -82,6 +82,8 @@ export default function Sidebar() {
   const profileImage = getShopkeeperImage(user);
   const profileSubtitle = getShopkeeperSubtitle(user);
 
+  const [openSupport, setOpenSupport] = useState(false);
+
   const handleLogout = async () => {
     // Clear all storage to ensure no sensitive data remains
     localStorage.clear();
@@ -242,41 +244,69 @@ export default function Sidebar() {
         </nav>
 
         {/* Support Section - Premium Design */}
-        <div className="mx-4 mb-3 p-5 bg-surface rounded-[24px] border border-border space-y-4">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-              <HelpCircle size={16} className="text-blue-600" />
-            </div>
-            <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">
-              Support
-            </h3>
-          </div>
-          <div className="space-y-3">
-            <Link
-              href="tel:+447777787771"
-              className="flex items-center gap-3 group transition-transform hover:translate-x-1"
-            >
-              <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
-                <Phone size={14} className="text-[#25D366]" />
+        <div className="mx-4 mb-3">
+          <button
+            onClick={() => setOpenSupport(!openSupport)}
+            className="w-full p-5 bg-surface rounded-[24px] border border-border flex items-center justify-between transition-all"
+          >
+            <div className="flex items-center gap-2">
+              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                <HelpCircle size={16} className="text-blue-600" />
               </div>
-              <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition">
-                +447777787771
-              </span>
-            </Link>
-            <Link
-              href="mailto:reports@imoscan.com"
-              className="flex items-center gap-3 group transition-transform hover:translate-x-1"
-            >
-              <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
-                <Mail size={14} className="text-[#EA4335]" />
-              </div>
-              <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition truncate">
-                reports@imoscan.com
-              </span>
-            </Link>
-          </div>
-        </div>
 
+              <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">
+                Support
+              </h3>
+            </div>
+
+            <motion.div
+              animate={{ rotate: openSupport ? 180 : 0 }}
+              transition={{ duration: 0.2 }}
+            >
+              <ChevronDown size={18} className="text-muted-foreground" />
+            </motion.div>
+          </button>
+
+          <AnimatePresence>
+            {openSupport && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: "auto" }}
+                exit={{ opacity: 0, height: 0 }}
+                transition={{ duration: 0.2 }}
+                className="overflow-hidden"
+              >
+                <div className="mt-2 p-5 bg-surface rounded-[24px] border border-border space-y-3">
+                  <Link
+                    href="tel:+447777787771"
+                    className="flex items-center gap-3 group transition-transform hover:translate-x-1"
+                  >
+                    <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
+                      <Phone size={14} className="text-[#25D366]" />
+                    </div>
+
+                    <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition">
+                      +447777787771
+                    </span>
+                  </Link>
+
+                  <Link
+                    href="mailto:reports@imoscan.com"
+                    className="flex items-center gap-3 group transition-transform hover:translate-x-1"
+                  >
+                    <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
+                      <Mail size={14} className="text-[#EA4335]" />
+                    </div>
+
+                    <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition truncate">
+                      reports@imoscan.com
+                    </span>
+                  </Link>
+                </div>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </div>
         {/* User Section */}
         <div className="p-4 pt-0">
           <div className="bg-surface border border-border rounded-[28px] p-4 flex flex-col gap-4 shadow-sm">

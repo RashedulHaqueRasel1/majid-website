@@ -66,7 +66,7 @@ export default function PaymentHistory() {
   }
 
   return (
-    <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-8 font-poppins relative">
+    <div className="p-4 md:p-10 max-w-[1600px] mx-auto bg-background h-screen space-y-8 font-poppins relative">
       {/* Header Section */}
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-6">
         <div>
