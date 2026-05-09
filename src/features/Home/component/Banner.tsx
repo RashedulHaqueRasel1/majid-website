@@ -111,6 +111,18 @@ export default function Banner() {
       type: "specialized",
       icon: "🌐",
     },
+    {
+      label: "Sold By Check",
+      keyword: "sold by",
+      type: "specialized",
+      icon: "🔍",
+    },
+    {
+      label: "Apple ID On/Off Check",
+      keyword: "apple id",
+      type: "specialized",
+      icon: "🟢",
+    },
   ];
 
   return (
@@ -360,10 +372,10 @@ export default function Banner() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 flex w-full max-w-6xl flex-col items-center gap-8"
+          className="mt-14 flex w-full max-w-4xl flex-col items-center gap-5"
         >
           {/* Specialized Cards Row */}
-          <div className="flex flex-wrap justify-center gap-6">
+          <div className="flex justify-center gap-6 w-full">
             {quickChecks
               .filter((tag) => tag.type === "specialized")
               .map((tag, i) => (
@@ -375,7 +387,7 @@ export default function Banner() {
                     setSearchTerm(tag.keyword);
                     setIsDropdownOpen(true);
                   }}
-                  className="group relative flex w-[100px] cursor-pointer flex-col items-center gap-2 rounded-2xl bg-white/20 p-4 backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:shadow-[0_8px_25px_rgba(132,204,22,0.2)] border border-white/20"
+                  className="group relative flex w-[100px] cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl bg-white/20 p-4 backdrop-blur-md transition-all duration-300 hover:bg-white/10 hover:shadow-[0_8px_25px_rgba(132,204,22,0.2)] border border-white/20 w-[200px]"
                 >
                   <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
