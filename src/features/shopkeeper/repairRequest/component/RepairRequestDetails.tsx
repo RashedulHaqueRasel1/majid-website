@@ -7,8 +7,6 @@ import {
   Smartphone,
   User,
   Mail,
-  Phone,
-  MapPin,
   Clock,
   DollarSign,
   Paperclip,
@@ -16,6 +14,7 @@ import {
   ChevronLeft,
   ChevronRight,
   CheckCircle2,
+  Clock3,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -25,36 +24,49 @@ import {
   useUpdateResentRepairQuoteStatus,
 } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { Button } from "@/components/ui/button";
+import RepairOfferModal from "@/features/customer/repairHistory/component/RepairOfferModal";
 
 const timelineSteps = [
   {
-    id: "request_submitted",
-    label: "Request Submitted",
-    description: "Your request was received and logged",
-    statuses: ["request_submitted", "submitted"],
+    id: "order_booked",
+    label: "Order Booked",
+    description: "Your order has been successfully created",
+    statuses: ["inProgress"],
   },
   {
-    id: "in_review",
-    label: "Under Review",
-    description: "Technician is diagnosing the device",
-    statuses: ["in_review"],
+    id: "order_assigned",
+    label: "Order Assigned",
+    description: "A technician has been assigned",
+    statuses: ["order-assigned"],
+  },
+  {
+    id: "diagnosing",
+    label: "Diagnosing Started",
+    description: "Technician is diagnosing the issue",
+    statuses: ["diagnosing"],
   },
   {
     id: "quote_sent",
     label: "Quote Sent",
-    description: "Quote will appear once review is complete",
-    statuses: ["quote_sent", "quote_rejected", "rejected"],
+    description: "A quote has been sent for the repair",
+    statuses: ["quote_sent"],
   },
   {
-    id: "repair_in_progress",
-    label: "Repair in Progress",
-    description: "Hardware components will be repaired",
-    statuses: ["repair_in_progress", "quote_accepted", "approved"],
+    id: "repairing",
+    label: "Repairing Started",
+    description: "Device is being repaired",
+    statuses: ["start-work"],
+  },
+  {
+    id: "waiting_parts",
+    label: "Waiting for Parts",
+    description: "Repair is paused until parts arrive",
+    statuses: ["waiting-for-parts"],
   },
   {
     id: "completed",
-    label: "Completed",
-    description: "Repair will be finalized and closed",
+    label: "Repair Complete",
+    description: "Repair has been successfully completed",
     statuses: ["completed"],
   },
 ];
@@ -63,11 +75,13 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   const { data: detailsData, isLoading } = useRepairRequestDetails(id);
   const updateStatus = useUpdateRepairRequestStatusByShopkeeper();
   const addNote = useAddRepairRequestNote();
+  const [showOfferModal, setShowOfferModal] = useState(false);
   const updateResentQuote = useUpdateResentRepairQuoteStatus();
   const [noteMessage, setNoteMessage] = useState("");
   const [noteCost, setNoteCost] = useState("");
   const [noteDays, setNoteDays] = useState("");
   const [noteImages, setNoteImages] = useState<File[]>([]);
+
   const [lightbox, setLightbox] = useState<{
     urls: string[];
     index: number;
@@ -191,78 +205,74 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                 </div>
               </div>
 
-              <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
-                <h3 className="text-xl font-black text-foreground mb-2">
-                  Repair Timeline
-                </h3>
-                <p className="text-sm font-medium text-muted-foreground mb-8">
-                  Live progress of your repair request
-                </p>
+              <div className="relative border-l-2 border-border dark:border-yellow-400 ml-4 space-y-8 pb-4">
+                {timelineSteps.map((step, index) => {
+                  const isCompleted = index < activeStepIndex;
+                  const isActive = index === activeStepIndex;
 
-                <div className="relative border-l-2 border-border dark:border-yellow-400 ml-4 space-y-8 pb-4">
-                  {timelineSteps.map((step, index) => {
-                    const isCompleted = index < activeStepIndex;
-                    const isActive = index === activeStepIndex;
-                    const isPending = index > activeStepIndex;
+                  let dotStyle = "bg-muted border-border text-muted-foreground"; // pending default
 
-                    let dotColor = "bg-muted border-border";
-                    let textColor = "text-muted-foreground";
+                  if (isCompleted) {
+                    dotStyle = "bg-primary border-primary text-white shadow-sm";
+                  } else if (isActive) {
+                    dotStyle =
+                      "bg-blue-500 border-blue-500 text-white shadow-[0_0_0_4px_rgba(59,130,246,0.2)]";
+                  }
 
-                    if (isCompleted) {
-                      dotColor =
-                        "bg-primary border-primary text-primary-foreground";
-                      textColor = "text-foreground";
-                    } else if (isActive) {
-                      dotColor =
-                        "bg-blue-500 border-blue-500 text-white shadow-[0_0_0_4px_rgba(59,130,246,0.2)]";
-                      textColor = "text-foreground";
-                    }
+                  return (
+                    <div key={step.id} className="relative pl-8">
+                      {/* DOT */}
+                      <div
+                        className={`absolute -left-[11px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${dotStyle}`}
+                      >
+                        {isCompleted && <CheckCircle2 size={12} />}
 
-                    return (
-                      <div key={step.id} className="relative pl-8">
-                        <div
-                          className={`absolute -left-[11px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${dotColor}`}
-                        >
-                          {isCompleted && <CheckCircle2 size={12} />}
+                        {isActive && (
+                          <div className="h-2 w-2 rounded-full bg-white" />
+                        )}
+
+                        {!isCompleted && !isActive && (
+                          <div className="h-2 w-2 rounded-full bg-muted-foreground/60" />
+                        )}
+                      </div>
+
+                      {/* CONTENT */}
+                      <div>
+                        <div className="flex items-center gap-3">
+                          <h4
+                            className={`text-base font-bold ${
+                              isCompleted || isActive
+                                ? "text-foreground"
+                                : "text-muted-foreground"
+                            }`}
+                          >
+                            {step.label}
+                          </h4>
+
                           {isActive && (
-                            <div className="h-2 w-2 rounded-full bg-white" />
+                            <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
+                              Active
+                            </span>
+                          )}
+
+                          {!isCompleted && !isActive && (
+                            <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
+                              Pending
+                            </span>
                           )}
                         </div>
 
-                        <div>
-                          <div className="flex items-center gap-3">
-                            <h4 className={`text-base font-bold ${textColor}`}>
-                              {step.label}
-                            </h4>
-                            {isActive && (
-                              <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
-                                Active
-                              </span>
-                            )}
-                            {isPending && (
-                              <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
-                                Pending
-                              </span>
-                            )}
-                            {step.id === "quote_sent" &&
-                              currentStatus === "quote_sent" && (
-                                <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-[10px] font-bold text-yellow-700 uppercase tracking-wider">
-                                  Awaiting Approval
-                                </span>
-                              )}
-                          </div>
-                          <p className="text-sm font-medium text-muted-foreground mt-1">
-                            {step.description}
-                          </p>
-                        </div>
+                        <p className="text-sm font-medium text-muted-foreground mt-1">
+                          {step.description}
+                        </p>
                       </div>
-                    );
-                  })}
-                </div>
+                    </div>
+                  );
+                })}
               </div>
 
               {/* Issue Description Card */}
-              {/* <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-4">
+              <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-4">
                 <h3 className="text-xl font-black text-foreground">
                   Issue Description
                 </h3>
@@ -271,7 +281,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                     {request.description}
                   </p>
                 </div>
-              </div> */}
+              </div>
 
               {/* Customer Details Card */}
               <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
@@ -420,54 +430,58 @@ export default function RepairRequestDetails({ id }: { id: string }) {
               )}
 
               {/* Sent Notes & Quotes History */}
-              {request.userNotes && request.userNotes.length > 0 && (
-                <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
-                  <div className="flex items-center justify-between">
-                    <h3 className="text-xl font-black text-foreground">
-                      Notes & Quotes History
-                    </h3>
-                    <span className="px-3 py-1 bg-surface rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground">
-                      {request.userNotes.length} Entries
-                    </span>
-                  </div>
-                  <div className="space-y-4">
-                    {request.userNotes
-                      .slice()
-                      .reverse()
-                      .map((note, idx) => (
-                        <div
-                          key={note._id || idx}
-                          className="bg-surface rounded-2xl p-5 border border-border/50 space-y-3"
-                        >
-                          <div className="flex items-center justify-between mb-2">
-                            <div className="flex items-center gap-2">
-                              <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
-                                {idx + 1}
-                              </span>
-                              <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                                {format(new Date(note.date), "MMM dd, hh:mm a")}
-                              </span>
-                            </div>
-                            {(note.cost || note.estimatedDays) && (
-                              <div className="flex items-center gap-3">
-                                {note.cost && (
-                                  <span className="text-sm font-black text-foreground">
-                                    {"$"}
-                                    {note.cost.toFixed(2)}
-                                  </span>
-                                )}
-                                {note.estimatedDays && (
-                                  <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase">
-                                    {note.estimatedDays} Days
-                                  </span>
-                                )}
+              {request.shopkeeperNotes &&
+                request.shopkeeperNotes.length > 0 && (
+                  <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-black text-foreground">
+                        Notes & Quotes History
+                      </h3>
+                      <span className="px-3 py-1 bg-surface rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        {request.shopkeeperNotes.length} Entries
+                      </span>
+                    </div>
+                    <div className="space-y-4">
+                      {request.shopkeeperNotes
+                        .slice()
+                        .reverse()
+                        .map((note, idx) => (
+                          <div
+                            key={note._id || idx}
+                            className="bg-surface rounded-2xl p-5 border border-border/50 space-y-3"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
+                                  {idx + 1}
+                                </span>
+                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                  {format(
+                                    new Date(note.date),
+                                    "MMM dd, hh:mm a",
+                                  )}
+                                </span>
                               </div>
-                            )}
-                          </div>
-                          <p className="text-sm font-medium text-foreground/80 leading-relaxed">
-                            {note.message}
-                          </p>
-                          {/* {note.images && note.images.length > 0 && (
+                              {(note.cost || note.estimatedDays) && (
+                                <div className="flex items-center gap-3">
+                                  {note.cost && (
+                                    <span className="text-sm font-black text-foreground">
+                                      {"$"}
+                                      {note.cost.toFixed(2)}
+                                    </span>
+                                  )}
+                                  {note.estimatedDays && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase">
+                                      {note.estimatedDays} Days
+                                    </span>
+                                  )}
+                                </div>
+                              )}
+                            </div>
+                            <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                              {note.message}
+                            </p>
+                            {note.images && note.images.length > 0 && (
                               <div className="flex gap-2 pt-2">
                                 {note.images.map((img, i) => (
                                   <div
@@ -483,12 +497,52 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                                   </div>
                                 ))}
                               </div>
-                            )} */}
-                        </div>
-                      ))}
+                            )}
+                          </div>
+                        ))}
+                    </div>
                   </div>
-                </div>
-              )}
+                )}
+
+              {request.waitingForPartsDays &&
+                request.waitingForPartsDescription && (
+                  <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
+                      <h3 className="text-xl font-black text-foreground">
+                        Waiting For Parts Details
+                      </h3>
+
+                      <span className="px-3 py-1 bg-blue-100 text-blue-700 rounded-full text-[10px] font-black uppercase tracking-widest">
+                        {request.waitingForPartsDays} Days
+                      </span>
+                    </div>
+
+                    <div className="bg-surface rounded-2xl p-6 border border-border/50 space-y-4">
+                      <div className="flex items-center gap-3">
+                        <div className="w-12 h-12 rounded-2xl bg-blue-500/10 flex items-center justify-center">
+                          <Clock3 className="w-5 h-5 text-blue-600" />
+                        </div>
+
+                        <div>
+                          <h4 className="text-sm font-black text-foreground">
+                            Parts Currently Unavailable
+                          </h4>
+
+                          <p className="text-xs font-medium text-muted-foreground">
+                            Estimated waiting time:{" "}
+                            {request.waitingForPartsDays} days
+                          </p>
+                        </div>
+                      </div>
+
+                      <div className="rounded-2xl bg-card border border-border p-5">
+                        <p className="text-sm leading-relaxed font-medium text-foreground/80">
+                          {request.waitingForPartsDescription}
+                        </p>
+                      </div>
+                    </div>
+                  </div>
+                )}
             </div>
 
             {/* Right Column */}
@@ -625,47 +679,63 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                     onClick={() => {
                       updateResentQuote.mutate({
                         id: id!,
-                        status: "rejected",
+                        status: "order-assigned",
                       });
                     }}
                     variant="outline"
                     className="flex-1 rounded-full !bg-[#EF4444] hover:text-white font-bold h-11"
                   >
-                    Booking
+                    Order Assigned
                   </Button>
 
                   <Button
                     onClick={() => {
                       updateResentQuote.mutate({
                         id: id!,
-                        status: "rejected",
+                        status: "diagnosing",
                       });
                     }}
                     variant="outline"
                     className="flex-1 rounded-full !bg-[#84CC16] hover:text-white font-bold h-11"
                   >
-                    Pending
+                    Diagonosing Device
                   </Button>
 
                   <Button
                     onClick={() => {
                       updateResentQuote.mutate({
                         id: id!,
-                        status: "rejected",
+                        status: "start-work",
                       });
                     }}
                     variant="outline"
                     className="flex-1 rounded-full !bg-[#F59E0B] hover:text-white font-bold h-11"
                   >
-                    In Progress
+                    Repairing Device
                   </Button>
 
                   <Button
-                    className="flex-1 rounded-full font-bold h-11 !bg-[#3B82F6] text-primary-foreground shadow-lg shadow-primary/20"
+                    onClick={() => {
+                      setShowOfferModal(true);
+                    }}
+                    variant="outline"
+                    className="flex-1 rounded-full !bg-[#3B82F6] hover:text-white font-bold h-11"
+                  >
+                    Waiting for Parts
+                  </Button>
+
+                  <RepairOfferModal
+                    isOpen={showOfferModal}
+                    onClose={() => setShowOfferModal(false)}
+                    id={id}
+                  />
+
+                  <Button
+                    className="flex-1 rounded-full font-bold h-11 !bg-[#84CC16] text-primary-foreground shadow-lg shadow-primary/20"
                     onClick={() =>
                       updateResentQuote.mutate({
                         id,
-                        status: "approved",
+                        status: "completed",
                       })
                     }
                     disabled={updateResentQuote.isPending}

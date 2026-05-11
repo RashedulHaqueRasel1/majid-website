@@ -100,4 +100,6 @@ export interface RepairRequest {
   createdAt: string;
   updatedAt: string;
   userNotes?: UserNote[];
+  waitingForPartsDays?: number;
+  waitingForPartsDescription?: string;
 }

@@ -744,12 +744,12 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                     >
                       Counter Offer
                     </Button>
-                    <RepairOfferModal
+                    {/* <RepairOfferModal
                       isOpen={showOfferModal}
                       onClose={() => setShowOfferModal(false)}
                       id={counterOfferId}
                       shopkeeperId={shopkeeperId}
-                    />
+                    /> */}
                     <Button
                       className="flex-1 rounded-full font-bold h-11 bg-primary text-primary-foreground shadow-lg shadow-primary/20"
                       onClick={() =>

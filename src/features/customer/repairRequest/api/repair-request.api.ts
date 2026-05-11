@@ -143,16 +143,29 @@ export const resentRepairRequestNote = async ({
 export const updateRepairReSentQuoteStatus = async ({
   id,
   status,
+  waitingForPartsDays,
+  waitingForPartsDescription,
 }: {
   id: string;
-  status: "approved" | "rejected";
+  status:
+    | "inProgress"
+    | "quote_sent"
+    | "approved"
+    | "rejected"
+    | "completed"
+    | "inReview"
+    | "start-work"
+    | "waiting-for-parts"
+    | "order-assigned"
+    | "diagnosing";
+  waitingForPartsDays?: number;
+  waitingForPartsDescription?: string;
   userNotesId?: string;
 }): Promise<ApiResponse<RepairRequest>> => {
-  const response = await api.put(
-    `/repair-requests/quote-status-shopkeeper/${id}`,
-    {
-      status,
-    },
-  );
+  const response = await api.put(`/repair-requests/update-status/${id}`, {
+    status,
+    waitingForPartsDays,
+    waitingForPartsDescription,
+  });
   return response.data;
 };
