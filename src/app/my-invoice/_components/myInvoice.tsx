@@ -170,62 +170,70 @@ export default function RepairInvoice({ id }: { id: string }) {
                 <h3 className="text-xl font-black text-foreground mb-2">
                   Repair Timeline
                 </h3>
+
                 <p className="text-sm font-medium text-muted-foreground mb-8">
                   Live progress of your repair request
                 </p>
 
-                <div className="relative border-l-2 border-border ml-4 space-y-8 pb-4">
+                <div className="relative border-l-2 border-border dark:border-yellow-400 ml-4 space-y-8 pb-4">
                   {timelineSteps.map((step, index) => {
                     const isCompleted = index < activeStepIndex;
                     const isActive = index === activeStepIndex;
-                    const isPending = index > activeStepIndex;
 
-                    let dotColor = "bg-muted border-border";
-                    let textColor = "text-muted-foreground";
+                    let dotStyle =
+                      "bg-muted border-border text-muted-foreground"; // pending default
 
                     if (isCompleted) {
-                      dotColor =
-                        "bg-primary border-primary text-primary-foreground";
-                      textColor = "text-foreground";
+                      dotStyle =
+                        "bg-primary border-primary text-white shadow-sm";
                     } else if (isActive) {
-                      dotColor =
+                      dotStyle =
                         "bg-blue-500 border-blue-500 text-white shadow-[0_0_0_4px_rgba(59,130,246,0.2)]";
-                      textColor = "text-foreground";
                     }
 
                     return (
                       <div key={step.id} className="relative pl-8">
+                        {/* DOT */}
                         <div
-                          className={`absolute -left-[11px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 ${dotColor}`}
+                          className={`absolute -left-[11px] top-1 flex h-5 w-5 items-center justify-center rounded-full border-2 transition-all ${dotStyle}`}
                         >
                           {isCompleted && <CheckCircle2 size={12} />}
+
                           {isActive && (
                             <div className="h-2 w-2 rounded-full bg-white" />
                           )}
+
+                          {!isCompleted && !isActive && (
+                            <div className="h-2 w-2 rounded-full bg-muted-foreground/60" />
+                          )}
                         </div>
 
+                        {/* CONTENT */}
                         <div>
                           <div className="flex items-center gap-3">
-                            <h4 className={`text-base font-bold ${textColor}`}>
+                            <h4
+                              className={`text-base font-bold ${
+                                isCompleted || isActive
+                                  ? "text-foreground"
+                                  : "text-muted-foreground"
+                              }`}
+                            >
                               {step.label}
                             </h4>
+
                             {isActive && (
                               <span className="rounded-full bg-blue-100 px-2.5 py-0.5 text-[10px] font-bold text-blue-700 uppercase tracking-wider">
                                 Active
                               </span>
                             )}
-                            {isPending && (
+
+                            {!isCompleted && !isActive && (
                               <span className="rounded-full bg-muted px-2.5 py-0.5 text-[10px] font-bold text-muted-foreground uppercase tracking-wider">
                                 Pending
                               </span>
                             )}
-                            {step.id === "quote_sent" &&
-                              currentStatus === "quote_sent" && (
-                                <span className="rounded-full bg-yellow-100 px-2.5 py-0.5 text-[10px] font-bold text-yellow-700 uppercase tracking-wider">
-                                  Awaiting Approval
-                                </span>
-                              )}
                           </div>
+
                           <p className="text-sm font-medium text-muted-foreground mt-1">
                             {step.description}
                           </p>
@@ -239,51 +247,74 @@ export default function RepairInvoice({ id }: { id: string }) {
               {/* Shopkeeper Notes */}
               {request.shopkeeperNotes &&
                 request.shopkeeperNotes.length > 0 && (
-                  <div className="rounded-3xl border border-border bg-card p-8 shadow-sm">
-                    <div className="flex items-center justify-between mb-6">
+                  <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
+                    <div className="flex items-center justify-between">
                       <h3 className="text-xl font-black text-foreground">
-                        Shopkeeper Notes
+                        Notes & Quotes History
                       </h3>
-                      <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
-                        {request.shopkeeperNotes.length} notes
+                      <span className="px-3 py-1 bg-surface rounded-full text-[10px] font-black uppercase tracking-widest text-muted-foreground">
+                        {request.shopkeeperNotes.length} Entries
                       </span>
                     </div>
-
-                    <div className="space-y-6">
-                      {request.shopkeeperNotes.map((note, idx) => (
-                        <div key={note._id || idx} className="flex gap-4">
-                          <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-primary font-black uppercase">
-                            {shopName.slice(0, 2)}
-                          </div>
-                          <div className="flex-1 space-y-2">
-                            <div className="flex items-center justify-between">
-                              <p className="font-bold text-foreground">
-                                {shopName}
-                              </p>
-                              <p className="text-xs font-medium text-muted-foreground">
-                                {format(new Date(note.date), "MMM dd, hh:mm a")}
-                              </p>
-                            </div>
-                            {/* <div className="rounded-2xl rounded-tl-none bg-surface p-4 text-sm font-medium text-foreground/80 leading-relaxed space-y-3">
-                          <p>{note.message}</p>
-                          {note.images && note.images.length > 0 && (
-                            <div className="grid grid-cols-2 gap-2 pt-1">
-                              {note.images.map((img, i) => (
-                                <div key={i} className="relative aspect-video rounded-xl overflow-hidden border border-border/50">
-                                  <Image 
-                                    src={img.url} 
-                                    alt="Proof" 
-                                    fill 
-                                    className="object-cover" 
-                                  />
+                    <div className="space-y-4">
+                      {request.shopkeeperNotes
+                        .slice()
+                        .reverse()
+                        .map((note, idx) => (
+                          <div
+                            key={note._id || idx}
+                            className="bg-surface rounded-2xl p-5 border border-border/50 space-y-3"
+                          >
+                            <div className="flex items-center justify-between mb-2">
+                              <div className="flex items-center gap-2">
+                                <span className="w-8 h-8 rounded-lg bg-primary/10 flex items-center justify-center text-primary font-black text-xs">
+                                  {idx + 1}
+                                </span>
+                                <span className="text-xs font-bold text-muted-foreground uppercase tracking-wider">
+                                  {format(
+                                    new Date(note.date),
+                                    "MMM dd, hh:mm a",
+                                  )}
+                                </span>
+                              </div>
+                              {(note.cost || note.estimatedDays) && (
+                                <div className="flex items-center gap-3">
+                                  {note.cost && (
+                                    <span className="text-sm font-black text-foreground">
+                                      {"$"}
+                                      {note.cost.toFixed(2)}
+                                    </span>
+                                  )}
+                                  {note.estimatedDays && (
+                                    <span className="px-2 py-0.5 bg-blue-100 text-blue-700 rounded-md text-[10px] font-black uppercase">
+                                      {note.estimatedDays} Days
+                                    </span>
+                                  )}
                                 </div>
-                              ))}
+                              )}
                             </div>
-                          )}
-                        </div> */}
+                            <p className="text-sm font-medium text-foreground/80 leading-relaxed">
+                              {note.message}
+                            </p>
+                            {note.images && note.images.length > 0 && (
+                              <div className="flex gap-2 pt-2">
+                                {note.images.map((img, i) => (
+                                  <div
+                                    key={i}
+                                    className="relative w-12 h-12 rounded-lg overflow-hidden border border-border"
+                                  >
+                                    <Image
+                                      src={img.url}
+                                      alt="Note proof"
+                                      fill
+                                      className="object-cover"
+                                    />
+                                  </div>
+                                ))}
+                              </div>
+                            )}
                           </div>
-                        </div>
-                      ))}
+                        ))}
                     </div>
                   </div>
                 )}
@@ -363,7 +394,7 @@ export default function RepairInvoice({ id }: { id: string }) {
               })()}
 
               {/* Approval Required */}
-              {currentStatus === "quote_sent" && latestQuote && (
+              {/* {currentStatus === "quote_sent" && latestQuote && (
                 <div className="rounded-3xl border border-yellow-200 bg-yellow-50/50 p-6 shadow-sm dark:bg-yellow-900/10 dark:border-yellow-900/50">
                   <div className="flex items-center justify-between mb-6">
                     <h3 className="text-base font-black text-foreground">
@@ -423,7 +454,7 @@ export default function RepairInvoice({ id }: { id: string }) {
                     </Button>
                   </div>
                 </div>
-              )}
+              )} */}
 
               {(currentStatus === "approved" ||
                 currentStatus === "quote_accepted") &&

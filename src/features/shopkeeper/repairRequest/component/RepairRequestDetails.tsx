@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import Image from "next/image";
@@ -25,6 +26,9 @@ import {
 } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { Button } from "@/components/ui/button";
 import RepairOfferModal from "@/features/customer/repairHistory/component/RepairOfferModal";
+import jsPDF from "jspdf";
+import autoTable from "jspdf-autotable";
+import QRCode from "qrcode";
 
 const timelineSteps = [
   {
@@ -105,6 +109,179 @@ export default function RepairRequestDetails({ id }: { id: string }) {
     );
   }
 
+  const generateInvoicePDF = async () => {
+    if (!request) return;
+
+    const doc = new jsPDF();
+
+    const shopName =
+      typeof request?.shopkeeperId === "object"
+        ? request?.shopkeeperId?.shopName || "Repair Shop"
+        : "Repair Shop";
+
+    const formatDate = (date: string | number | Date) =>
+      date ? format(new Date(date), "MMM dd, yyyy") : "-";
+
+    const safeText = (text: string | undefined) =>
+      text ? String(text) : "N/A";
+
+    // ================= HEADER =================
+    doc.setFillColor(15, 23, 42);
+    doc.rect(0, 0, 210, 45, "F");
+
+    doc.setTextColor(255, 255, 255);
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(22);
+    doc.text("INVOICE", 14, 28);
+
+    doc.setFontSize(11);
+    doc.setFont("helvetica", "normal");
+    doc.text(shopName, 196, 22, { align: "right" });
+
+    doc.setTextColor(200, 200, 200);
+    doc.text(
+      `Request ID: ${request?._id?.slice(-8)?.toUpperCase() || "N/A"}`,
+      196,
+      30,
+      { align: "right" },
+    );
+
+    // ================= CUSTOMER =================
+    doc.setTextColor(30, 41, 59);
+    doc.setFontSize(10);
+    doc.setFont("helvetica", "bold");
+    doc.text("CUSTOMER DETAILS", 14, 60);
+
+    doc.setFont("helvetica", "normal");
+    doc.text(safeText(request.firstName), 14, 68);
+    doc.text(safeText(request.email), 14, 74);
+
+    // ================= META =================
+    doc.setFont("helvetica", "bold");
+    doc.text("DATE", 120, 60);
+    doc.setFont("normal");
+    doc.text(formatDate(new Date()), 120, 68);
+
+    doc.setFont("bold");
+    doc.text("STATUS", 120, 78);
+    doc.setFont("normal");
+    doc.text(
+      safeText(request.status?.replaceAll("_", " ")?.toUpperCase()),
+      120,
+      86,
+    );
+
+    // ================= DEVICE BOX =================
+    doc.setFillColor(248, 250, 252);
+    doc.roundedRect(14, 95, 182, 32, 3, 3, "F");
+
+    doc.setTextColor(30, 41, 59);
+    doc.setFont("bold");
+    doc.text("DEVICE:", 20, 106);
+
+    doc.setFont("normal");
+    doc.text(
+      `${safeText(request.deviceModel)} (IMEI: ${safeText(
+        request.IMEINumber,
+      )})`,
+      45,
+      106,
+    );
+
+    doc.setFont("bold");
+    doc.text("ISSUE:", 20, 116);
+
+    doc.setFont("normal");
+    doc.text(safeText(request.description), 45, 116, {
+      maxWidth: 140,
+    });
+
+    // ================= TABLE DATA =================
+    const notes =
+      request?.shopkeeperNotes?.map((n) => [
+        formatDate(n.date),
+        safeText(n.message),
+        `${n.estimatedDays || 0} days`,
+        `$${Number(n.cost || 0).toFixed(2)}`,
+      ]) || [];
+
+    autoTable(doc, {
+      startY: 135,
+      head: [["Date", "Description", "Est. Time", "Cost"]],
+      body: notes,
+      theme: "grid",
+      headStyles: {
+        fillColor: [15, 23, 42],
+        textColor: 255,
+      },
+      styles: {
+        fontSize: 9,
+        cellPadding: 3,
+      },
+      columnStyles: {
+        3: { halign: "right" },
+      },
+    });
+
+    // ================= SUMMARY =================
+    const finalY = (doc as any).lastAutoTable?.finalY || 160;
+
+    const totalCost =
+      request?.shopkeeperNotes?.reduce(
+        (sum, n) => sum + Number(n.cost || 0),
+        0,
+      ) || 0;
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(12);
+    doc.text("TOTAL:", 140, finalY + 15);
+
+    doc.setFontSize(16);
+    doc.text(`$${totalCost.toFixed(2)}`, 196, finalY + 15, {
+      align: "right",
+    });
+
+    // ================= QR =================
+    try {
+      const baseURL = "http://187.77.187.56:4897"; // move to env later 👌
+      const qrLink = `${baseURL}/my-invoice/${request._id}`;
+
+      const qrDataUrl = await QRCode.toDataURL(qrLink, {
+        width: 90,
+        margin: 1,
+      });
+
+      doc.addImage(qrDataUrl, "PNG", 14, finalY + 5, 28, 28);
+
+      doc.setFontSize(8);
+      doc.setTextColor(100);
+      doc.text("Scan to view invoice", 14, finalY + 36);
+    } catch (err) {
+      console.error("QR error:", err);
+    }
+
+    // ================= FOOTER =================
+    const pageHeight = doc.internal.pageSize.height;
+
+    doc.setDrawColor(220);
+    doc.line(14, pageHeight - 22, 196, pageHeight - 22);
+
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+
+    doc.text(`Thank you for choosing ${shopName}`, 105, pageHeight - 14, {
+      align: "center",
+    });
+
+    doc.text("This is a system generated invoice.", 105, pageHeight - 8, {
+      align: "center",
+    });
+
+    doc.save(
+      `Invoice_${request.deviceModel || "device"}_${request._id.slice(-5)}.pdf`,
+    );
+  };
+
   const currentStatus = request.status;
 
   const activeStepIndex = timelineSteps.findIndex((step) =>
@@ -150,9 +327,17 @@ export default function RepairRequestDetails({ id }: { id: string }) {
             <div className="lg:col-span-2 space-y-6">
               {/* Device Information Card */}
               <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
-                <h3 className="text-xl font-black text-foreground">
-                  Device Information
-                </h3>
+                <div className="flex justify-between items-center">
+                  <h3 className="text-xl font-black text-foreground">
+                    Device Information
+                  </h3>
+                  <button
+                    className="rounded-full cursor-pointer bg-primary px-4 py-2 text-sm font-bold text-primary-foreground shadow-lg shadow-primary/20 hover:bg-primary/90 transition-colors"
+                    onClick={generateInvoicePDF}
+                  >
+                    Invoice
+                  </button>
+                </div>
                 <div className="bg-surface rounded-3xl p-6 flex items-center justify-between">
                   <div className="flex items-center gap-5">
                     <div className="w-14 h-14 bg-card rounded-2xl flex items-center justify-center border border-border shadow-sm text-muted-foreground">

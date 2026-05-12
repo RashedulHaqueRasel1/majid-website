@@ -22,7 +22,6 @@ import { Button } from "@/components/ui/button";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
-import RepairOfferModal from "./RepairOfferModal";
 // import RepairOfferModal from "./RepairOfferModal";
 // import { set } from "idb-keyval";
 
@@ -62,6 +61,7 @@ const timelineSteps = [
 export default function RepairHistoryDetails({ id }: { id: string }) {
   const { data: detailsData, isLoading } = useRepairRequestDetails(id);
   const updateQuote = useUpdateRepairQuoteStatus();
+
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [counterOfferId, setCounterOfferId] = useState<string | null>(null);
   const [shopkeeperId, setShopkeeperId] = useState<string | null>(null);
