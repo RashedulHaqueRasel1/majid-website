@@ -19,6 +19,7 @@ import {
   Database,
   Tag,
   Shield,
+  Receipt,
 } from "lucide-react";
 import { IMEIResult } from "../../scanDevice/types/scanDevice.types";
 import { CertificatePDF } from "./CertificatePDF";
@@ -27,6 +28,8 @@ import {
   getStatusColor,
   getTechnicalBreakdownItems,
 } from "@/utils/resultHelpers";
+import { SmartInvoicePDF } from "./SmartInvoicePDF";
+import { useCertificateDownload } from "../hooks/useCertificateDownload";
 
 interface SingleResultViewProps {
   scanResult: IMEIResult;
@@ -161,6 +164,7 @@ export const SingleResultView = ({
   const riskScore = scanResult.riskMeter?.score || 0;
   const riskColor = getRiskColor(riskScore);
   const statusTone = getStatusColor(scanResult.deviceStatus || "");
+  const { downloadCertificatePdf } = useCertificateDownload();
 
   // Get provider data from API response
   const providerData = scanResult.providerData as
@@ -490,9 +494,18 @@ export const SingleResultView = ({
             Report Actions
           </span>
           <div className="space-y-3">
-            <button className="w-full py-3.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-black text-sm hover:bg-[#84CC16]/5 transition flex items-center justify-center gap-2 cursor-pointer">
-              <FileText size={16} />
-              Create Smart Invoice
+            <button
+              onClick={() =>
+                downloadCertificatePdf(
+                  ["smart-invoice-pdf-container"],
+                  `Invoice_${scanResult.imei}.pdf`,
+                )
+              }
+              disabled={isDownloading}
+              className="w-full py-3.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-black text-sm hover:bg-[#84CC16]/5 transition flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+            >
+              <Receipt size={16} />
+              {isDownloading ? "Generating Invoice..." : "Create Smart Invoice"}
             </button>
             <button
               onClick={onDownload}
@@ -614,6 +627,8 @@ export const SingleResultView = ({
             undefined
           }
         />
+
+        <SmartInvoicePDF data={scanResult} id="smart-invoice-pdf-container" />
       </div>
     </div>
   );
