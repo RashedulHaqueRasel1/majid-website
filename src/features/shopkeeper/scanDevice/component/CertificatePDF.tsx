@@ -1,5 +1,3 @@
-// CertificatePDF.tsx - সম্পূর্ণ আপডেটেড (API রেসপন্স অনুযায়ী)
-
 "use client";
 
 import React from "react";
@@ -22,7 +20,7 @@ interface CertificatePDFProps {
 }
 
 export const CERTIFICATE_PDF_WIDTH = 800;
-export const CERTIFICATE_PDF_HEIGHT = 1250;
+export const CERTIFICATE_PDF_HEIGHT = 1450; // বাড়ানো হয়েছে
 
 // Helper functions
 function getText(value: unknown, fallback = "N/A") {
@@ -104,10 +102,6 @@ export const CertificatePDF = React.forwardRef<
       "Estimated Purchase Date",
       "Purchase Date",
     ]) || "";
-  const activationStatus =
-    findProviderValue(providerRows, ["Activation Status", "Activated"]) || "";
-  const warrantyType =
-    findProviderValue(providerRows, ["Warranty Type", "Warranty"]) || "";
   const coverageBenefits =
     findProviderValue(providerRows, ["Coverage Benefits", "Benefits"]) || "";
   const notice = findProviderValue(providerRows, ["Notice"]) || "";
@@ -116,10 +110,6 @@ export const CertificatePDF = React.forwardRef<
   const riskScore = data.riskMeter?.score ?? 0;
   const riskLabel = data.riskMeter?.label ?? "Unknown Risk";
   const aiMessage = data.aiInsight?.message ?? "No AI insight available.";
-
-  // Market value
-  const marketAmount = data.marketValue?.amount;
-  const marketCurrency = data.marketValue?.currency ?? "USD";
 
   // Security checks
   const checks = data.checks;
@@ -184,11 +174,13 @@ export const CertificatePDF = React.forwardRef<
       id={id}
       style={{
         width: `${CERTIFICATE_PDF_WIDTH}px`,
-        minHeight: `${CERTIFICATE_PDF_HEIGHT}px`,
+        height: `${CERTIFICATE_PDF_HEIGHT}px`,
         backgroundColor: "white",
         fontFamily: "'Inter', sans-serif",
         padding: "40px 34px 50px",
         boxSizing: "border-box",
+        position: "relative",
+        overflow: "hidden",
       }}
     >
       <div
@@ -198,6 +190,9 @@ export const CertificatePDF = React.forwardRef<
           backgroundColor: "#ffffff",
           boxShadow: "0 20px 45px rgba(15, 23, 42, 0.08)",
           padding: "30px 28px 35px",
+          height: "100%",
+          display: "flex",
+          flexDirection: "column",
         }}
       >
         {/* Header */}
@@ -598,7 +593,8 @@ export const CertificatePDF = React.forwardRef<
         {/* Footer */}
         <div
           style={{
-            marginTop: "20px",
+            marginTop: "auto",
+            paddingTop: "20px",
             display: "flex",
             justifyContent: "space-between",
             flexWrap: "wrap",
