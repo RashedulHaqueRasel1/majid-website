@@ -23,8 +23,10 @@ import {
   CheckCircle,
   XCircle,
   Unlock,
+  Copy,
 } from "lucide-react";
 import { FavouriteIMEIData } from "../../scanDevice/types/scanDevice.types";
+import { useState } from "react";
 
 interface FavouriteResultViewProps {
   scanResult: FavouriteIMEIData;
@@ -64,21 +66,65 @@ export const FavouriteResultView = ({
   const providerData = scanResult.providerResults;
   const riskScore = scanResult.riskMeter;
   const riskInfo = getRiskLabel(riskScore);
+  const [copied, setCopied] = useState(false);
 
   const isSimUnlocked = providerData.simlock?.toLowerCase() === "unlocked";
   const isICloudUnlocked = providerData.icloud_lock?.toLowerCase() === "off";
   const isBlacklistClean =
     providerData.blacklist_status?.toLowerCase() === "clean";
 
+  // Extract market value from description or device_configuration
+  const extractMarketValue = () => {
+    // Check if description contains price
+    const descMatch = providerData.description?.match(/\$?(\d+(?:\.\d{2})?)/);
+    if (descMatch) return parseFloat(descMatch[1]);
+
+    // Check if device_configuration contains storage size
+    const configMatch = providerData.device_configuration?.match(/(\d+)GB/);
+    if (configMatch) {
+      const storage = parseInt(configMatch[1]);
+      // Approximate market value based on storage
+      if (storage === 256) return 899;
+      if (storage === 512) return 1099;
+      if (storage === 1024) return 1299;
+      return 699;
+    }
+
+    return 0; // No price found
+  };
+
+  const marketValue = extractMarketValue();
+
   // Helper function to format date
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
     const date = new Date(dateStr);
-    return date.toLocaleDateString("en-US", {
-      year: "numeric",
-      month: "short",
+    return date.toLocaleDateString("en-GB", {
       day: "numeric",
+      month: "short",
+      year: "numeric",
     });
+  };
+
+  const handleCopyToClipboard = () => {
+    const textToCopy = `
+Model: ${providerData.marketing_name || providerData.model_name || "iPhone"}
+IMEI: ${providerData.imei || imei}
+${providerData.imei2 ? `IMEI2: ${providerData.imei2}` : ""}
+Serial Number: ${providerData.serial_number || "N/A"}
+EID: ${providerData.eid || "N/A"}
+Warranty Status: ${providerData.warranty_status || "Limited Warranty"}
+Purchase Date: ${formatDate(providerData.purchase_date)}
+Coverage End Date: ${providerData.coverage_end_date || "N/A"}
+Find My iPhone: ${isICloudUnlocked ? "OFF" : "ON"}
+iCloud Status: ${isBlacklistClean ? "CLEAN" : "FLAGGED"}
+Locked Carrier: ${providerData.locked_carrier || "10 - Unlock"}
+SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
+Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
+    `.trim();
+    navigator.clipboard.writeText(textToCopy);
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
   };
 
   return (
@@ -95,7 +141,118 @@ export const FavouriteResultView = ({
         <span className="font-medium">Back to scan</span>
       </button>
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      {/* --- MOBILE VIEW --- */}
+      <div className="block md:hidden bg-white border border-slate-200 rounded-[32px] p-5 shadow-sm relative">
+        <div className="space-y-3 text-center text-[14px] text-[#5F6368] leading-relaxed">
+          <p>
+            <span className="font-semibold">Model:</span>{" "}
+            {providerData.marketing_name || providerData.model_name || "iPhone"}
+          </p>
+          <p>
+            <span className="font-semibold">IMEI:</span>{" "}
+            {providerData.imei || imei}
+          </p>
+          {providerData.imei2 && (
+            <p>
+              <span className="font-semibold">IMEI2:</span> {providerData.imei2}
+            </p>
+          )}
+          <p>
+            <span className="font-semibold">Serial Number:</span>{" "}
+            {providerData.serial_number || "N/A"}
+          </p>
+          <p className="break-all">
+            <span className="font-semibold">EID:</span>{" "}
+            {providerData.eid || "N/A"}
+          </p>
+
+          <p>
+            <span className="font-semibold">Warranty:</span>{" "}
+            {providerData.warranty_status || "Limited Warranty"}
+          </p>
+          <p>
+            <span className="font-semibold">Purchase Date:</span>{" "}
+            {formatDate(providerData.purchase_date)}
+          </p>
+          <p>
+            <span className="font-semibold">Coverage End:</span>{" "}
+            {providerData.coverage_end_date || "N/A"}
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="font-semibold">Find My iPhone:</span>
+            <span
+              className={`${!isICloudUnlocked ? "bg-[#F44336]" : "bg-[#4CAF50]"} text-white px-2 py-0.5 rounded-md text-[10px] font-bold`}
+            >
+              {!isICloudUnlocked ? "ON" : "OFF"}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="font-semibold">iCloud Status:</span>
+            <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase">
+              {isBlacklistClean ? "CLEAN" : "FLAGGED"}
+            </span>
+          </div>
+
+          <p>
+            <span className="font-semibold">Locked Carrier:</span>{" "}
+            {providerData.locked_carrier || "10 - Unlock"}
+          </p>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="font-semibold">SIM-Lock:</span>
+            <span
+              className={`${isSimUnlocked ? "bg-[#4CAF50]" : "bg-[#F44336]"} text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase`}
+            >
+              {isSimUnlocked ? "UNLOCKED" : "LOCKED"}
+            </span>
+          </div>
+
+          <div className="flex flex-wrap items-center justify-center gap-2">
+            <span className="font-semibold">Replaced by Apple:</span>
+            <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase">
+              {providerData.replaced_device === "No" ? "NO" : "YES"}
+            </span>
+          </div>
+        </div>
+
+        <button
+          onClick={handleCopyToClipboard}
+          className="absolute bottom-4 right-4 text-slate-300 hover:text-slate-500 transition"
+        >
+          <Copy size={22} />
+        </button>
+
+        {/* Mobile Action Buttons */}
+        <div className="mt-6 space-y-2">
+          <button className="w-full py-2.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm transition flex items-center justify-center gap-2">
+            <FileText size={14} />
+            Create Smart Invoice
+          </button>
+          <button
+            onClick={onDownload}
+            disabled={isDownloading}
+            className="w-full py-2.5 rounded-xl bg-[#84CC16] text-white font-bold text-sm shadow-lg transition flex items-center justify-center gap-2"
+          >
+            {isDownloading ? (
+              <Loader2 size={14} className="animate-spin" />
+            ) : (
+              <Download size={14} />
+            )}
+            {isDownloading ? "Generating..." : "Download PDF Certificate"}
+          </button>
+        </div>
+
+        {copied && (
+          <div className="absolute top-3 right-3 bg-slate-800 text-white text-[10px] px-2 py-1 rounded-full animate-pulse">
+            Copied!
+          </div>
+        )}
+      </div>
+
+      {/* --- DESKTOP VIEW --- */}
+      <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Header Card */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
           <div className="flex justify-between items-start">
@@ -149,7 +306,7 @@ export const FavouriteResultView = ({
               </div>
               <div className="text-right">
                 <span className="text-3xl font-bold text-slate-900">
-                  $942.00
+                  ${marketValue}
                 </span>
               </div>
             </div>
@@ -185,9 +342,7 @@ export const FavouriteResultView = ({
           <StatusTile
             icon={<CreditCard className="text-amber-500" />}
             title="Carrier Financing"
-            status={
-              providerData.financing_status || "No active payment plan detected"
-            }
+            status="No active payment plan detected"
             isValid={true}
           />
           <StatusTile
@@ -311,7 +466,7 @@ export const FavouriteResultView = ({
               {
                 label: "AppleCare",
                 value:
-                  providerData.applecare_description || "90 Days Phone Support",
+                  providerData.applecare_description || "90 DAYS PHONE SUPPORT",
               },
               {
                 label: "Purchase Date",
