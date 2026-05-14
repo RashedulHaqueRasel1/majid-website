@@ -6,6 +6,7 @@ import {
   BatchImeiResponse,
   IMEICheckApiResponse,
   ServiceListResponse,
+  FavouriteIMEIResponse,
 } from "../types/scanDevice.types";
 
 export const checkIMEIApi = async (
@@ -19,6 +20,18 @@ export const checkIMEIApi = async (
   console.log("📤 API Payload:", payload);
 
   const response = await axiosInstance.post("/imei/check", payload);
+  return response.data;
+};
+
+// নতুন API for favourite services (v2)
+export const checkFavouriteIMEIApi = async (
+  imei: string,
+  serviceId: number,
+): Promise<FavouriteIMEIResponse> => {
+  const payload = { imei, serviceId };
+  console.log("⭐ Favourite API Payload:", payload);
+
+  const response = await axiosInstance.post("/imei/check-v2", payload);
   return response.data;
 };
 

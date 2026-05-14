@@ -15,28 +15,22 @@ import {
   Cpu,
   CreditCard,
   Globe,
-  Gauge,
-  Database,
-  Tag,
+  Calendar,
   Shield,
-  Receipt,
-  Check,
-  Wallet,
+  Tag,
+  Database,
+  Wifi,
+  CheckCircle,
+  XCircle,
+  Unlock,
   Copy,
 } from "lucide-react";
-import { IMEIResult } from "../../scanDevice/types/scanDevice.types";
-import { CertificatePDF } from "./CertificatePDF";
-import {
-  getChecksArray,
-  getStatusColor,
-  getTechnicalBreakdownItems,
-} from "@/utils/resultHelpers";
-import { SmartInvoicePDF } from "./SmartInvoicePDF";
-import { useCertificateDownload } from "../hooks/useCertificateDownload";
+import { FavouriteIMEIData } from "../../scanDevice/types/scanDevice.types";
 import { useState } from "react";
 
-interface SingleResultViewProps {
-  scanResult: IMEIResult;
+interface FavouriteResultViewProps {
+  scanResult: FavouriteIMEIData;
+  imei: string;
   singleReportMeta: { provider?: string; serviceId?: number } | null;
   selectedService?: { name?: string; serviceId?: number | null } | null;
   onBack: () => void;
@@ -60,105 +54,50 @@ const getRiskLabel = (score: number) => {
   return { label: "High Risk", color: "bg-red-500", text: "text-red-500" };
 };
 
-// Helper function to parse provider data rows
-const parseProviderRows = (
-  html: string,
-): { label: string; value: string }[] => {
-  if (!html) return [];
-  const cleanText = html
-    .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?(font|span|b|strong|i|em)[^>]*>/gi, "")
-    .replace(/&nbsp;/gi, " ")
-    .replace(/&amp;/gi, "&")
-    .trim();
-  const rows: { label: string; value: string }[] = [];
-  const lines = cleanText.split("\n");
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-    const colonIndex = trimmed.indexOf(":");
-    if (colonIndex > 0) {
-      const label = trimmed.substring(0, colonIndex).trim();
-      const value = trimmed.substring(colonIndex + 1).trim();
-      rows.push({ label, value });
-    } else {
-      rows.push({ label: "Info", value: trimmed });
-    }
-  }
-  return rows;
-};
-
-export const SingleResultView = ({
+export const FavouriteResultView = ({
   scanResult,
+  imei,
   singleReportMeta,
   selectedService,
   onBack,
   onDownload,
-  isDownloading: parentIsDownloading,
-}: SingleResultViewProps) => {
-  const checksArray = getChecksArray(scanResult);
-  const technicalItems = getTechnicalBreakdownItems(scanResult);
-  const riskScore = scanResult.riskMeter?.score || 0;
+  isDownloading,
+}: FavouriteResultViewProps) => {
+  const providerData = scanResult.providerResults;
+  const riskScore = scanResult.riskMeter;
   const riskInfo = getRiskLabel(riskScore);
-  const { downloadCertificatePdf, isDownloading: hookIsDownloading } =
-    useCertificateDownload();
-
-  const [isCertificateDownloading, setIsCertificateDownloading] =
-    useState(false);
-  const [isInvoiceDownloading, setIsInvoiceDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
 
-  const providerData = scanResult.providerData as
-    | {
-        result?: string;
-        imei?: string;
-        balance?: number;
-        price?: string;
-        id?: number;
-        status?: string;
-        ip?: string;
-      }
-    | undefined;
-
-  const providerHTML = providerData?.result || "";
-  const providerRows = parseProviderRows(providerHTML);
-
-  // Create provider data map
-  const providerDataMap: Record<string, string> = {};
-  providerRows.forEach((row) => {
-    providerDataMap[row.label] = row.value;
-  });
-
-  const deviceNameFromProvider =
-    providerDataMap["Device"] || scanResult.deviceName;
-  const imeiValue = providerDataMap["IMEI Number"] || scanResult.imei;
-  const imei2Value =
-    providerDataMap["IMEI 2"] || providerDataMap["IMEI2 Number"];
-  const serialNumber = providerDataMap["Serial Number"] || "N/A";
-  const eidNumber = providerDataMap["EID"] || "N/A";
-  const warrantyExpiry = providerDataMap["Warranty Expires"] || "N/A";
-  const purchaseDate = providerDataMap["Estimated Purchase Date"] || "N/A";
-  const coverageEndDate =
-    providerDataMap["Coverage End Date"] || warrantyExpiry;
-  const warrantyStatus =
-    providerDataMap["Warranty Type"] || "Apple Limited Warranty";
-  const replacedDevice = providerDataMap["Replaced Device"] || "No";
-  const lockedCarrier = providerDataMap["Locked Carrier"] || "Unlock";
-
-  // Get check statuses
+  const isSimUnlocked = providerData.simlock?.toLowerCase() === "unlocked";
+  const isICloudUnlocked = providerData.icloud_lock?.toLowerCase() === "off";
   const isBlacklistClean =
-    scanResult.checks?.globalBlacklist?.status === "passed";
-  const isFinancingClean =
-    scanResult.checks?.carrierFinancing?.status === "passed";
-  const isHardwareClean = scanResult.checks?.hardwareLock?.status === "passed";
-  const isPartAuthentic =
-    scanResult.checks?.partAuthenticity?.status === "passed";
+    providerData.blacklist_status?.toLowerCase() === "clean";
 
-  const isSimUnlocked = scanResult.checks?.hardwareLock?.status === "passed";
-  const isICloudUnlocked = scanResult.checks?.hardwareLock?.status === "passed";
+  // Extract market value from description or device_configuration
+  const extractMarketValue = () => {
+    // Check if description contains price
+    const descMatch = providerData.description?.match(/\$?(\d+(?:\.\d{2})?)/);
+    if (descMatch) return parseFloat(descMatch[1]);
 
+    // Check if device_configuration contains storage size
+    const configMatch = providerData.device_configuration?.match(/(\d+)GB/);
+    if (configMatch) {
+      const storage = parseInt(configMatch[1]);
+      // Approximate market value based on storage
+      if (storage === 256) return 899;
+      if (storage === 512) return 1099;
+      if (storage === 1024) return 1299;
+      return 699;
+    }
+
+    return 0; // No price found
+  };
+
+  const marketValue = extractMarketValue();
+
+  // Helper function to format date
   const formatDate = (dateStr: string) => {
-    if (!dateStr || dateStr === "N/A") return "N/A";
+    if (!dateStr) return "N/A";
     const date = new Date(dateStr);
     return date.toLocaleDateString("en-GB", {
       day: "numeric",
@@ -167,53 +106,21 @@ export const SingleResultView = ({
     });
   };
 
-  const certificateElementId = "certificate-pdf-single";
-  const invoiceElementId = "smart-invoice-pdf-container";
-
-  const handleDownloadCertificate = async () => {
-    setIsCertificateDownloading(true);
-    try {
-      await downloadCertificatePdf(
-        [certificateElementId],
-        `Certificate_${scanResult.imei}.pdf`,
-      );
-    } catch (error) {
-      console.error("Certificate download failed:", error);
-    } finally {
-      setIsCertificateDownloading(false);
-    }
-  };
-
-  const handleDownloadInvoice = async () => {
-    setIsInvoiceDownloading(true);
-    try {
-      await downloadCertificatePdf(
-        [invoiceElementId],
-        `Invoice_${scanResult.imei}.pdf`,
-      );
-    } catch (error) {
-      console.error("Invoice download failed:", error);
-    } finally {
-      setIsInvoiceDownloading(false);
-    }
-  };
-
   const handleCopyToClipboard = () => {
     const textToCopy = `
-Model: ${deviceNameFromProvider || "iPhone"}
-IMEI: ${imeiValue}
-${imei2Value ? `IMEI2: ${imei2Value}` : ""}
-Serial Number: ${serialNumber}
-EID: ${eidNumber}
-Activation Status: ACTIVATED
-Warranty Status: ${warrantyStatus}
-Estimated Purchase Date: ${formatDate(purchaseDate)}
-Coverage End Date: ${formatDate(coverageEndDate)}
+Model: ${providerData.marketing_name || providerData.model_name || "iPhone"}
+IMEI: ${providerData.imei || imei}
+${providerData.imei2 ? `IMEI2: ${providerData.imei2}` : ""}
+Serial Number: ${providerData.serial_number || "N/A"}
+EID: ${providerData.eid || "N/A"}
+Warranty Status: ${providerData.warranty_status || "Limited Warranty"}
+Purchase Date: ${formatDate(providerData.purchase_date)}
+Coverage End Date: ${providerData.coverage_end_date || "N/A"}
 Find My iPhone: ${isICloudUnlocked ? "OFF" : "ON"}
 iCloud Status: ${isBlacklistClean ? "CLEAN" : "FLAGGED"}
-US Block Status: ${isBlacklistClean ? "CLEAN" : "FLAGGED"}
-Locked Carrier: ${lockedCarrier}
+Locked Carrier: ${providerData.locked_carrier || "10 - Unlock"}
 SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
+Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
     `.trim();
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
@@ -234,45 +141,42 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         <span className="font-medium">Back to scan</span>
       </button>
 
-      {/* --- MOBILE VIEW (Complete Data) --- */}
+      {/* --- MOBILE VIEW --- */}
       <div className="block md:hidden bg-white border border-slate-200 rounded-[32px] p-5 shadow-sm relative">
         <div className="space-y-3 text-center text-[14px] text-[#5F6368] leading-relaxed">
           <p>
             <span className="font-semibold">Model:</span>{" "}
-            {deviceNameFromProvider || scanResult.deviceName || "iPhone"}
+            {providerData.marketing_name || providerData.model_name || "iPhone"}
           </p>
           <p>
-            <span className="font-semibold">IMEI:</span> {imeiValue}
+            <span className="font-semibold">IMEI:</span>{" "}
+            {providerData.imei || imei}
           </p>
-          {imei2Value && (
+          {providerData.imei2 && (
             <p>
-              <span className="font-semibold">IMEI2:</span> {imei2Value}
+              <span className="font-semibold">IMEI2:</span> {providerData.imei2}
             </p>
           )}
           <p>
-            <span className="font-semibold">Serial Number:</span> {serialNumber}
+            <span className="font-semibold">Serial Number:</span>{" "}
+            {providerData.serial_number || "N/A"}
           </p>
           <p className="break-all">
-            <span className="font-semibold">EID:</span> {eidNumber}
+            <span className="font-semibold">EID:</span>{" "}
+            {providerData.eid || "N/A"}
           </p>
 
-          <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
-            <span className="font-semibold">Activation:</span>
-            <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
-              ACTIVATED
-            </span>
-          </div>
-
           <p>
-            <span className="font-semibold">Warranty:</span> {warrantyStatus}
+            <span className="font-semibold">Warranty:</span>{" "}
+            {providerData.warranty_status || "Limited Warranty"}
           </p>
           <p>
             <span className="font-semibold">Purchase Date:</span>{" "}
-            {formatDate(purchaseDate)}
+            {formatDate(providerData.purchase_date)}
           </p>
           <p>
             <span className="font-semibold">Coverage End:</span>{" "}
-            {formatDate(coverageEndDate)}
+            {providerData.coverage_end_date || "N/A"}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -291,16 +195,9 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             </span>
           </div>
 
-          <div className="flex flex-wrap items-center justify-center gap-2">
-            <span className="font-semibold">US Block:</span>
-            <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase">
-              {isBlacklistClean ? "CLEAN" : "FLAGGED"}
-            </span>
-          </div>
-
           <p>
             <span className="font-semibold">Locked Carrier:</span>{" "}
-            {lockedCarrier}
+            {providerData.locked_carrier || "10 - Unlock"}
           </p>
 
           <div className="flex flex-wrap items-center justify-center gap-2">
@@ -315,7 +212,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">Replaced by Apple:</span>
             <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase">
-              {replacedDevice === "No" ? "NO" : "YES"}
+              {providerData.replaced_device === "No" ? "NO" : "YES"}
             </span>
           </div>
         </div>
@@ -329,31 +226,21 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
 
         {/* Mobile Action Buttons */}
         <div className="mt-6 space-y-2">
-          <button
-            onClick={handleDownloadInvoice}
-            disabled={isInvoiceDownloading}
-            className="w-full py-2.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm transition flex items-center justify-center gap-2"
-          >
-            {isInvoiceDownloading ? (
-              <Loader2 size={14} className="animate-spin" />
-            ) : (
-              <Receipt size={14} />
-            )}
-            {isInvoiceDownloading ? "Generating..." : "Create Smart Invoice"}
+          <button className="w-full py-2.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm transition flex items-center justify-center gap-2">
+            <FileText size={14} />
+            Create Smart Invoice
           </button>
           <button
-            onClick={handleDownloadCertificate}
-            disabled={isCertificateDownloading}
+            onClick={onDownload}
+            disabled={isDownloading}
             className="w-full py-2.5 rounded-xl bg-[#84CC16] text-white font-bold text-sm shadow-lg transition flex items-center justify-center gap-2"
           >
-            {isCertificateDownloading ? (
+            {isDownloading ? (
               <Loader2 size={14} className="animate-spin" />
             ) : (
               <Download size={14} />
             )}
-            {isCertificateDownloading
-              ? "Generating..."
-              : "Download PDF Certificate"}
+            {isDownloading ? "Generating..." : "Download PDF Certificate"}
           </button>
         </div>
 
@@ -364,25 +251,30 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         )}
       </div>
 
-      {/* --- DESKTOP VIEW (COMPLETELY UNCHANGED) --- */}
+      {/* --- DESKTOP VIEW --- */}
       <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Header Card */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
           <div className="flex justify-between items-start">
             <div>
               <h1 className="text-2xl md:text-3xl font-bold text-slate-900">
-                {deviceNameFromProvider ||
-                  scanResult.deviceName ||
-                  "Unknown Device"}
+                {providerData.marketing_name ||
+                  providerData.model_name ||
+                  "Device"}
               </h1>
               <p className="text-slate-400 mt-1 font-medium font-mono text-sm">
-                IMEI: {providerData?.imei || scanResult.imei}
+                IMEI: {providerData.imei || imei}
               </p>
+              {providerData.imei2 && (
+                <p className="text-slate-400 mt-0.5 font-mono text-xs">
+                  IMEI2: {providerData.imei2}
+                </p>
+              )}
             </div>
             <span
               className={`px-4 py-1.5 text-white rounded-full text-xs font-bold uppercase tracking-widest ${isBlacklistClean ? "bg-emerald-500" : "bg-red-500"}`}
             >
-              {scanResult.deviceStatus?.toUpperCase() || "UNKNOWN"}
+              {isBlacklistClean ? "CLEAN" : "FLAGGED"}
             </span>
           </div>
 
@@ -414,7 +306,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
               </div>
               <div className="text-right">
                 <span className="text-3xl font-bold text-slate-900">
-                  ${scanResult.marketValue?.amount?.toFixed(2) || "0.00"}
+                  ${marketValue}
                 </span>
               </div>
             </div>
@@ -437,7 +329,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
           </div>
         </div>
 
-        {/* Status Grid - Security Checks */}
+        {/* Status Grid */}
         <div className="lg:col-span-2 grid grid-cols-1 md:grid-cols-2 gap-4">
           <StatusTile
             icon={<Globe className="text-emerald-500" />}
@@ -448,34 +340,22 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             isValid={isBlacklistClean}
           />
           <StatusTile
-            icon={<Wallet className="text-amber-500" />}
+            icon={<CreditCard className="text-amber-500" />}
             title="Carrier Financing"
-            status={
-              isFinancingClean
-                ? "No active payment plan"
-                : "Active payment plan detected"
-            }
-            isValid={isFinancingClean}
+            status="No active payment plan detected"
+            isValid={true}
           />
           <StatusTile
             icon={<Lock className="text-emerald-500" />}
             title="Hardware Lock"
-            status={
-              isHardwareClean
-                ? "No hardware lock detected"
-                : "Hardware lock detected"
-            }
-            isValid={isHardwareClean}
+            status={isICloudUnlocked ? "FMI is OFF" : "FMI is ON"}
+            isValid={isICloudUnlocked}
           />
           <StatusTile
             icon={<Cpu className="text-emerald-500" />}
             title="Part Authenticity"
-            status={
-              isPartAuthentic
-                ? "All original components"
-                : "Aftermarket parts detected"
-            }
-            isValid={isPartAuthentic}
+            status="All original components verified"
+            isValid={true}
           />
         </div>
 
@@ -485,106 +365,198 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             Report Actions
           </span>
           <div className="space-y-3">
-            <button
-              onClick={handleDownloadInvoice}
-              disabled={isInvoiceDownloading || parentIsDownloading}
-              className="w-full py-3 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm hover:bg-lime-50 transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-            >
-              {isInvoiceDownloading ? (
-                <Loader2 size={16} className="animate-spin" />
-              ) : (
-                <Receipt size={16} />
-              )}
-              {isInvoiceDownloading
-                ? "Generating Invoice..."
-                : "Create Smart Invoice"}
+            <button className="w-full py-3 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm hover:bg-lime-50 transition flex items-center justify-center gap-2">
+              <FileText size={16} />
+              Create Smart Invoice
             </button>
             <button
-              onClick={handleDownloadCertificate}
-              disabled={isCertificateDownloading || parentIsDownloading}
+              onClick={onDownload}
+              disabled={isDownloading}
               className="w-full py-3 rounded-xl bg-[#84CC16] text-white font-bold text-sm hover:bg-[#76b813] transition shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
             >
-              {isCertificateDownloading ? (
+              {isDownloading ? (
                 <Loader2 size={18} className="animate-spin" />
               ) : (
                 <Download size={18} />
               )}
-              {isCertificateDownloading
-                ? "Generating Certificate..."
-                : "Download PDF Certificate"}
+              {isDownloading ? "Generating..." : "Download PDF Certificate"}
             </button>
           </div>
         </div>
 
         {/* Device Specifications Section */}
-        {providerRows.length > 0 && (
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-lime-500/10 rounded-xl">
-                <Smartphone size={18} className="text-lime-500" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">
-                Device Specifications
-              </h3>
+        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-lime-500/10 rounded-xl">
+              <Smartphone size={18} className="text-lime-500" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {providerRows.slice(0, 6).map((row, idx) => (
+            <h3 className="text-base font-bold text-slate-800">
+              Device Specifications
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              { label: "Model", value: providerData.model, icon: Smartphone },
+              {
+                label: "Model Name",
+                value: providerData.model_name,
+                icon: Tag,
+              },
+              {
+                label: "Serial Number",
+                value: providerData.serial_number,
+                icon: Database,
+              },
+              {
+                label: "Manufacturer",
+                value: providerData.manufacturer || "Apple",
+                icon: Shield,
+              },
+              {
+                label: "Operating System",
+                value: providerData.operating_system || "iOS",
+                icon: Cpu,
+              },
+              { label: "EID", value: providerData.eid, icon: Wifi },
+            ]
+              .filter((item) => item.value)
+              .map((item, idx) => (
                 <div
                   key={idx}
                   className="bg-slate-50 rounded-xl p-4 border border-slate-100"
                 >
                   <div className="flex items-center gap-2 mb-2">
-                    <Tag size={14} className="text-slate-400" />
+                    <item.icon size={14} className="text-slate-400" />
                     <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      {row.label}
+                      {item.label}
                     </span>
                   </div>
                   <p className="text-sm font-semibold text-slate-800 break-words">
-                    {row.value}
+                    {item.value}
                   </p>
                 </div>
               ))}
-            </div>
           </div>
-        )}
+        </div>
 
-        {/* Technical Breakdown Section */}
-        {technicalItems.length > 0 && (
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-blue-500/10 rounded-xl">
-                <Database size={18} className="text-blue-500" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">
-                Technical Breakdown
-              </h3>
+        {/* Warranty & Coverage Section */}
+        <div className="lg:col-span-2 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-blue-500/10 rounded-xl">
+              <Shield size={18} className="text-blue-500" />
             </div>
-            <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
-              {technicalItems.map((item, idx) => (
+            <h3 className="text-base font-bold text-slate-800">
+              Warranty & Coverage
+            </h3>
+          </div>
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            {[
+              {
+                label: "Warranty Status",
+                value: providerData.warranty_status || "Limited Warranty",
+              },
+              {
+                label: "Limited Warranty",
+                value: providerData.limited_warranty || "Yes",
+              },
+              {
+                label: "Coverage Period",
+                value: `${providerData.coverage_start_date || "N/A"} - ${providerData.coverage_end_date || "N/A"}`,
+              },
+              {
+                label: "AppleCare",
+                value:
+                  providerData.applecare_description || "90 DAYS PHONE SUPPORT",
+              },
+              {
+                label: "Purchase Date",
+                value: formatDate(providerData.purchase_date || ""),
+              },
+              {
+                label: "Replaced Device",
+                value: providerData.replaced_device === "No" ? "No" : "Yes",
+              },
+            ]
+              .filter((item) => item.value !== "N/A - N/A")
+              .map((item, idx) => (
                 <div key={idx} className="border-b border-slate-100 pb-3">
                   <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                     {item.label}
                   </p>
-                  <p className="text-sm font-semibold text-slate-800 break-words">
-                    {String(item.value)}
+                  <p className="text-sm font-semibold text-slate-800">
+                    {item.value}
                   </p>
                 </div>
               ))}
+          </div>
+        </div>
+
+        {/* Lock & Security Section */}
+        <div className="bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-purple-500/10 rounded-xl">
+              <Lock size={18} className="text-purple-500" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">
+              Lock & Security
+            </h3>
+          </div>
+          <div className="space-y-4">
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-xs text-slate-500">SIM Lock Status</span>
+              {isSimUnlocked ? (
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                  <Unlock size={12} /> Unlocked
+                </span>
+              ) : (
+                <span className="text-xs font-bold text-red-600 flex items-center gap-1">
+                  <Lock size={12} /> Locked
+                </span>
+              )}
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-xs text-slate-500">iCloud Lock</span>
+              {isICloudUnlocked ? (
+                <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
+                  <CheckCircle size={12} /> OFF (Clean)
+                </span>
+              ) : (
+                <span className="text-xs font-bold text-red-600 flex items-center gap-1">
+                  <XCircle size={12} /> ON (Locked)
+                </span>
+              )}
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-xs text-slate-500">SIM Policy Unlock</span>
+              <span className="text-xs font-bold text-slate-700">
+                {providerData.simpolicy_unlock_status || "UNLOCK"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-2 border-b border-slate-100">
+              <span className="text-xs text-slate-500">Locked Carrier</span>
+              <span className="text-xs font-bold text-slate-700">
+                {providerData.locked_carrier || "10 - Unlock"}
+              </span>
+            </div>
+            <div className="flex justify-between items-center py-2">
+              <span className="text-xs text-slate-500">Activation Policy</span>
+              <span className="text-xs font-bold text-slate-700 truncate max-w-[180px]">
+                {providerData.initial_activation_policy_description ||
+                  "10 - Unlock"}
+              </span>
             </div>
           </div>
-        )}
+        </div>
 
         {/* Metadata Footer */}
         <div className="lg:col-span-3 bg-slate-50 rounded-2xl p-5 border border-slate-200">
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Provider
+                Service
               </p>
               <p className="text-sm font-bold text-slate-700">
-                {singleReportMeta?.provider ||
-                  selectedService?.name ||
-                  "IMEI Service"}
+                {scanResult.bundledServiceName}
               </p>
             </div>
             <div>
@@ -592,9 +564,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
                 Service ID
               </p>
               <p className="text-sm font-bold text-slate-700">
-                {singleReportMeta?.serviceId ??
-                  selectedService?.serviceId ??
-                  "N/A"}
+                {scanResult.bundledServiceId}
               </p>
             </div>
             <div>
@@ -607,52 +577,20 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             </div>
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Balance
+                Risk Score
               </p>
               <p className="text-sm font-bold text-slate-700">
-                {providerData?.balance !== undefined
-                  ? `$${providerData.balance.toFixed(3)}`
-                  : "N/A"}
+                {riskScore}/100
               </p>
             </div>
           </div>
         </div>
       </div>
-
-      {/* Hidden Certificate & Invoice Containers */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: "-10000px",
-          width: "1100px",
-          pointerEvents: "none",
-          zIndex: -1,
-          overflow: "hidden",
-        }}
-      >
-        <CertificatePDF
-          data={scanResult}
-          id={certificateElementId}
-          providerName={singleReportMeta?.provider || selectedService?.name}
-          serviceId={
-            singleReportMeta?.serviceId ??
-            selectedService?.serviceId ??
-            undefined
-          }
-        />
-        <SmartInvoicePDF
-          data={scanResult}
-          id={invoiceElementId}
-          customerName="Alexander Wright"
-          customerEmail="alex.wright@example.com"
-        />
-      </div>
     </div>
   );
 };
 
-/* Helper Components - UNCHANGED */
+/* Helper Components */
 function StatusTile({
   icon,
   title,

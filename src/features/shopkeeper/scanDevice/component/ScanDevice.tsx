@@ -10,6 +10,7 @@ import { useScanDevice } from "../hooks/useScanDevice";
 import { useCertificateDownload } from "../hooks/useCertificateDownload";
 import { usePersistedReport } from "../hooks/usePersistedReport";
 import { SingleResultView } from "./SingleResultView";
+import { FavouriteResultView } from "./FavouriteResultView";
 import { ScanHeader } from "./ScanHeader";
 import { ServiceSelector } from "./ServiceSelector";
 import { ScanInput } from "./ScanInput";
@@ -37,6 +38,7 @@ export default function ScanDevice() {
     setImei,
     isScanning,
     scanResult,
+    favouriteResult,
     batchResult,
     setBatchResult,
     currentStep,
@@ -70,6 +72,7 @@ export default function ScanDevice() {
       selectedService &&
       !isScanning &&
       !scanResult &&
+      !favouriteResult &&
       !batchResult
     ) {
       handleScan(queryImei, selectedService.serviceId || 6);
@@ -79,9 +82,30 @@ export default function ScanDevice() {
     selectedService,
     isScanning,
     scanResult,
+    favouriteResult,
     batchResult,
     handleScan,
   ]);
+
+  // Favourite result view
+  if (favouriteResult) {
+    return (
+      <FavouriteResultView
+        scanResult={favouriteResult}
+        imei={imei}
+        singleReportMeta={singleReportMeta}
+        selectedService={selectedService}
+        onBack={clearResults}
+        onDownload={() =>
+          downloadCertificatePdf(
+            ["certificate-pdf-favourite"],
+            `Favourite_Certificate_${imei}.pdf`,
+          )
+        }
+        isDownloading={isDownloading}
+      />
+    );
+  }
 
   // Single result view
   if (scanResult) {

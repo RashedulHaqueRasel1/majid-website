@@ -1,15 +1,23 @@
+// hooks/useScanDevice.ts - আপডেটেড
+
 import { useState, useCallback } from "react";
-import { checkIMEIApi } from "../../scanDevice/api/scanDevice.api";
+import {
+  checkIMEIApi,
+  checkFavouriteIMEIApi,
+} from "../../scanDevice/api/scanDevice.api";
 import {
   IMEIResult,
   BatchImeiResponse,
   BatchImeiItemResult,
+  FavouriteIMEIData,
 } from "../../scanDevice/types/scanDevice.types";
 
 export const useScanDevice = () => {
   const [imei, setImei] = useState("");
   const [isScanning, setIsScanning] = useState(false);
   const [scanResult, setScanResult] = useState<IMEIResult | null>(null);
+  const [favouriteResult, setFavouriteResult] =
+    useState<FavouriteIMEIData | null>(null);
   const [batchResult, setBatchResult] = useState<BatchImeiResponse | null>(
     null,
   );
@@ -26,14 +34,18 @@ export const useScanDevice = () => {
 
   const parseIMEIInput = useCallback((input: string): string[] => {
     if (!input || input.trim() === "") return [];
-
     const items = input
       .split(/[,\n\r\t;]+/)
       .map((item) => item.trim())
       .filter((item) => item.length > 0 && isValidIMEI(item));
-
     console.log("📝 Parsed IMEIs:", items);
     return items;
+  }, []);
+
+  // Check if selected service is favourite
+  const isFavouriteService = useCallback((serviceId: number): boolean => {
+    // Favourite service IDs: 1000, 1001, 1002 etc.
+    return [1000, 1001, 1002].includes(serviceId);
   }, []);
 
   const handleScan = useCallback(
@@ -54,6 +66,7 @@ export const useScanDevice = () => {
 
       setIsScanning(true);
       setScanResult(null);
+      setFavouriteResult(null);
       setBatchResult(null);
       setError(null);
       setCurrentStep(1);
@@ -63,14 +76,49 @@ export const useScanDevice = () => {
         setTimeout(() => setCurrentStep(3), 3000);
 
         const isBulk = imeiList.length > 1;
+        const isFav = !isBulk && isFavouriteService(serviceId);
 
-        if (isBulk) {
-          // Bulk IMEI check - সবগুলো একসাথে
+        // Favourite service (single IMEI only)
+        if (isFav) {
+          console.log("⭐ Sending favourite service request:", {
+            imei: imeiList[0],
+            serviceId,
+          });
+
+          const response = await checkFavouriteIMEIApi(imeiList[0], serviceId);
+          console.log("📦 Favourite response:", response);
+
+          if (
+            response.success &&
+            Array.isArray(response.data) &&
+            response.data.length > 0
+          ) {
+            const firstItem = response.data[0];
+            if (firstItem.ok && firstItem.data) {
+              setTimeout(() => {
+                setFavouriteResult(firstItem.data);
+                setSingleReportMeta({
+                  provider: firstItem.data.bundledServiceName,
+                  serviceId: firstItem.data.bundledServiceId,
+                });
+                setIsScanning(false);
+                onComplete?.();
+              }, 4500);
+            } else {
+              setError(firstItem.message || "No valid IMEI data received");
+              setIsScanning(false);
+            }
+          } else {
+            setError(response.message || "Failed to check IMEI");
+            setIsScanning(false);
+          }
+        }
+        // Bulk IMEI check
+        else if (isBulk) {
           console.log("🚀 Sending bulk request:", {
             imei: imeiList,
             serviceId,
           });
-
           const response = await checkIMEIApi(imeiList, serviceId);
           console.log("📦 Bulk response:", response);
 
@@ -93,16 +141,10 @@ export const useScanDevice = () => {
             const batchResponse: BatchImeiResponse = {
               success: true,
               message: response.message,
-              summary: {
-                total: imeiList.length,
-                successCount,
-                failedCount,
-              },
+              summary: { total: imeiList.length, successCount, failedCount },
               data: bulkItems,
             };
-
             setBatchResult(batchResponse);
-
             setTimeout(() => {
               setIsScanning(false);
               onComplete?.();
@@ -111,13 +153,13 @@ export const useScanDevice = () => {
             setError(response.message || "Failed to check IMEIs");
             setIsScanning(false);
           }
-        } else {
-          // Single IMEI check
+        }
+        // Single IMEI check (non-favourite)
+        else {
           console.log("🎯 Sending single request:", {
             imei: imeiList[0],
             serviceId,
           });
-
           const response = await checkIMEIApi(imeiList[0], serviceId);
 
           if (
@@ -159,12 +201,13 @@ export const useScanDevice = () => {
         setIsScanning(false);
       }
     },
-    [parseIMEIInput],
+    [parseIMEIInput, isFavouriteService],
   );
 
   const clearResults = () => {
     console.log("🧹 Clearing all results");
     setScanResult(null);
+    setFavouriteResult(null);
     setBatchResult(null);
     setSingleReportMeta(null);
     setError(null);
@@ -177,6 +220,7 @@ export const useScanDevice = () => {
     setImei,
     isScanning,
     scanResult,
+    favouriteResult,
     batchResult,
     setBatchResult,
     currentStep,

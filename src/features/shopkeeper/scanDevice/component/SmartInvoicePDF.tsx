@@ -110,7 +110,7 @@ export const SmartInvoicePDF = React.forwardRef<
       day: "numeric",
     });
 
-    const invoiceId = `IMS-${data.imei.slice(-6)}-${new Date().getFullYear()}`;
+    const invoiceId = `IMS-${data?.imei?.slice(-6)}-${new Date().getFullYear()}`;
 
     return (
       <div
@@ -894,7 +894,7 @@ export const SmartInvoicePDF = React.forwardRef<
           </div>
           <div>
             <p style={{ fontSize: "8px", color: colors.slate500, margin: 0 }}>
-              TXN: {data.imei.slice(-8)}-{new Date().getFullYear()}
+              TXN: {data?.imei?.slice(-8)}-{new Date().getFullYear()}
             </p>
           </div>
         </div>
