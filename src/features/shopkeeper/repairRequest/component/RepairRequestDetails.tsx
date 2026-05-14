@@ -109,10 +109,190 @@ export default function RepairRequestDetails({ id }: { id: string }) {
     );
   }
 
+  // const generateInvoicePDF = async () => {
+  //   if (!request) return;
+
+  //   const doc = new jsPDF();
+
+  //   const shopName =
+  //     typeof request?.shopkeeperId === "object"
+  //       ? request?.shopkeeperId?.shopName || "Repair Shop"
+  //       : "Repair Shop";
+
+  //   const formatDate = (date: string | number | Date) =>
+  //     date ? format(new Date(date), "MMM dd, yyyy") : "-";
+
+  //   const safeText = (text: string | undefined) =>
+  //     text ? String(text) : "N/A";
+
+  //   // ================= HEADER =================
+  //   doc.setFillColor(15, 23, 42);
+  //   doc.rect(0, 0, 210, 45, "F");
+
+  //   doc.setTextColor(255, 255, 255);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.setFontSize(22);
+  //   doc.text("INVOICE", 14, 28);
+
+  //   doc.setFontSize(11);
+  //   doc.setFont("helvetica", "normal");
+  //   doc.text(shopName, 196, 22, { align: "right" });
+
+  //   doc.setTextColor(200, 200, 200);
+  //   doc.text(
+  //     `Request ID: ${request?._id?.slice(-8)?.toUpperCase() || "N/A"}`,
+  //     196,
+  //     30,
+  //     { align: "right" },
+  //   );
+
+  //   // ================= CUSTOMER =================
+  //   doc.setTextColor(30, 41, 59);
+  //   doc.setFontSize(10);
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("CUSTOMER DETAILS", 14, 60);
+
+  //   doc.setFont("helvetica", "normal");
+  //   doc.text(safeText(request.firstName), 14, 68);
+  //   doc.text(safeText(request.email), 14, 74);
+
+  //   // ================= META =================
+  //   doc.setFont("helvetica", "bold");
+  //   doc.text("DATE", 120, 60);
+  //   doc.setFont("normal");
+  //   doc.text(formatDate(new Date()), 120, 68);
+
+  //   doc.setFont("bold");
+  //   doc.text("STATUS", 120, 78);
+  //   doc.setFont("normal");
+  //   doc.text(
+  //     safeText(request.status?.replaceAll("_", " ")?.toUpperCase()),
+  //     120,
+  //     86,
+  //   );
+
+  //   // ================= DEVICE BOX =================
+  //   doc.setFillColor(248, 250, 252);
+  //   doc.roundedRect(14, 95, 182, 32, 3, 3, "F");
+
+  //   doc.setTextColor(30, 41, 59);
+  //   doc.setFont("bold");
+  //   doc.text("DEVICE:", 20, 106);
+
+  //   doc.setFont("normal");
+  //   doc.text(
+  //     `${safeText(request.deviceModel)} (IMEI: ${safeText(
+  //       request.IMEINumber,
+  //     )})`,
+  //     45,
+  //     106,
+  //   );
+
+  //   doc.setFont("bold");
+  //   doc.text("ISSUE:", 20, 116);
+
+  //   doc.setFont("normal");
+  //   doc.text(safeText(request.description), 45, 116, {
+  //     maxWidth: 140,
+  //   });
+
+  //   // ================= TABLE DATA =================
+  //   const notes =
+  //     request?.shopkeeperNotes?.map((n) => [
+  //       formatDate(n.date),
+  //       safeText(n.message),
+  //       `${n.estimatedDays || 0} days`,
+  //       `$${Number(n.cost || 0).toFixed(2)}`,
+  //     ]) || [];
+
+  //   autoTable(doc, {
+  //     startY: 135,
+  //     head: [["Date", "Description", "Est. Time", "Cost"]],
+  //     body: notes,
+  //     theme: "grid",
+  //     headStyles: {
+  //       fillColor: [15, 23, 42],
+  //       textColor: 255,
+  //     },
+  //     styles: {
+  //       fontSize: 9,
+  //       cellPadding: 3,
+  //     },
+  //     columnStyles: {
+  //       3: { halign: "right" },
+  //     },
+  //   });
+
+  //   // ================= SUMMARY =================
+  //   const finalY = (doc as any).lastAutoTable?.finalY || 160;
+
+  //   const totalCost =
+  //     request?.shopkeeperNotes?.reduce(
+  //       (sum, n) => sum + Number(n.cost || 0),
+  //       0,
+  //     ) || 0;
+
+  //   doc.setFont("helvetica", "bold");
+  //   doc.setFontSize(12);
+  //   doc.text("TOTAL:", 140, finalY + 15);
+
+  //   doc.setFontSize(16);
+  //   doc.text(`$${totalCost.toFixed(2)}`, 196, finalY + 15, {
+  //     align: "right",
+  //   });
+
+  //   try {
+  //     const baseURL = "http://187.77.187.56:4897";
+  //     const qrLink = `${baseURL}/my-invoice/${request._id}`;
+
+  //     const qrDataUrl = await QRCode.toDataURL(qrLink, {
+  //       width: 90,
+  //       margin: 1,
+  //     });
+
+  //     doc.addImage(qrDataUrl, "PNG", 14, finalY + 5, 28, 28);
+
+  //     doc.setFontSize(8);
+  //     doc.setTextColor(100);
+  //     doc.text("Scan to view invoice", 14, finalY + 36);
+  //   } catch (err) {
+  //     console.error("QR error:", err);
+  //   }
+
+  //   // ================= FOOTER =================
+  //   const pageHeight = doc.internal.pageSize.height;
+
+  //   doc.setDrawColor(220);
+  //   doc.line(14, pageHeight - 22, 196, pageHeight - 22);
+
+  //   doc.setFontSize(9);
+  //   doc.setTextColor(120);
+
+  //   doc.text(`Thank you for choosing ${shopName}`, 105, pageHeight - 14, {
+  //     align: "center",
+  //   });
+
+  //   doc.text("This is a system generated invoice.", 105, pageHeight - 8, {
+  //     align: "center",
+  //   });
+
+  //   doc.save(
+  //     `Invoice_${request.deviceModel || "device"}_${request._id.slice(-5)}.pdf`,
+  //   );
+  // };
+
   const generateInvoicePDF = async () => {
     if (!request) return;
 
-    const doc = new jsPDF();
+    const doc = new jsPDF({
+      orientation: "portrait",
+      unit: "mm",
+      format: "a4",
+    });
+
+    const pageHeight = doc.internal.pageSize.getHeight();
+
+    // ================= HELPERS =================
 
     const shopName =
       typeof request?.shopkeeperId === "object"
@@ -125,163 +305,248 @@ export default function RepairRequestDetails({ id }: { id: string }) {
     const safeText = (text: string | undefined) =>
       text ? String(text) : "N/A";
 
-    // ================= HEADER =================
-    doc.setFillColor(15, 23, 42);
-    doc.rect(0, 0, 210, 45, "F");
-
-    doc.setTextColor(255, 255, 255);
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(22);
-    doc.text("INVOICE", 14, 28);
-
-    doc.setFontSize(11);
-    doc.setFont("helvetica", "normal");
-    doc.text(shopName, 196, 22, { align: "right" });
-
-    doc.setTextColor(200, 200, 200);
-    doc.text(
-      `Request ID: ${request?._id?.slice(-8)?.toUpperCase() || "N/A"}`,
-      196,
-      30,
-      { align: "right" },
-    );
-
-    // ================= CUSTOMER =================
-    doc.setTextColor(30, 41, 59);
-    doc.setFontSize(10);
-    doc.setFont("helvetica", "bold");
-    doc.text("CUSTOMER DETAILS", 14, 60);
-
-    doc.setFont("helvetica", "normal");
-    doc.text(safeText(request.firstName), 14, 68);
-    doc.text(safeText(request.email), 14, 74);
-
-    // ================= META =================
-    doc.setFont("helvetica", "bold");
-    doc.text("DATE", 120, 60);
-    doc.setFont("normal");
-    doc.text(formatDate(new Date()), 120, 68);
-
-    doc.setFont("bold");
-    doc.text("STATUS", 120, 78);
-    doc.setFont("normal");
-    doc.text(
-      safeText(request.status?.replaceAll("_", " ")?.toUpperCase()),
-      120,
-      86,
-    );
-
-    // ================= DEVICE BOX =================
-    doc.setFillColor(248, 250, 252);
-    doc.roundedRect(14, 95, 182, 32, 3, 3, "F");
-
-    doc.setTextColor(30, 41, 59);
-    doc.setFont("bold");
-    doc.text("DEVICE:", 20, 106);
-
-    doc.setFont("normal");
-    doc.text(
-      `${safeText(request.deviceModel)} (IMEI: ${safeText(
-        request.IMEINumber,
-      )})`,
-      45,
-      106,
-    );
-
-    doc.setFont("bold");
-    doc.text("ISSUE:", 20, 116);
-
-    doc.setFont("normal");
-    doc.text(safeText(request.description), 45, 116, {
-      maxWidth: 140,
-    });
-
-    // ================= TABLE DATA =================
-    const notes =
-      request?.shopkeeperNotes?.map((n) => [
-        formatDate(n.date),
-        safeText(n.message),
-        `${n.estimatedDays || 0} days`,
-        `$${Number(n.cost || 0).toFixed(2)}`,
-      ]) || [];
-
-    autoTable(doc, {
-      startY: 135,
-      head: [["Date", "Description", "Est. Time", "Cost"]],
-      body: notes,
-      theme: "grid",
-      headStyles: {
-        fillColor: [15, 23, 42],
-        textColor: 255,
-      },
-      styles: {
-        fontSize: 9,
-        cellPadding: 3,
-      },
-      columnStyles: {
-        3: { halign: "right" },
-      },
-    });
-
-    // ================= SUMMARY =================
-    const finalY = (doc as any).lastAutoTable?.finalY || 160;
-
     const totalCost =
       request?.shopkeeperNotes?.reduce(
         (sum, n) => sum + Number(n.cost || 0),
         0,
       ) || 0;
 
-    doc.setFont("helvetica", "bold");
-    doc.setFontSize(12);
-    doc.text("TOTAL:", 140, finalY + 15);
+    const invoiceNumber = `IMS-${request?._id?.slice(-6)?.toUpperCase()}`;
 
-    doc.setFontSize(16);
-    doc.text(`$${totalCost.toFixed(2)}`, 196, finalY + 15, {
+    // ================= BACKGROUND =================
+
+    doc.setFillColor(248, 250, 252);
+    doc.rect(0, 0, 210, 297, "F");
+
+    // ================= TITLE =================
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(20);
+    doc.setTextColor(20);
+
+    doc.text("DEVICE INVOICE", 105, 35, { align: "center" });
+
+    doc.setFontSize(9);
+    doc.setFont("helvetica", "normal");
+    doc.setTextColor(120);
+
+    doc.text("Verified Repair & Hardware Report", 105, 41, { align: "center" });
+
+    // ================= VERIFIED BADGE =================
+
+    doc.setFillColor(220, 252, 231);
+    doc.roundedRect(70, 46, 70, 8, 3, 3, "F");
+
+    doc.setFontSize(8);
+    doc.setTextColor(22, 163, 74);
+    doc.setFont("helvetica", "bold");
+
+    doc.text("✓ AUTHENTICITY VERIFIED", 105, 51, {
+      align: "center",
+    });
+
+    // ================= META =================
+
+    doc.setDrawColor(220);
+    doc.line(14, 60, 196, 60);
+
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+
+    doc.text("INVOICE NO", 14, 68);
+    doc.text("DATE", 165, 68);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(10);
+    doc.setTextColor(20);
+
+    doc.text(invoiceNumber, 14, 74);
+
+    doc.text(formatDate(new Date()), 196, 74, {
       align: "right",
     });
 
-    // ================= QR =================
-    try {
-      const baseURL = "http://187.77.187.56:4897"; // move to env later 👌
-      const qrLink = `${baseURL}/my-invoice/${request._id}`;
+    // ================= DEVICE SECTION =================
 
-      const qrDataUrl = await QRCode.toDataURL(qrLink, {
-        width: 90,
-        margin: 1,
-      });
+    doc.setFillColor(255, 255, 255);
+    doc.setDrawColor(230);
 
-      doc.addImage(qrDataUrl, "PNG", 14, finalY + 5, 28, 28);
+    doc.roundedRect(14, 80, 182, 40, 4, 4, "FD");
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(15);
+    doc.setTextColor(30);
+
+    doc.text(safeText(request.deviceModel), 20, 92);
+
+    doc.setFont("helvetica", "normal");
+    doc.setFontSize(9);
+    doc.setTextColor(120);
+
+    doc.text(`IMEI: ${safeText(request.IMEINumber)}`, 20, 100);
+
+    doc.text(
+      `Status: ${safeText(request.status).replaceAll("_", " ").toUpperCase()}`,
+      20,
+      107,
+    );
+
+    // ================= CUSTOMER + SHOP =================
+
+    const card = (
+      x: number,
+      y: number,
+      title: string,
+      main: string,
+      sub?: string,
+    ) => {
+      doc.setFillColor(255, 255, 255);
+      doc.roundedRect(x, y, 86, 26, 4, 4, "FD");
 
       doc.setFontSize(8);
-      doc.setTextColor(100);
-      doc.text("Scan to view invoice", 14, finalY + 36);
-    } catch (err) {
-      console.error("QR error:", err);
-    }
+      doc.setTextColor(120);
+      doc.text(title.toUpperCase(), x + 5, y + 7);
 
-    // ================= FOOTER =================
-    const pageHeight = doc.internal.pageSize.height;
+      doc.setFontSize(11);
+      doc.setTextColor(20);
+      doc.setFont("helvetica", "bold");
+      doc.text(main, x + 5, y + 15);
 
-    doc.setDrawColor(220);
-    doc.line(14, pageHeight - 22, 196, pageHeight - 22);
+      if (sub) {
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(8);
+        doc.setTextColor(120);
+        doc.text(sub, x + 5, y + 21);
+      }
+    };
+
+    card(
+      14,
+      125,
+      "Customer",
+      safeText(request.firstName),
+      safeText(request.email),
+    );
+
+    card(
+      110,
+      125,
+      "Shop",
+      shopName,
+      `Created: ${formatDate(request.createdAt)}`,
+    );
+
+    // ================= TABLE =================
+
+    const rows =
+      request?.shopkeeperNotes?.map((n) => [
+        formatDate(n.date),
+        safeText(n.message),
+        `${n.estimatedDays || 0} Days`,
+        `$${Number(n.cost || 0).toFixed(2)}`,
+      ]) || [];
+
+    autoTable(doc, {
+      startY: 160,
+      margin: { left: 14, right: 14 },
+
+      head: [["DATE", "DESCRIPTION", "TIME", "COST"]],
+      body: rows.length ? rows : [["-", "No Data", "-", "$0.00"]],
+
+      theme: "plain",
+
+      styles: {
+        fontSize: 8,
+        cellPadding: 4,
+        textColor: [40, 40, 40],
+      },
+
+      headStyles: {
+        fillColor: [245, 247, 250],
+        textColor: [80, 80, 80],
+      },
+
+      columnStyles: {
+        3: { halign: "right" },
+      },
+    });
+
+    const finalY = (doc as any).lastAutoTable?.finalY || 210;
+
+    // ================= TOTAL =================
 
     doc.setFontSize(9);
     doc.setTextColor(120);
 
-    doc.text(`Thank you for choosing ${shopName}`, 105, pageHeight - 14, {
+    doc.text("Subtotal", 150, finalY + 15);
+    doc.text(`$${totalCost.toFixed(2)}`, 196, finalY + 15, {
+      align: "right",
+    });
+
+    doc.text("Tax (0%)", 150, finalY + 21);
+    doc.text("$0.00", 196, finalY + 21, {
+      align: "right",
+    });
+
+    doc.setDrawColor(220);
+    doc.line(145, finalY + 24, 196, finalY + 24);
+
+    doc.setFont("helvetica", "bold");
+    doc.setFontSize(13);
+    doc.setTextColor(20);
+
+    doc.text("TOTAL", 150, finalY + 32);
+    doc.text(`USD $${totalCost.toFixed(2)}`, 196, finalY + 32, {
+      align: "right",
+    });
+
+    // ================= QR (UNCHANGED) =================
+
+    try {
+      const baseURL = "http://187.77.187.56:4897";
+      const qrLink = `${baseURL}/my-invoice/${request._id}`;
+
+      const qrDataUrl = await QRCode.toDataURL(qrLink, {
+        width: 120,
+        margin: 1,
+      });
+
+      doc.addImage(qrDataUrl, "PNG", 14, finalY + 5, 22, 22);
+
+      doc.setFontSize(7);
+      doc.setTextColor(120);
+      doc.text("Scan to verify invoice", 14, finalY + 32);
+    } catch (err) {
+      console.log(err);
+    }
+
+    // ================= FOOTER =================
+
+    doc.setDrawColor(230);
+    doc.line(14, pageHeight - 18, 196, pageHeight - 18);
+
+    doc.setFontSize(8);
+    doc.setTextColor(120);
+
+    doc.text(`Thank you for choosing ${shopName}`, 105, pageHeight - 10, {
       align: "center",
     });
 
-    doc.text("This is a system generated invoice.", 105, pageHeight - 8, {
-      align: "center",
-    });
+    doc.text(
+      "This is a computer generated verified invoice.",
+      105,
+      pageHeight - 6,
+      { align: "center" },
+    );
+
+    // ================= SAVE =================
 
     doc.save(
-      `Invoice_${request.deviceModel || "device"}_${request._id.slice(-5)}.pdf`,
+      `Invoice_${request.deviceModel}_${request._id
+        .slice(-5)
+        .toUpperCase()}.pdf`,
     );
   };
-
   const currentStatus = request.status;
 
   const activeStepIndex = timelineSteps.findIndex((step) =>
@@ -311,7 +576,6 @@ export default function RepairRequestDetails({ id }: { id: string }) {
           setNoteCost("");
           setNoteDays("");
           setNoteImages([]);
-          // Automatically update status to quote_sent when a note/quote is added
           updateStatus.mutate({ id, status: "quote_sent" });
         },
       },
