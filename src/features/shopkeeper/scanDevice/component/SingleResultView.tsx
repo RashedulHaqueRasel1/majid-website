@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
 import { motion } from "framer-motion";
@@ -23,6 +24,8 @@ import {
   Check,
   Wallet,
   Copy,
+  RefreshCw,
+  Clock,
 } from "lucide-react";
 import { IMEIResult } from "../../scanDevice/types/scanDevice.types";
 import { CertificatePDF } from "./CertificatePDF";
@@ -42,6 +45,7 @@ interface SingleResultViewProps {
   onBack: () => void;
   onDownload: () => void;
   isDownloading: boolean;
+  onRegenerate?: () => void; // নতুন প্রপ
 }
 
 const getRiskLabel = (score: number) => {
@@ -95,6 +99,7 @@ export const SingleResultView = ({
   onBack,
   onDownload,
   isDownloading: parentIsDownloading,
+  onRegenerate,
 }: SingleResultViewProps) => {
   const checksArray = getChecksArray(scanResult);
   const technicalItems = getTechnicalBreakdownItems(scanResult);
@@ -107,6 +112,7 @@ export const SingleResultView = ({
     useState(false);
   const [isInvoiceDownloading, setIsInvoiceDownloading] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
 
   const providerData = scanResult.providerData as
     | {
@@ -144,6 +150,10 @@ export const SingleResultView = ({
     providerDataMap["Warranty Type"] || "Apple Limited Warranty";
   const replacedDevice = providerDataMap["Replaced Device"] || "No";
   const lockedCarrier = providerDataMap["Locked Carrier"] || "Unlock";
+  const notice = providerDataMap["Notice"] || "";
+
+  // Check if data is old generated
+  const isOldGenerated = (scanResult as any).oldGenerated === true;
 
   // Get check statuses
   const isBlacklistClean =
@@ -198,6 +208,14 @@ export const SingleResultView = ({
     }
   };
 
+  const handleRegenerate = async () => {
+    if (onRegenerate) {
+      setIsRegenerating(true);
+      await onRegenerate();
+      setIsRegenerating(false);
+    }
+  };
+
   const handleCopyToClipboard = () => {
     const textToCopy = `
 Model: ${deviceNameFromProvider || "iPhone"}
@@ -234,7 +252,43 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         <span className="font-medium">Back to scan</span>
       </button>
 
-      {/* --- MOBILE VIEW (Complete Data) --- */}
+      {/* Old Data Warning Banner */}
+      {isOldGenerated && (
+        <motion.div
+          initial={{ opacity: 0, y: -10 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4"
+        >
+          <div className="flex items-center gap-3">
+            <div className="p-2 bg-amber-100 rounded-full">
+              <Clock size={20} className="text-amber-600" />
+            </div>
+            <div>
+              <p className="text-sm font-semibold text-amber-800">
+                Cached Data Notice
+              </p>
+              <p className="text-xs text-amber-700">
+                This information is from a previously generated report. For the
+                most up-to-date data, please generate a fresh report.
+              </p>
+            </div>
+          </div>
+          <button
+            onClick={handleRegenerate}
+            disabled={isRegenerating}
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+          >
+            {isRegenerating ? (
+              <Loader2 size={16} className="animate-spin" />
+            ) : (
+              <RefreshCw size={16} />
+            )}
+            {isRegenerating ? "Generating..." : "Generate New"}
+          </button>
+        </motion.div>
+      )}
+
+      {/* --- MOBILE VIEW --- */}
       <div className="block md:hidden bg-white border border-slate-200 rounded-[32px] p-5 shadow-sm relative">
         <div className="space-y-3 text-center text-[14px] text-[#5F6368] leading-relaxed">
           <p>
@@ -274,6 +328,12 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             <span className="font-semibold">Coverage End:</span>{" "}
             {formatDate(coverageEndDate)}
           </p>
+
+          {notice && (
+            <p className="text-amber-600 text-xs">
+              <span className="font-semibold">Notice:</span> {notice}
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">Find My iPhone:</span>
@@ -364,7 +424,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         )}
       </div>
 
-      {/* --- DESKTOP VIEW (COMPLETELY UNCHANGED) --- */}
+      {/* --- DESKTOP VIEW --- */}
       <div className="hidden md:grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Main Header Card */}
         <div className="lg:col-span-2 bg-white rounded-2xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
@@ -571,6 +631,15 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
                 </div>
               ))}
             </div>
+          </div>
+        )}
+
+        {/* Notice Section */}
+        {notice && (
+          <div className="lg:col-span-3 bg-amber-50 rounded-2xl p-4 border border-amber-200">
+            <p className="text-sm text-amber-800">
+              <span className="font-semibold">ℹ️ Notice:</span> {notice}
+            </p>
           </div>
         )}
 
