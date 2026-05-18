@@ -153,6 +153,10 @@ export default function ScanDevice() {
               clearResults();
               router.push("/shopkeeper/scan-device");
             }}
+            onRegenerateItem={(imei, serviceId) => {
+              clearResults();
+              return handleRegenerateScan(imei, serviceId);
+            }}
           />
         </div>
       </div>

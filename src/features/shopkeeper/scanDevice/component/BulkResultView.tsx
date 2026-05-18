@@ -27,6 +27,8 @@ import {
   Globe,
   CreditCard,
   Copy,
+  RefreshCw,
+  Clock,
 } from "lucide-react";
 import { useState, useCallback, useMemo, useRef, useEffect } from "react";
 import { CertificatePDF } from "./CertificatePDF";
@@ -44,6 +46,7 @@ interface BulkResultViewProps {
     filename: string,
   ) => Promise<void>;
   isDownloading: boolean;
+  onRegenerateItem?: (imei: string, serviceId: number) => Promise<void>; // নতুন প্রপ
 }
 
 const getRiskLabel = (score: number) => {
@@ -136,10 +139,12 @@ export const BulkResultView = ({
   onDownloadCertificate,
   isDownloading,
   onBack,
+  onRegenerateItem,
 }: BulkResultViewProps) => {
   const [selectedBatchIndex, setSelectedBatchIndex] = useState(0);
   const [isSelectOpen, setIsSelectOpen] = useState(false);
   const [copied, setCopied] = useState(false);
+  const [isRegenerating, setIsRegenerating] = useState(false);
   const selectRef = useRef<HTMLDivElement>(null);
 
   const batchRows = useMemo(() => batchResult?.data ?? [], [batchResult]);
@@ -158,6 +163,9 @@ export const BulkResultView = ({
     () => batchRows[selectedBatchIndex] ?? null,
     [batchRows, selectedBatchIndex],
   );
+
+  // Check if current selected data is old generated
+  const isOldGenerated = (selectedBatchRow?.data as any)?.oldGenerated === true;
 
   // Get provider data from selected row
   const currentProviderData = selectedBatchRow?.data?.providerData as
@@ -216,6 +224,7 @@ export const BulkResultView = ({
     "N/A";
   const replacedDevice = providerDataMap["Replaced Device"] || "No";
   const lockedCarrier = providerDataMap["Locked Carrier"] || "Unlock";
+  const notice = providerDataMap["Notice"] || "";
   const isSimUnlocked = isHardwareClean;
   const isICloudUnlocked = isHardwareClean;
 
@@ -249,6 +258,17 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
     navigator.clipboard.writeText(textToCopy);
     setCopied(true);
     setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleRegenerate = async () => {
+    if (onRegenerateItem && selectedBatchRow) {
+      setIsRegenerating(true);
+      await onRegenerateItem(
+        selectedBatchRow.imei,
+        selectedBatchRow.serviceId || 6,
+      );
+      setIsRegenerating(false);
+    }
   };
 
   // Close dropdown when clicking outside
@@ -319,6 +339,33 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
 
       {/* --- MOBILE VIEW (Only visible on mobile) --- */}
       <div className="block md:hidden bg-white border border-slate-200 rounded-[32px] p-5 shadow-sm relative">
+        {/* Old Data Warning Banner for Mobile */}
+        {isOldGenerated && (
+          <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
+            <div className="flex items-center gap-2 mb-2">
+              <Clock size={14} className="text-amber-600" />
+              <span className="text-xs font-semibold text-amber-800">
+                Cached Data
+              </span>
+            </div>
+            <p className="text-[11px] text-amber-700 mb-2">
+              This is from a previously generated report.
+            </p>
+            <button
+              onClick={handleRegenerate}
+              disabled={isRegenerating}
+              className="w-full py-1.5 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-xs font-semibold transition flex items-center justify-center gap-2"
+            >
+              {isRegenerating ? (
+                <Loader2 size={12} className="animate-spin" />
+              ) : (
+                <RefreshCw size={12} />
+              )}
+              {isRegenerating ? "Generating..." : "Generate New"}
+            </button>
+          </div>
+        )}
+
         <div className="space-y-3 text-center text-[14px] text-[#5F6368] leading-relaxed">
           <p>
             <span className="font-semibold">Model:</span>{" "}
@@ -357,6 +404,12 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             <span className="font-semibold">Coverage End:</span>{" "}
             {formatDate(coverageEndDate)}
           </p>
+
+          {notice && (
+            <p className="text-amber-600 text-xs">
+              <span className="font-semibold">Notice:</span> {notice}
+            </p>
+          )}
 
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">Find My iPhone:</span>
@@ -455,7 +508,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         )}
       </div>
 
-      {/* --- DESKTOP VIEW (COMPLETELY UNCHANGED - Same as your original) --- */}
+      {/* --- DESKTOP VIEW --- */}
       <div className="hidden md:block">
         {/* Header Section */}
         <motion.div
@@ -620,6 +673,39 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
           >
+            {/* Old Data Warning Banner for Desktop */}
+            {isOldGenerated && (
+              <div className="mb-6 bg-amber-50 border border-amber-200 rounded-xl p-4 flex flex-col sm:flex-row items-center justify-between gap-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 bg-amber-100 rounded-full">
+                    <Clock size={20} className="text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-sm font-semibold text-amber-800">
+                      Cached Data Notice
+                    </p>
+                    <p className="text-xs text-amber-700">
+                      This information is from a previously generated report.
+                      For the most up-to-date data, please generate a fresh
+                      report.
+                    </p>
+                  </div>
+                </div>
+                <button
+                  onClick={handleRegenerate}
+                  disabled={isRegenerating}
+                  className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+                >
+                  {isRegenerating ? (
+                    <Loader2 size={16} className="animate-spin" />
+                  ) : (
+                    <RefreshCw size={16} />
+                  )}
+                  {isRegenerating ? "Generating..." : "Generate New"}
+                </button>
+              </div>
+            )}
+
             {/* Main Header Card */}
             <div className="bg-white rounded-2xl p-8 border border-slate-200 shadow-sm relative overflow-hidden">
               <div className="flex justify-between items-start">
@@ -782,6 +868,15 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
                     </div>
                   ))}
                 </div>
+              </div>
+            )}
+
+            {/* Notice Section */}
+            {notice && (
+              <div className="mt-6 bg-amber-50 rounded-2xl p-4 border border-amber-200">
+                <p className="text-sm text-amber-800">
+                  <span className="font-semibold">ℹ️ Notice:</span> {notice}
+                </p>
               </div>
             )}
 
