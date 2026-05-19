@@ -2,7 +2,6 @@
 
 import React from "react";
 import {
-  ShieldCheck,
   Smartphone,
   User,
   ShoppingBag,
@@ -29,7 +28,6 @@ interface SmartInvoicePDFProps {
 }
 
 export const INVOICE_PDF_WIDTH = 750;
-// height সরিয়ে দেওয়া হয়েছে, auto হবে
 
 // Helper function to parse HTML
 const parseProviderData = (rawHtml: string) => {
@@ -122,11 +120,11 @@ export const SmartInvoicePDF = React.forwardRef<
       id={id}
       style={{
         width: `${INVOICE_PDF_WIDTH}px`,
-        height: "auto", // auto height
+        height: "auto",
         minHeight: "auto",
         backgroundColor: "#ffffff",
         fontFamily: "'Inter', -apple-system, BlinkMacSystemFont, sans-serif",
-        padding: "20px 25px 30px",
+        padding: "25px 30px",
         color: colors.slate900,
         boxSizing: "border-box",
         position: "relative",
@@ -134,7 +132,14 @@ export const SmartInvoicePDF = React.forwardRef<
       }}
     >
       {/* Header Section with Logo */}
-      <div style={{ textAlign: "center", marginBottom: "20px" }}>
+      <div
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          marginBottom: "20px",
+        }}
+      >
         <div
           style={{
             display: "flex",
@@ -156,9 +161,10 @@ export const SmartInvoicePDF = React.forwardRef<
 
         <div
           style={{
+            width: "100%",
             textAlign: "center",
             marginBottom: "15px",
-            paddingTop: "8px",
+            paddingTop: "12px",
             borderTop: `1px dashed ${colors.slate200}`,
           }}
         >
@@ -172,16 +178,23 @@ export const SmartInvoicePDF = React.forwardRef<
           >
             DEVICE INVOICE
           </h1>
-          <p style={{ fontSize: "9px", color: colors.slate500 }}>
+          <p
+            style={{
+              fontSize: "9px",
+              color: colors.slate500,
+              margin: "0 0 8px",
+            }}
+          >
             Check before you buy • Verified Hardware Report
           </p>
           <div
             style={{
-              display: "inline-block",
+              display: "inline-flex",
+              alignItems: "center",
+              justifyContent: "center",
               backgroundColor: colors.successBg,
-              padding: "3px 12px",
+              padding: "4px 12px",
               borderRadius: "16px",
-              marginTop: "8px",
               border: `1px solid #BBF7D0`,
             }}
           >
@@ -204,6 +217,7 @@ export const SmartInvoicePDF = React.forwardRef<
         style={{
           display: "flex",
           justifyContent: "space-between",
+          alignItems: "center",
           marginBottom: "15px",
           paddingBottom: "10px",
           borderBottom: `1px solid ${colors.slate200}`,
@@ -253,7 +267,7 @@ export const SmartInvoicePDF = React.forwardRef<
           backgroundColor: colors.slate50,
         }}
       >
-        <div style={{ display: "flex", gap: "15px", alignItems: "flex-start" }}>
+        <div style={{ display: "flex", gap: "15px", alignItems: "center" }}>
           <div
             style={{
               backgroundColor: "white",
@@ -264,6 +278,8 @@ export const SmartInvoicePDF = React.forwardRef<
               alignItems: "center",
               justifyContent: "center",
               minWidth: "60px",
+              height: "60px",
+              boxSizing: "border-box",
             }}
           >
             <Smartphone size={40} color={colors.brand} strokeWidth={1.5} />
@@ -274,7 +290,7 @@ export const SmartInvoicePDF = React.forwardRef<
               style={{
                 display: "flex",
                 justifyContent: "space-between",
-                alignItems: "flex-start",
+                alignItems: "center",
                 marginBottom: "10px",
               }}
             >
@@ -301,8 +317,10 @@ export const SmartInvoicePDF = React.forwardRef<
               <div
                 style={{
                   backgroundColor: colors.successBg,
-                  padding: "3px 10px",
+                  padding: "4px 10px",
                   borderRadius: "12px",
+                  display: "flex",
+                  alignItems: "center",
                 }}
               >
                 <span
@@ -404,6 +422,8 @@ export const SmartInvoicePDF = React.forwardRef<
             border: `1px solid ${colors.slate200}`,
             borderRadius: "12px",
             padding: "12px",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div
@@ -426,19 +446,26 @@ export const SmartInvoicePDF = React.forwardRef<
               BILL TO
             </span>
           </div>
-          <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 3px" }}>
+          <p style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 4px" }}>
             {invoiceData.customerName}
           </p>
           <p
             style={{
               fontSize: "9px",
               color: colors.slate500,
-              margin: "0 0 3px",
+              margin: "0 0 4px",
+              lineHeight: "1.3",
             }}
           >
             {invoiceData.customerAddress}
           </p>
-          <p style={{ fontSize: "9px", color: colors.slate500, margin: 0 }}>
+          <p
+            style={{
+              fontSize: "9px",
+              color: colors.slate500,
+              margin: "0 0 4px",
+            }}
+          >
             Phone: {invoiceData.customerPhone}
           </p>
           {invoiceData.customerEmail && (
@@ -446,7 +473,7 @@ export const SmartInvoicePDF = React.forwardRef<
               style={{
                 fontSize: "9px",
                 color: colors.slate500,
-                marginTop: "3px",
+                margin: 0,
               }}
             >
               Email: {invoiceData.customerEmail}
@@ -460,6 +487,8 @@ export const SmartInvoicePDF = React.forwardRef<
             border: `1px solid ${colors.slate200}`,
             borderRadius: "12px",
             padding: "12px",
+            display: "flex",
+            flexDirection: "column",
           }}
         >
           <div
@@ -485,7 +514,7 @@ export const SmartInvoicePDF = React.forwardRef<
           {shopkeeperDetails ? (
             <>
               <p
-                style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 3px" }}
+                style={{ fontSize: "11px", fontWeight: 800, margin: "0 0 4px" }}
               >
                 {shopkeeperDetails.shopName}
               </p>
@@ -493,12 +522,19 @@ export const SmartInvoicePDF = React.forwardRef<
                 style={{
                   fontSize: "9px",
                   color: colors.slate500,
-                  margin: "0 0 3px",
+                  margin: "0 0 4px",
+                  lineHeight: "1.3",
                 }}
               >
                 {shopkeeperDetails.shopAddress}
               </p>
-              <p style={{ fontSize: "9px", color: colors.slate500, margin: 0 }}>
+              <p
+                style={{
+                  fontSize: "9px",
+                  color: colors.slate500,
+                  margin: "0 0 4px",
+                }}
+              >
                 Phone: {shopkeeperDetails.phone}
               </p>
               {shopkeeperDetails.email && (
@@ -506,7 +542,7 @@ export const SmartInvoicePDF = React.forwardRef<
                   style={{
                     fontSize: "9px",
                     color: colors.slate500,
-                    marginTop: "3px",
+                    margin: 0,
                   }}
                 >
                   Email: {shopkeeperDetails.email}
@@ -675,23 +711,32 @@ export const SmartInvoicePDF = React.forwardRef<
               style={{
                 display: "flex",
                 alignItems: "center",
-                gap: "8px",
-                padding: "6px 8px",
+                gap: "10px",
+                padding: "8px 10px",
                 backgroundColor: colors.slate50,
                 borderRadius: "8px",
               }}
             >
-              {item.status ? (
-                <CheckCircle size={12} color={colors.success} />
-              ) : (
-                <AlertCircle size={12} color={colors.danger} />
-              )}
+              <div
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  justifyContent: "center",
+                  minWidth: "14px",
+                }}
+              >
+                {item.status ? (
+                  <CheckCircle size={14} color={colors.success} />
+                ) : (
+                  <AlertCircle size={14} color={colors.danger} />
+                )}
+              </div>
               <div>
                 <p
                   style={{
                     fontSize: "8px",
                     fontWeight: 800,
-                    margin: "0 0 1px",
+                    margin: "0 0 2px",
                   }}
                 >
                   {item.label}
@@ -728,7 +773,7 @@ export const SmartInvoicePDF = React.forwardRef<
                 fontSize: "7px",
                 fontWeight: 800,
                 color: colors.slate500,
-                padding: "6px 4px",
+                padding: "8px 6px",
                 letterSpacing: "0.5px",
               }}
             >
@@ -740,7 +785,7 @@ export const SmartInvoicePDF = React.forwardRef<
                 fontSize: "7px",
                 fontWeight: 800,
                 color: colors.slate500,
-                padding: "6px 4px",
+                padding: "8px 6px",
                 letterSpacing: "0.5px",
               }}
             >
@@ -748,11 +793,11 @@ export const SmartInvoicePDF = React.forwardRef<
             </th>
             <th
               style={{
-                textAlign: "left",
+                textAlign: "center",
                 fontSize: "7px",
                 fontWeight: 800,
                 color: colors.slate500,
-                padding: "6px 4px",
+                padding: "8px 6px",
                 letterSpacing: "0.5px",
               }}
             >
@@ -760,11 +805,11 @@ export const SmartInvoicePDF = React.forwardRef<
             </th>
             <th
               style={{
-                textAlign: "left",
+                textAlign: "center",
                 fontSize: "7px",
                 fontWeight: 800,
                 color: colors.slate500,
-                padding: "6px 4px",
+                padding: "8px 6px",
                 letterSpacing: "0.5px",
               }}
             >
@@ -772,11 +817,11 @@ export const SmartInvoicePDF = React.forwardRef<
             </th>
             <th
               style={{
-                textAlign: "left",
+                textAlign: "right",
                 fontSize: "7px",
                 fontWeight: 800,
                 color: colors.slate500,
-                padding: "6px 4px",
+                padding: "8px 6px",
                 letterSpacing: "0.5px",
               }}
             >
@@ -786,9 +831,9 @@ export const SmartInvoicePDF = React.forwardRef<
         </thead>
         <tbody>
           <tr style={{ borderBottom: `1px solid ${colors.slate200}` }}>
-            <td style={{ padding: "10px 4px" }}>
+            <td style={{ padding: "12px 6px", verticalAlign: "middle" }}>
               <p
-                style={{ fontSize: "10px", fontWeight: 800, margin: "0 0 1px" }}
+                style={{ fontSize: "10px", fontWeight: 800, margin: "0 0 2px" }}
               >
                 {deviceName}
               </p>
@@ -798,39 +843,54 @@ export const SmartInvoicePDF = React.forwardRef<
             </td>
             <td
               style={{
-                padding: "10px 4px",
+                padding: "12px 6px",
                 fontSize: "8px",
                 fontWeight: 600,
                 fontFamily: "monospace",
+                verticalAlign: "middle",
               }}
             >
               {imei1.slice(-8)}
             </td>
-            <td style={{ padding: "10px 4px" }}>
+            <td
+              style={{
+                padding: "12px 6px",
+                textAlign: "center",
+                verticalAlign: "middle",
+              }}
+            >
               <span
                 style={{
                   fontSize: "6px",
                   fontWeight: 900,
                   color: "#0D9488",
                   backgroundColor: "#F0FDFA",
-                  padding: "2px 6px",
+                  padding: "3px 8px",
                   borderRadius: "4px",
+                  display: "inline-block",
                 }}
               >
                 MINT
               </span>
             </td>
             <td
-              style={{ padding: "10px 4px", fontSize: "10px", fontWeight: 700 }}
+              style={{
+                padding: "12px 6px",
+                fontSize: "10px",
+                fontWeight: 700,
+                textAlign: "center",
+                verticalAlign: "middle",
+              }}
             >
               1
             </td>
             <td
               style={{
-                padding: "10px 4px",
+                padding: "12px 6px",
                 fontSize: "11px",
                 fontWeight: 800,
                 textAlign: "right",
+                verticalAlign: "middle",
               }}
             >
               ${invoiceData.price.toFixed(2)}
@@ -842,14 +902,19 @@ export const SmartInvoicePDF = React.forwardRef<
       {/* Trade-In Row */}
       {invoiceData.paymentMethod === "tradein" &&
         invoiceData.tradeInDetails && (
-          <div style={{ marginBottom: "15px", textAlign: "right" }}>
+          <div
+            style={{
+              marginBottom: "10px",
+              display: "flex",
+              justifyContent: "flex-end",
+            }}
+          >
             <div
               style={{
                 display: "flex",
-                justifyContent: "flex-end",
-                gap: "20px",
+                justifyContent: "space-between",
+                width: "220px",
                 padding: "4px 0",
-                borderTop: `1px solid ${colors.slate200}`,
               }}
             >
               <span style={{ fontSize: "9px", color: colors.slate600 }}>
@@ -873,7 +938,7 @@ export const SmartInvoicePDF = React.forwardRef<
         style={{
           display: "flex",
           justifyContent: "flex-end",
-          marginBottom: "15px",
+          marginBottom: "20px",
         }}
       >
         <div style={{ width: "220px" }}>
@@ -881,7 +946,7 @@ export const SmartInvoicePDF = React.forwardRef<
             style={{
               display: "flex",
               justifyContent: "space-between",
-              padding: "5px 0",
+              padding: "6px 0",
               borderBottom: `1px solid ${colors.slate200}`,
             }}
           >
@@ -897,8 +962,7 @@ export const SmartInvoicePDF = React.forwardRef<
               <div
                 style={{
                   display: "flex",
-                  justifyContent: "space-between",
-                  padding: "5px 0",
+                  padding: "6px 0",
                   borderBottom: `1px solid ${colors.slate200}`,
                 }}
               >
@@ -920,10 +984,11 @@ export const SmartInvoicePDF = React.forwardRef<
             style={{
               display: "flex",
               justifyContent: "space-between",
-              padding: "8px 0 4px",
+              alignItems: "center",
+              padding: "10px 0 4px",
             }}
           >
-            <span style={{ fontSize: "11px", fontWeight: 800 }}>
+            <span style={{ fontSize: "10px", fontWeight: 800 }}>
               TOTAL ({paymentDescription})
             </span>
             <span
@@ -941,13 +1006,13 @@ export const SmartInvoicePDF = React.forwardRef<
           display: "flex",
           justifyContent: "space-between",
           alignItems: "center",
-          paddingTop: "10px",
+          paddingTop: "12px",
           borderTop: `1px solid ${colors.slate200}`,
           marginBottom: "15px",
         }}
       >
-        <div style={{ display: "flex", alignItems: "center", gap: "10px" }}>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+        <div style={{ display: "flex", alignItems: "center", gap: "15px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <div
               style={{
                 width: "8px",
@@ -966,7 +1031,7 @@ export const SmartInvoicePDF = React.forwardRef<
               PAYMENT RECEIVED
             </span>
           </div>
-          <div style={{ display: "flex", alignItems: "center", gap: "5px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "6px" }}>
             <div
               style={{
                 width: "8px",
@@ -987,7 +1052,14 @@ export const SmartInvoicePDF = React.forwardRef<
           </div>
         </div>
         <div>
-          <p style={{ fontSize: "7px", color: colors.slate500, margin: 0 }}>
+          <p
+            style={{
+              fontSize: "8px",
+              color: colors.slate500,
+              margin: 0,
+              fontFamily: "monospace",
+            }}
+          >
             TXN: {data?.imei?.slice(-8)}-{new Date().getFullYear()}
           </p>
         </div>
@@ -996,11 +1068,10 @@ export const SmartInvoicePDF = React.forwardRef<
       {/* Risk Meter Footer */}
       <div
         style={{
-          marginTop: "10px",
-          padding: "8px 12px",
+          marginTop: "15px",
+          padding: "10px 12px",
           backgroundColor: colors.slate100,
           borderRadius: "8px",
-          textAlign: "center",
         }}
       >
         <div
@@ -1011,7 +1082,7 @@ export const SmartInvoicePDF = React.forwardRef<
             gap: "6px",
           }}
         >
-          <Shield size={10} color={colors.brand} />
+          <Shield size={12} color={colors.brand} />
           <span
             style={{ fontSize: "8px", fontWeight: 600, color: colors.slate600 }}
           >
