@@ -33,185 +33,236 @@ import {
   SelectValue,
 } from "@/components/ui/select";
 
-// --- Enhanced PDF Styles (Professional Layout) ---
+// --- Ultra-Modern PDF Styles (Premium Layout) ---
 const pdfStyles = StyleSheet.create({
   page: {
-    padding: 40,
+    padding: 45,
     backgroundColor: "#ffffff",
-    fontSize: 10,
-    color: "#334155",
+    fontSize: 9,
+    color: "#334155", // Slate 700
   },
   headerBar: {
     position: "absolute",
     top: 0,
     left: 0,
     right: 0,
-    height: 8,
-    backgroundColor: "#0d9488",
+    height: 6,
+    backgroundColor: "#0d9488", // Premium Teal
   },
   topSection: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 30,
-    alignItems: "center",
-    borderBottom: 1,
-    borderBottomColor: "#f1f5f9",
-    paddingBottom: 20,
+    alignItems: "flex-start",
+    marginBottom: 40,
+    marginTop: 10,
   },
   logo: {
-    width: 120,
+    width: 130,
+    objectFit: "contain",
+  },
+  invoiceMeta: {
+    textAlign: "right",
   },
   invoiceTitle: {
-    fontSize: 24,
+    fontSize: 26,
     fontWeight: "bold",
-    color: "#1e293b",
-    textAlign: "right",
+    color: "#0f172a", // Dark Slate
+    letterSpacing: 1,
+    marginBottom: 4,
+  },
+  dateText: {
+    fontSize: 9,
+    color: "#64748b",
   },
   infoContainer: {
     flexDirection: "row",
-    gap: 20,
-    marginBottom: 30,
-    marginTop: 10,
+    gap: 24,
+    marginBottom: 35,
   },
   infoBox: {
     flex: 1,
-    border: 1,
-    borderColor: "#e69d6c",
-    borderRadius: 12,
-    overflow: "hidden",
-    backgroundColor: "#f8fafc",
+    backgroundColor: "#f8fafc", // Very soft gray/blue
+    borderRadius: 8,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
   },
   infoLabel: {
-    backgroundColor: "#f97316",
-    color: "white",
-    padding: 8,
+    color: "#0d9488",
     fontSize: 8,
     fontWeight: "bold",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
   infoLabelBlue: {
-    backgroundColor: "#1e293b",
-    color: "white",
-    padding: 8,
+    color: "#1e293b",
     fontSize: 8,
     fontWeight: "bold",
     textTransform: "uppercase",
-    letterSpacing: 1,
+    letterSpacing: 0.8,
+    marginBottom: 8,
   },
-  infoContent: { padding: 12, lineHeight: 1.6 },
   customerName: {
     fontSize: 12,
     fontWeight: "bold",
     color: "#0f172a",
-    marginBottom: 4,
+    marginBottom: 6,
   },
+  infoText: {
+    color: "#475569",
+    lineHeight: 1.5,
+    marginBottom: 2,
+  },
+  paymentMethod: {
+    marginTop: 8,
+    fontSize: 8,
+    color: "#0f172a",
+    fontWeight: "bold",
+    backgroundColor: "#e2e8f0",
+    paddingVertical: 3,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    alignSelf: "flex-start",
+  },
+  // Modern Table Styling
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f8fafc",
-    borderBottom: 2,
-    borderBottomColor: "#0d9488",
-    color: "#475569",
+    borderBottomWidth: 1.5,
+    borderBottomColor: "#0f172a",
+    color: "#0f172a",
     fontWeight: "bold",
-    padding: 10,
+    paddingBottom: 8,
+    paddingHorizontal: 4,
     textTransform: "uppercase",
     fontSize: 8,
+    letterSpacing: 0.5,
   },
   tableRow: {
     flexDirection: "row",
     borderBottomWidth: 1,
     borderBottomColor: "#f1f5f9",
-    padding: 10,
+    paddingVertical: 12,
+    paddingHorizontal: 4,
     alignItems: "center",
   },
   colProduct: {
     width: "55%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 10,
+    gap: 12,
   },
-  colId: { width: "20%", textAlign: "center" },
-  colPrice: { width: "25%", textAlign: "right" },
+  colId: {
+    width: "20%",
+    textAlign: "center",
+    color: "#64748b",
+  },
+  colPrice: {
+    width: "25%",
+    textAlign: "right",
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
   productImg: {
-    width: 35,
-    height: 35,
+    width: 38,
+    height: 38,
     borderRadius: 6,
-    border: 1,
-    borderColor: "#e2e8f0",
+    backgroundColor: "#f8fafc",
   },
   productText: {
     fontSize: 10,
     fontWeight: "bold",
-    color: "#1e293b",
+    color: "#0f172a",
+    marginBottom: 2,
   },
   productSub: {
-    fontSize: 7,
-    color: "#64748b",
+    fontSize: 7.5,
+    color: "#94a3b8",
   },
+  // Summary Section
   totalSection: {
-    marginTop: 20,
+    marginTop: 30,
     flexDirection: "row",
     justifyContent: "flex-end",
   },
   totalBox: {
-    backgroundColor: "#1e293b",
-    color: "white",
-    padding: 15,
-    borderRadius: 12,
-    width: 240,
+    backgroundColor: "#0f172a", // Premium Dark Background
+    color: "#ffffff",
+    padding: 16,
+    borderRadius: 8,
+    width: 250,
   },
   summaryRow: {
     flexDirection: "row",
     justifyContent: "space-between",
-    marginBottom: 6,
+    marginBottom: 8,
   },
   summaryLabel: {
     fontSize: 8,
     textTransform: "uppercase",
     color: "#94a3b8",
+    letterSpacing: 0.5,
   },
   summaryValue: {
     fontSize: 10,
     fontWeight: "bold",
+    color: "#ffffff",
   },
   divider: {
     height: 1,
     backgroundColor: "#334155",
-    marginVertical: 6,
+    marginVertical: 8,
+  },
+  balanceRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+    marginTop: 4,
+    marginBottom: 10,
+  },
+  balanceLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
+    color: "#ffffff",
+    textTransform: "uppercase",
+  },
+  balanceValue: {
+    fontSize: 14,
+    fontWeight: "bold",
+    color: "#22c55e", // Light Green text for amount
   },
   statusBadgePaid: {
-    backgroundColor: "#22c55e",
+    backgroundColor: "#16a34a", // Emerald Green
     color: "white",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    fontSize: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    fontSize: 9,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 6,
+    letterSpacing: 1,
   },
   statusBadgeDue: {
-    backgroundColor: "#ef4444",
+    backgroundColor: "#dc2626", // Crisp Red
     color: "white",
-    paddingVertical: 4,
-    paddingHorizontal: 8,
-    borderRadius: 6,
-    fontSize: 10,
+    paddingVertical: 5,
+    borderRadius: 5,
+    fontSize: 9,
     fontWeight: "bold",
     textAlign: "center",
-    marginTop: 6,
+    letterSpacing: 1,
   },
   footer: {
     position: "absolute",
     bottom: 30,
-    left: 40,
-    right: 40,
+    left: 45,
+    right: 45,
     textAlign: "center",
     color: "#94a3b8",
-    fontSize: 8,
-    borderTop: 1,
+    fontSize: 7.5,
+    borderTopWidth: 1,
     borderTopColor: "#f1f5f9",
     paddingTop: 15,
+    lineHeight: 1.4,
   },
 });
 
@@ -227,127 +278,175 @@ const InvoicePDF = ({
 }: any) => (
   <Document>
     <Page size="A4" style={pdfStyles.page}>
+      {/* Decorative Top Bar */}
       <View style={pdfStyles.headerBar} />
 
-      {/* Header with Logo */}
+      {/* Brand Header */}
       <View style={pdfStyles.topSection}>
-        <Image src={shopkeeper.image?.url} style={pdfStyles.logo} />
-        <View>
+        {shopkeeper?.image?.url ? (
+          <Image src={shopkeeper.image.url} style={pdfStyles.logo} />
+        ) : (
+          <Text
+            style={[
+              pdfStyles.invoiceTitle,
+              { textAlign: "left", fontSize: 20 },
+            ]}
+          >
+            {shopkeeper?.shopName || "STORE"}
+          </Text>
+        )}
+        <View style={pdfStyles.invoiceMeta}>
           <Text style={pdfStyles.invoiceTitle}>INVOICE</Text>
-          <Text style={{ fontSize: 8, color: "#64748b", textAlign: "right" }}>
-            Date: {new Date().toLocaleDateString()}
+          <Text style={pdfStyles.dateText}>
+            Date:{" "}
+            {new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
           </Text>
         </View>
       </View>
 
-      {/* Info Boxes */}
+      {/* Information Cards */}
       <View style={pdfStyles.infoContainer}>
+        {/* Customer Card */}
         <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.infoLabel}>Billed To</Text>
-          <View style={pdfStyles.infoContent}>
-            <Text style={pdfStyles.customerName}>
-              {customer.firstName || "Valued Customer"}
-            </Text>
-            <Text style={pdfStyles.customerName}>
-              {customer.lastName || "Valued Customer"}
-            </Text>
-            <Text>Email: {customer.email || "N/A"}</Text>
-            <Text>Phone: {customer.phone || "N/A"}</Text>
-            <Text>Address: {customer.address || "N/A"}</Text>
-            <Text>Customer ID: {customer.id || "N/A"}</Text>
+          <Text style={pdfStyles.infoLabel}>Client Details</Text>
+          <Text style={pdfStyles.customerName}>
+            {`${customer?.firstName || "Valued"} ${customer?.lastName || "Customer"}`}
+          </Text>
+          <Text style={pdfStyles.infoText}>
+            Email: {customer?.email || "N/A"}
+          </Text>
+          <Text style={pdfStyles.infoText}>
+            Phone: {customer?.phone || "N/A"}
+          </Text>
+          <Text style={pdfStyles.infoText}>
+            Address: {customer?.address || "N/A"}
+          </Text>
+          <Text
+            style={[
+              pdfStyles.infoText,
+              { fontSize: 7.5, color: "#94a3b8", marginTop: 4 },
+            ]}
+          >
+            ID: {customer?.id || "N/A"}
+          </Text>
 
-            <Text
-              style={{
-                marginTop: 4,
-                fontSize: 8,
-                color: "#475569",
-                fontWeight: "bold",
-              }}
-            >
-              Payment Method: {paymentType.toUpperCase()}{" "}
-              {paymentType === "card" && card ? `(${card})` : ""}
-            </Text>
-          </View>
+          <Text style={pdfStyles.paymentMethod}>
+            {paymentType ? paymentType.toUpperCase() : "N/A"}
+            {paymentType === "card" && card ? ` •••• ${card}` : ""}
+          </Text>
         </View>
+
+        {/* Store Card */}
         <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.infoLabelBlue}>Store Info</Text>
-          <View style={pdfStyles.infoContent}>
-            <Text style={pdfStyles.customerName}>
-              {shopkeeper?.shopName || "N/A"}
-            </Text>
-            <Text>{shopkeeper?.shopAddress || "N/A"}</Text>
-            <Text>{shopkeeper?.email || "N/A"}</Text>
-            <Text>{shopkeeper?.phone || "N/A"}</Text>
-          </View>
+          <Text style={pdfStyles.infoLabelBlue}>Store Information</Text>
+          <Text style={pdfStyles.customerName}>
+            {shopkeeper?.shopName || "Gadget Galaxy"}
+          </Text>
+          <Text style={pdfStyles.infoText}>
+            {shopkeeper?.shopAddress || "N/A"}
+          </Text>
+          <Text style={pdfStyles.infoText}>
+            Email: {shopkeeper?.email || "N/A"}
+          </Text>
+          <Text style={pdfStyles.infoText}>
+            Phone: {shopkeeper?.phone || "N/A"}
+          </Text>
         </View>
       </View>
 
-      {/* Table */}
+      {/* Modern Product Table */}
       <View style={pdfStyles.tableHeader}>
-        <Text style={pdfStyles.colProduct}>Product Details</Text>
-        <Text style={pdfStyles.colId}>Model ID</Text>
-        <Text style={pdfStyles.colPrice}>Price</Text>
+        <Text style={pdfStyles.colProduct}>Item Description</Text>
+        <Text style={pdfStyles.colId}>IMEI / Model ID</Text>
+        <Text style={pdfStyles.colPrice}>Amount</Text>
       </View>
 
-      {items.map((item: any) => (
+      {items?.map((item: any) => (
         <View key={item.id} style={pdfStyles.tableRow}>
           <View style={pdfStyles.colProduct}>
-            <Image src={item.image} style={pdfStyles.productImg} />
+            {item.image && (
+              <Image src={item.image} style={pdfStyles.productImg} />
+            )}
             <View>
               <Text style={pdfStyles.productText}>{item.name}</Text>
               <Text style={pdfStyles.productSub}>
-                Brand New • Local Warranty
+                Brand New • Official Local Warranty
               </Text>
             </View>
           </View>
-          <Text style={pdfStyles.colId}>{item.imeiNumber}</Text>
-          <Text style={pdfStyles.colPrice}>${item.price.toFixed(2)}</Text>
+          <Text style={pdfStyles.colId}>{item.imeiNumber || "N/A"}</Text>
+          <Text style={pdfStyles.colPrice}>
+            ${item.price ? item.price.toFixed(2) : "0.00"}
+          </Text>
         </View>
       ))}
 
-      {/* Total Calculation Section */}
+      {/* Calculations & Status section */}
       <View style={pdfStyles.totalSection}>
         <View style={pdfStyles.totalBox}>
           <View style={pdfStyles.summaryRow}>
-            <Text style={pdfStyles.summaryLabel}>Sub Total:</Text>
+            <Text style={pdfStyles.summaryLabel}>Subtotal</Text>
             <Text style={pdfStyles.summaryValue}>
-              ${total.toLocaleString()}
+              $
+              {total
+                ? total.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                : "0.00"}
             </Text>
           </View>
           <View style={pdfStyles.summaryRow}>
-            <Text style={pdfStyles.summaryLabel}>Amount Paid:</Text>
+            <Text style={pdfStyles.summaryLabel}>Amount Paid</Text>
             <Text style={pdfStyles.summaryValue}>
-              ${alreadyPaid.toLocaleString()}
+              $
+              {alreadyPaid
+                ? alreadyPaid.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })
+                : "0.00"}
             </Text>
           </View>
+
           <View style={pdfStyles.divider} />
-          <View style={pdfStyles.summaryRow}>
+
+          <View style={pdfStyles.balanceRow}>
+            <Text style={pdfStyles.balanceLabel}>Balance Due</Text>
             <Text
               style={[
-                pdfStyles.summaryLabel,
-                { color: "white", fontWeight: "bold" },
+                pdfStyles.balanceValue,
+                { color: dueAmount <= 0 ? "#22c55e" : "#ef4444" },
               ]}
             >
-              Balance Due:
-            </Text>
-            <Text style={[pdfStyles.summaryValue, { fontSize: 12 }]}>
-              ${dueAmount.toLocaleString()}
+              $
+              {dueAmount
+                ? dueAmount.toLocaleString(undefined, {
+                    minimumFractionDigits: 2,
+                  })
+                : "0.00"}
             </Text>
           </View>
 
           {dueAmount <= 0 ? (
-            <Text style={pdfStyles.statusBadgePaid}>PAID</Text>
+            <Text style={pdfStyles.statusBadgePaid}>FULLY PAID</Text>
           ) : (
             <Text style={pdfStyles.statusBadgeDue}>
-              DUE: ${dueAmount.toLocaleString()}
+              DUE: $
+              {dueAmount.toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+              })}
             </Text>
           )}
         </View>
       </View>
 
+      {/* Minimalist Footer */}
       <Text style={pdfStyles.footer}>
-        This is a computer-generated invoice and requires no signature. Thank
-        you for shopping at Gadget Galaxy!
+        Thank you for choosing Gadget Galaxy! We appreciate your business.{" "}
+        {"\n"}
+        This is an electronically generated invoice, official signature is not
+        required.
       </Text>
     </Page>
   </Document>

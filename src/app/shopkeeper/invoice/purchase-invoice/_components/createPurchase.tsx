@@ -48,230 +48,401 @@ import {
 // --------------------------------------------------
 // PDF STYLES
 // --------------------------------------------------
+// --- Ultra-Modern PDF Styles (Premium Layout) ---
 const pdfStyles = StyleSheet.create({
   page: {
-    padding: 32,
+    padding: 40,
     backgroundColor: "#ffffff",
-    fontSize: 10,
-    color: "#0f172a",
+    fontSize: 9,
+    color: "#334155", // Slate 700
   },
-
+  headerBar: {
+    position: "absolute",
+    top: 0,
+    left: 0,
+    right: 0,
+    height: 6,
+    backgroundColor: "#0f172a", // Dark Slate Accent
+  },
   header: {
     flexDirection: "row",
     justifyContent: "space-between",
-    alignItems: "center",
-    marginBottom: 24,
-    borderBottom: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingBottom: 16,
+    alignItems: "flex-start",
+    marginBottom: 35,
+    marginTop: 10,
   },
-
   logo: {
-    width: 120,
+    width: 130,
+    objectFit: "contain",
   },
-
+  receiptMeta: {
+    textAlign: "right",
+  },
   title: {
-    fontSize: 24,
+    fontSize: 22,
     fontWeight: "bold",
+    color: "#0f172a",
+    letterSpacing: 1,
+    marginBottom: 4,
   },
-
+  dateText: {
+    fontSize: 9,
+    color: "#64748b",
+  },
   section: {
-    marginBottom: 20,
+    marginBottom: 24,
   },
-
+  sectionTitle: {
+    fontSize: 10,
+    fontWeight: "bold",
+    color: "#0f172a",
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
+    marginBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: "#cbd5e1",
+    paddingBottom: 4,
+  },
   infoRow: {
     flexDirection: "row",
-    gap: 16,
+    gap: 20,
   },
-
   infoBox: {
     flex: 1,
-    border: 1,
-    borderColor: "#e2e8f0",
-    borderRadius: 10,
-    padding: 12,
+    backgroundColor: "#f8fafc", // Very soft gray background
+    borderRadius: 8,
+    padding: 14,
+    borderWidth: 1,
+    borderColor: "#f1f5f9",
   },
-
-  sectionTitle: {
-    fontSize: 12,
+  infoBoxTitle: {
+    fontSize: 9,
     fontWeight: "bold",
+    color: "#0f172a",
     marginBottom: 10,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-
   label: {
-    fontSize: 8,
+    fontSize: 7.5,
     color: "#64748b",
-    marginBottom: 3,
+    textTransform: "uppercase",
+    marginBottom: 2,
   },
-
   value: {
+    color: "#1e293b",
+    fontSize: 9.5,
+    fontWeight: "bold",
     marginBottom: 8,
   },
-
+  storeValue: {
+    color: "#334155",
+    fontSize: 9.5,
+    lineHeight: 1.5,
+    marginBottom: 2,
+  },
+  // Table Style
   tableHeader: {
     flexDirection: "row",
-    backgroundColor: "#f1f5f9",
-    padding: 10,
+    backgroundColor: "#0f172a",
+    paddingVertical: 8,
+    paddingHorizontal: 12,
     borderRadius: 6,
+    color: "#ffffff",
     fontWeight: "bold",
+    fontSize: 8,
+    textTransform: "uppercase",
+    letterSpacing: 0.5,
   },
-
   row: {
     flexDirection: "row",
-    borderBottom: 1,
-    borderBottomColor: "#e2e8f0",
-    paddingVertical: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: "#f1f5f9",
+    paddingVertical: 12,
+    paddingHorizontal: 12,
     alignItems: "center",
   },
-
-  col1: {
-    width: "35%",
+  colProduct: {
+    width: "40%",
     flexDirection: "row",
     alignItems: "center",
-    gap: 8,
+    gap: 12,
   },
-
-  col2: {
-    width: "15%",
+  colQty: {
+    width: "10%",
     textAlign: "center",
+    color: "#0f172a",
+    fontWeight: "bold",
   },
-
-  col3: {
-    width: "50%",
+  colSerials: {
+    width: "30%",
   },
-
+  colPrice: {
+    width: "20%",
+    textAlign: "right",
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
   productImage: {
-    width: 35,
-    height: 35,
+    width: 38,
+    height: 38,
     borderRadius: 6,
+    backgroundColor: "#f8fafc",
   },
-
-  footer: {
-    marginTop: 24,
-    textAlign: "center",
+  productName: {
+    fontSize: 9.5,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  serialText: {
     fontSize: 8,
+    color: "#475569",
+    backgroundColor: "#f1f5f9",
+    paddingVertical: 2,
+    paddingHorizontal: 6,
+    borderRadius: 4,
+    marginBottom: 2,
+    alignSelf: "flex-start",
+  },
+  // Total Section
+  totalSection: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    marginBottom: 24,
+  },
+  totalBox: {
+    backgroundColor: "#f8fafc",
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    padding: 12,
+    borderRadius: 8,
+    width: 200,
+  },
+  totalRow: {
+    flexDirection: "row",
+    justifyContent: "space-between",
+    alignItems: "center",
+  },
+  totalLabel: {
+    fontSize: 9,
+    fontWeight: "bold",
     color: "#64748b",
+    textTransform: "uppercase",
+  },
+  totalValue: {
+    fontSize: 13,
+    fontWeight: "bold",
+    color: "#0f172a",
+  },
+  // Document Images Section
+  idImagesContainer: {
+    flexDirection: "row",
+    gap: 14,
+    marginTop: 4,
+  },
+  idImageFrame: {
+    borderWidth: 1,
+    borderColor: "#e2e8f0",
+    borderRadius: 8,
+    padding: 4,
+    backgroundColor: "#f8fafc",
+  },
+  idImage: {
+    width: 170,
+    height: 105,
+    borderRadius: 6,
+    objectFit: "cover",
+  },
+  footer: {
+    position: "absolute",
+    bottom: 30,
+    left: 40,
+    right: 40,
+    textAlign: "center",
+    color: "#94a3b8",
+    fontSize: 7.5,
+    borderTopWidth: 1,
+    borderTopColor: "#f1f5f9",
+    paddingTop: 15,
+    lineHeight: 1.4,
   },
 });
 
 // --------------------------------------------------
-// PDF COMPONENT
+// MODERN RECEIPT PDF COMPONENT WITH PRICE
 // --------------------------------------------------
-const PurchaseReceiptPDF = ({ customer, items, shopkeeper, idImages }: any) => (
+const PurchaseReceiptPDF = ({
+  customer,
+  items,
+  total,
+  shopkeeper,
+  idImages,
+}: any) => (
   <Document>
     <Page size="A4" style={pdfStyles.page}>
-      {/* HEADER */}
+      {/* Decorative Accent Bar */}
+      <View style={pdfStyles.headerBar} />
+
+      {/* HEADER SECTION */}
       <View style={pdfStyles.header}>
-        <Image src={shopkeeper.image?.url} style={pdfStyles.logo} />
+        {shopkeeper?.image?.url ? (
+          <Image src={shopkeeper.image.url} style={pdfStyles.logo} />
+        ) : (
+          <Text style={[pdfStyles.title, { fontSize: 18 }]}>
+            {shopkeeper?.shopName || "STORE"}
+          </Text>
+        )}
 
-        <View>
+        <View style={pdfStyles.receiptMeta}>
           <Text style={pdfStyles.title}>PURCHASE RECEIPT</Text>
-
-          <Text>Date: {new Date().toLocaleDateString()}</Text>
+          <Text style={pdfStyles.dateText}>
+            Date:{" "}
+            {new Date().toLocaleDateString("en-US", {
+              year: "numeric",
+              month: "long",
+              day: "numeric",
+            })}
+          </Text>
         </View>
       </View>
 
-      {/* CUSTOMER + STORE */}
+      {/* CUSTOMER + STORE DETAILS BOXES */}
       <View style={[pdfStyles.section, pdfStyles.infoRow]}>
+        {/* Customer Information Card */}
         <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.sectionTitle}>Customer Information</Text>
+          <Text style={pdfStyles.infoBoxTitle}>Customer Details</Text>
 
-          <Text style={pdfStyles.label}>Customer Name</Text>
-
+          <Text style={pdfStyles.label}>Name</Text>
           <Text style={pdfStyles.value}>
-            {customer.firstName} {customer.lastName}
+            {`${customer?.firstName || ""} ${customer?.lastName || "Valued Customer"}`}
           </Text>
 
-          <Text style={pdfStyles.label}>Email</Text>
-
-          <Text style={pdfStyles.value}>{customer.email || "N/A"}</Text>
-
-          <Text style={pdfStyles.label}>Phone</Text>
-
-          <Text style={pdfStyles.value}>{customer.phone || "N/A"}</Text>
+          <Text style={pdfStyles.label}>Contact Info</Text>
+          <Text
+            style={[
+              pdfStyles.value,
+              { fontSize: 8.5, fontWeight: "normal", marginBottom: 4 },
+            ]}
+          >
+            {customer?.phone || "Phone N/A"}
+          </Text>
+          <Text
+            style={[pdfStyles.value, { fontSize: 8.5, fontWeight: "normal" }]}
+          >
+            {customer?.email || "Email N/A"}
+          </Text>
 
           <Text style={pdfStyles.label}>Address</Text>
-
-          <Text style={pdfStyles.value}>{customer.address || "N/A"}</Text>
-
-          <Text style={pdfStyles.label}>ID Number</Text>
-
-          <Text style={pdfStyles.value}>{customer.idNumber || "N/A"}</Text>
-        </View>
-
-        <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.sectionTitle}>Shop Information</Text>
-
-          <Text style={pdfStyles.value}>{shopkeeper?.shopName || "N/A"}</Text>
-
-          <Text style={pdfStyles.value}>
-            {shopkeeper?.shopAddress || "N/A"}
+          <Text
+            style={[pdfStyles.value, { fontSize: 8.5, fontWeight: "normal" }]}
+          >
+            {customer?.address || "N/A"}
           </Text>
 
-          <Text style={pdfStyles.value}>{shopkeeper?.email || "N/A"}</Text>
+          <Text style={pdfStyles.label}>Govt ID Number</Text>
+          <Text style={[pdfStyles.value, { marginBottom: 0 }]}>
+            {customer?.idNumber || "N/A"}
+          </Text>
+        </View>
 
-          <Text style={pdfStyles.value}>{shopkeeper?.phone || "N/A"}</Text>
+        {/* Shop Information Card */}
+        <View style={pdfStyles.infoBox}>
+          <Text style={pdfStyles.infoBoxTitle}>Shop Information</Text>
+          <Text style={[pdfStyles.value, { fontSize: 11, marginBottom: 6 }]}>
+            {shopkeeper?.shopName || "Gadget Galaxy"}
+          </Text>
+          <Text style={pdfStyles.storeValue}>
+            {shopkeeper?.shopAddress || "Address N/A"}
+          </Text>
+          <Text style={pdfStyles.storeValue}>
+            Phone: {shopkeeper?.phone || "N/A"}
+          </Text>
+          <Text style={pdfStyles.storeValue}>
+            Email: {shopkeeper?.email || "N/A"}
+          </Text>
         </View>
       </View>
 
-      {/* ITEMS */}
+      {/* ITEMS TABLE SECTION */}
       <View style={pdfStyles.section}>
-        <Text style={pdfStyles.sectionTitle}>Purchased Items</Text>
+        <Text style={pdfStyles.sectionTitle}>Purchased Items & Assets</Text>
 
         <View style={pdfStyles.tableHeader}>
-          <Text style={pdfStyles.col1}>Product</Text>
-
-          <Text style={pdfStyles.col2}>Qty</Text>
-
-          <Text style={pdfStyles.col3}>IMEI / Serial Numbers</Text>
+          <Text style={pdfStyles.colProduct}>Product Name / Model</Text>
+          <Text style={pdfStyles.colQty}>Qty</Text>
+          <Text style={pdfStyles.colSerials}>IMEI / Serial Numbers</Text>
+          <Text style={pdfStyles.colPrice}>Price</Text>
         </View>
 
-        {items.map((item: any, index: number) => (
+        {items?.map((item: any, index: number) => (
           <View key={index} style={pdfStyles.row}>
-            <View style={pdfStyles.col1}>
-              <Image src={item.image} style={pdfStyles.productImage} />
-
-              <Text>{item.name}</Text>
+            <View style={pdfStyles.colProduct}>
+              {item.image && (
+                <Image src={item.image} style={pdfStyles.productImage} />
+              )}
+              <Text style={pdfStyles.productName}>{item.name}</Text>
             </View>
 
-            <Text style={pdfStyles.col2}>{item.quantity}</Text>
+            <Text style={pdfStyles.colQty}>{item.quantity || 1}</Text>
 
-            <View style={pdfStyles.col3}>
-              {item.serials.map((serial: string, idx: number) => (
-                <Text key={idx}>{serial}</Text>
+            <View style={pdfStyles.colSerials}>
+              {item.serials?.map((serial: string, idx: number) => (
+                <Text key={idx} style={pdfStyles.serialText}>
+                  • {serial}
+                </Text>
               ))}
             </View>
+
+            <Text style={pdfStyles.colPrice}>
+              $
+              {(
+                Number(item.expectedPrice || 0) * Number(item.quantity || 1)
+              ).toLocaleString(undefined, {
+                minimumFractionDigits: 2,
+              })}
+            </Text>
           </View>
         ))}
       </View>
 
-      {/* ID IMAGES */}
-      <View style={pdfStyles.section}>
-        <Text style={pdfStyles.sectionTitle}>Customer ID Images</Text>
-
-        <View
-          style={{
-            flexDirection: "row",
-            gap: 10,
-          }}
-        >
-          {idImages.map((img: string, index: number) => (
-            <Image
-              key={index}
-              src={img}
-              style={{
-                width: 180,
-                height: 120,
-                borderRadius: 8,
-                objectFit: "cover",
-              }}
-            />
-          ))}
+      {/* TOTAL AMOUNT SECTION */}
+      <View style={pdfStyles.totalSection}>
+        <View style={pdfStyles.totalBox}>
+          <View style={pdfStyles.totalRow}>
+            <Text style={pdfStyles.totalLabel}>Total Value</Text>
+            <Text style={pdfStyles.totalValue}>
+              $
+              {total
+                ? total.toLocaleString(undefined, { minimumFractionDigits: 2 })
+                : "0.00"}
+            </Text>
+          </View>
         </View>
       </View>
 
+      {/* VERIFIED ID IMAGES SECTION */}
+      {idImages && idImages.length > 0 && (
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>
+            Verification Documents (Customer ID)
+          </Text>
+
+          <View style={pdfStyles.idImagesContainer}>
+            {idImages.map((img: string, index: number) => (
+              <View key={index} style={pdfStyles.idImageFrame}>
+                <Image src={img} style={pdfStyles.idImage} />
+              </View>
+            ))}
+          </View>
+        </View>
+      )}
+
+      {/* LEGAL FOOTER */}
       <Text style={pdfStyles.footer}>
-        This document confirms the purchase of products from the customer.
+        This legally binding document officially confirms the legitimate
+        purchase/takeover of the products listed above from the customer. {"\n"}
+        All serial and IMEI numbers are cross-verified with the provided
+        Government ID verification.
       </Text>
     </Page>
   </Document>
@@ -348,6 +519,7 @@ export default function CreatePurchaseReceipt() {
 
     if (alreadyExists) {
       toast.error("Item already added");
+
       return;
     }
 
@@ -359,12 +531,14 @@ export default function CreatePurchaseReceipt() {
         quantity: 1,
         image: device.image?.url || "/placeholder.png",
         serials: device.imeiNumber ? [device.imeiNumber] : [""],
+
+        // PRICE ADDED
+        expectedPrice: Number(device.expectedPrice) || 0,
       },
     ]);
 
     toast.success("Item added");
   };
-
   // --------------------------------------------------
   // REMOVE ITEM
   // --------------------------------------------------
@@ -464,6 +638,11 @@ export default function CreatePurchaseReceipt() {
         items={items}
         shopkeeper={profileData?.data}
         idImages={imageUrls}
+        total={items.reduce(
+          (acc, item) =>
+            acc + Number(item.expectedPrice || 0) * Number(item.quantity || 1),
+          0,
+        )}
       />
     );
 
@@ -569,6 +748,7 @@ export default function CreatePurchaseReceipt() {
                     placeholder="Email Address"
                     className="rounded-2xl h-12 border-primary bg-background font-bold focus-visible:ring-primary"
                     value={customer.email}
+                    type="email"
                     onChange={(e) =>
                       setCustomer({
                         ...customer,
@@ -793,7 +973,7 @@ export default function CreatePurchaseReceipt() {
                                 className="rounded-2xl"
                                 onClick={() => addInventoryItem(device)}
                               >
-                                <Plus size={16} className="mr-2" />
+                                <Plus size={16} className="" />
                                 Add
                               </Button>
                             </td>
