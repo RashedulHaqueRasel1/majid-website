@@ -4,7 +4,7 @@ import React, { useState, useMemo } from "react";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Button } from "@/components/ui/button";
-import { Store, User, Package, Loader2, Search } from "lucide-react";
+import { User, Package, Loader2, Search } from "lucide-react";
 import { pdf } from "@react-pdf/renderer";
 import {
   Document,
@@ -231,7 +231,7 @@ const InvoicePDF = ({
 
       {/* Header with Logo */}
       <View style={pdfStyles.topSection}>
-        <Image src="/images/logo.png" style={pdfStyles.logo} />
+        <Image src={shopkeeper.image?.url} style={pdfStyles.logo} />
         <View>
           <Text style={pdfStyles.invoiceTitle}>INVOICE</Text>
           <Text style={{ fontSize: 8, color: "#64748b", textAlign: "right" }}>
@@ -254,6 +254,8 @@ const InvoicePDF = ({
             <Text>Email: {customer.email || "N/A"}</Text>
             <Text>Phone: {customer.phone || "N/A"}</Text>
             <Text>Address: {customer.address || "N/A"}</Text>
+            <Text>Customer ID: {customer.id || "N/A"}</Text>
+
             <Text
               style={{
                 marginTop: 4,
@@ -370,6 +372,7 @@ export default function CreateInvoice() {
     phone: "",
     card: "",
     address: "",
+    id: "",
   });
 
   const customers = getInvoiceUser?.data?.data || [];
@@ -527,6 +530,7 @@ export default function CreateInvoice() {
                         phone: selectedCustomer.phone || "",
                         address: selectedCustomer.address || "",
                         card: "",
+                        id: selectedCustomer._id,
                       });
                     }
                   }}
@@ -700,9 +704,22 @@ export default function CreateInvoice() {
                   onChange={(e) => setAlreadyPaid(Number(e.target.value))}
                 />
               </div>
-
+              <div className="space-y-2">
+                <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
+                  Customer ID
+                </label>
+                <Input
+                  type="number"
+                  className="rounded-2xl h-12 border-primary bg-background font-bold"
+                  placeholder="0.00"
+                  value={customer.id || ""}
+                  onChange={(e) =>
+                    setCustomer({ ...customer, id: e.target.value })
+                  }
+                />
+              </div>
               {/* Conditional Card field wrapper layer */}
-              {paymentType === "card" && (
+              {/* {paymentType === "card" && (
                 <div className="space-y-2 sm:col-span-2">
                   <label className="text-xs font-black text-muted-foreground uppercase tracking-widest">
                     Card Number
@@ -717,7 +734,7 @@ export default function CreateInvoice() {
                     }
                   />
                 </div>
-              )}
+              )} */}
             </div>
 
             {/* Calculations Status Grid view matching original structure style */}
@@ -747,7 +764,11 @@ export default function CreateInvoice() {
           <div className="bg-card rounded-[28px] p-8 text-foreground flex flex-col justify-between shadow-lg">
             <div className="space-y-4">
               <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-sky-400">
-                <Store size={24} />
+                <img
+                  src={profileData?.data?.image?.url}
+                  alt="Profile"
+                  className="w-12 h-12 rounded-full"
+                />
               </div>
               <div>
                 <h2 className="text-2xl font-black tracking-tight">
