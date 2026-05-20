@@ -621,19 +621,19 @@ export const InvoiceModal = ({
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex gap-3">
               <button
                 onClick={onClose}
-                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition"
+                className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
                 onClick={handleSubmit}
                 disabled={isGenerating || isCreatingCustomer}
-                className="flex-1 py-2.5 rounded-xl bg-[#84CC16] text-white font-semibold text-sm hover:bg-[#76b813] transition flex items-center justify-center gap-2 disabled:opacity-50"
+                className="flex-1 py-2.5 rounded-xl bg-[#84CC16] text-white font-semibold text-sm hover:bg-[#76b813] transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
               >
                 {isCreatingCustomer || isGenerating ? (
-                  <Loader2 size={16} className="animate-spin" />
+                  <Loader2 size={16} className="animate-spin " />
                 ) : (
-                  <DollarSign size={16} />
+                  <DollarSign size={16} className="" />
                 )}
                 {isCreatingCustomer
                   ? "Creating Customer..."

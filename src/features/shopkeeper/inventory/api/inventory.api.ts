@@ -5,6 +5,7 @@ import type {
   InventoryListResponse,
   CreateFromBarcodeBulkInput,
   InvoiceHistoryResponse,
+  CartListResponse,
 } from "../types";
 
 const BASE = "/inventory";
@@ -174,5 +175,24 @@ export const createCustomer = async (input: {
 
 export const getCustomersByShopkeeper = async (shopkeeperId: string) => {
   const response = await api.get(`/customer/shopkeeper/${shopkeeperId}`);
+  return response.data;
+};
+
+export const getShopkeeperCart = async (
+  shopkeeperId: string,
+): Promise<CartListResponse> => {
+  const response = await api.get(`/add-to-cart/shopkeeper/${shopkeeperId}`);
+  return response.data;
+};
+
+export const deleteCartItem = async (cartId: string) => {
+  const response = await api.delete(`/add-to-cart/delete/${cartId}`);
+  return response.data;
+};
+
+export const deleteAllShopkeeperCartItems = async (shopkeeperId: string) => {
+  const response = await api.delete(
+    `/add-to-cart/delete-all/shopkeeper/${shopkeeperId}`,
+  );
   return response.data;
 };

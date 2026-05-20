@@ -9,11 +9,20 @@ import {
   Trash2,
   Edit2,
   Package,
-  DollarSign,
+  ShoppingCart,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
-import { useMyInventory, useDeleteInventory } from "../hooks/useInventory";
+import {
+  INVENTORY_KEYS,
+  useMyInventory,
+  useDeleteInventory,
+  useShopkeeperCart,
+} from "../hooks/useInventory";
+import { useSession } from "next-auth/react";
+import axiosInstance from "@/lib/instance/axios-instance";
+import { useRouter } from "next/navigation";
+import { useQueryClient } from "@tanstack/react-query";
 
 import { InventorySkeleton } from "./skeletons/InventorySkeleton";
 import { InventoryFormModal } from "./modals/InventoryFormModal";
@@ -27,9 +36,49 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
 
+const SELL_QUANTITY = 1;
+
 export default function Inventory() {
   const { data: inventoryData, isLoading, isError } = useMyInventory();
   const { mutate: deleteItem } = useDeleteInventory();
+  const { data: session } = useSession();
+  const router = useRouter();
+  const queryClient = useQueryClient();
+  const shopkeeperId = (session?.user as { id?: string })?.id;
+  const { data: cartData } = useShopkeeperCart(shopkeeperId);
+
+  const cartItems = cartData?.data || [];
+  const cartQuantity = cartItems.reduce(
+    (sum, item) => sum + (item.quantity || 0),
+    0,
+  );
+
+  const handleSell = async (item: InventoryItem) => {
+    try {
+      if (!shopkeeperId) {
+        toast.error("Session not found");
+        return;
+      }
+
+      const payload = {
+        shopkeeperId,
+        itemId: item._id,
+        quantity: SELL_QUANTITY,
+      };
+
+      await axiosInstance.post("/add-to-cart/create", payload);
+      queryClient.invalidateQueries({
+        queryKey: INVENTORY_KEYS.shopkeeperCart(shopkeeperId),
+      });
+      toast.success("Added for sale successfully");
+    } catch (error) {
+      console.error(error);
+      const err = error as { response?: { data?: { message?: string } } };
+      toast.error(
+        err.response?.data?.message || "Failed to process sell action",
+      );
+    }
+  };
 
   console.log(inventoryData);
 
@@ -106,6 +155,26 @@ export default function Inventory() {
           </p>
         </div>
         <div className="flex items-center gap-4">
+          <button
+            onClick={() => router.push("/shopkeeper/cart")}
+            className="relative flex h-12 items-center gap-3 rounded-xl border border-slate-100 bg-white px-4 text-[#0F172A] shadow-sm transition hover:border-[#84CC16]/50 hover:bg-[#84CC16]/5 active:scale-95 dark:border-slate-700 dark:bg-slate-800 dark:text-white cursor-pointer"
+            aria-label="Open cart"
+          >
+            <span className="relative flex h-9 w-9 items-center justify-center rounded-lg bg-[#84CC16]/10 text-[#84CC16] cursor-pointer">
+              <ShoppingCart size={19} strokeWidth={2.6} />
+              {cartQuantity > 0 && (
+                <span className="absolute -right-2 -top-2 flex min-w-5 items-center justify-center rounded-full bg-[#84CC16] px-1.5 text-[10px] font-black leading-5 text-white shadow shadow-lime-500/30">
+                  {cartQuantity}
+                </span>
+              )}
+            </span>
+            <span className="hidden text-left sm:block">
+              <span className="block text-xs font-black">Cart</span>
+              <span className="block text-[10px] font-bold text-slate-400">
+                {cartItems.length} item{cartItems.length === 1 ? "" : "s"}
+              </span>
+            </span>
+          </button>
           <div className="relative hidden md:block">
             <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400" />
             <input
@@ -208,17 +277,6 @@ export default function Inventory() {
                           <DropdownMenuItem
                             onClick={() => {
                               setEditingItem(item);
-                              setFormForceType("sold");
-                              setIsFormOpen(true);
-                            }}
-                            className="flex items-center gap-2 p-3 font-bold text-xs rounded-lg text-[#84CC16] hover:bg-[#84CC16]/10 cursor-pointer"
-                          >
-                            <DollarSign size={14} />
-                            Sell
-                          </DropdownMenuItem>
-                          <DropdownMenuItem
-                            onClick={() => {
-                              setEditingItem(item);
                               setFormForceType("inventory");
                               setIsFormOpen(true);
                             }}
@@ -246,6 +304,12 @@ export default function Inventory() {
                     <span className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-[#84CC16] text-white">
                       In Stock
                     </span>
+                    <button
+                      onClick={() => handleSell(item)}
+                      className="px-3 py-1 rounded-full text-[9px] font-black uppercase tracking-widest bg-[#84CC16] text-white hover:bg-[#76b813] transition shadow shadow-lime-500/20 active:scale-95 cursor-pointer"
+                    >
+                      Sell
+                    </button>
                   </div>
 
                   <div className="flex items-end justify-between pt-2">

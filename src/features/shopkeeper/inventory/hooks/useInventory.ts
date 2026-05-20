@@ -10,17 +10,23 @@ import {
   getMyInvoiceHistory,
   createCustomer,
   getCustomersByShopkeeper,
+  getShopkeeperCart,
+  deleteCartItem,
+  deleteAllShopkeeperCartItems,
 } from "../api/inventory.api";
 import type {
   CreateInventoryInput,
   UpdateInventoryInput,
   CreateFromBarcodeBulkInput,
   InvoiceHistoryResponse,
+  CartListResponse,
 } from "../types";
 
 export const INVENTORY_KEYS = {
   all: ["inventory"] as const,
   myInventory: () => [...INVENTORY_KEYS.all, "my-inventory"] as const,
+  shopkeeperCart: (shopkeeperId: string) =>
+    [...INVENTORY_KEYS.all, "shopkeeper-cart", shopkeeperId] as const,
 };
 
 export function useMyInventory() {
@@ -132,5 +138,39 @@ export function useCustomersByShopkeeper(shopkeeperId: string) {
     queryKey: ["customers", shopkeeperId],
     queryFn: () => getCustomersByShopkeeper(shopkeeperId),
     enabled: !!shopkeeperId,
+  });
+}
+
+export function useShopkeeperCart(shopkeeperId?: string) {
+  return useQuery<CartListResponse>({
+    queryKey: INVENTORY_KEYS.shopkeeperCart(shopkeeperId || ""),
+    queryFn: () => getShopkeeperCart(shopkeeperId || ""),
+    enabled: !!shopkeeperId,
+  });
+}
+
+export function useDeleteCartItem(shopkeeperId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: (cartId: string) => deleteCartItem(cartId),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: INVENTORY_KEYS.shopkeeperCart(shopkeeperId || ""),
+      });
+    },
+  });
+}
+
+export function useDeleteAllShopkeeperCartItems(shopkeeperId?: string) {
+  const queryClient = useQueryClient();
+
+  return useMutation({
+    mutationFn: () => deleteAllShopkeeperCartItems(shopkeeperId || ""),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: INVENTORY_KEYS.shopkeeperCart(shopkeeperId || ""),
+      });
+    },
   });
 }

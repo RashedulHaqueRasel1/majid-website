@@ -227,6 +227,22 @@ export interface InvoiceHistoryResponse {
   data: InvoiceHistoryItem[];
 }
 
+export interface CartItem {
+  _id: string;
+  shopkeeperId: Shopkeeper;
+  itemId: InventoryItem;
+  quantity: number;
+  createdAt: string;
+  updatedAt: string;
+}
+
+export interface CartListResponse {
+  success: boolean;
+  message: string;
+  statusCode: number;
+  data: CartItem[];
+}
+
 // ─── TypeScript Interfaces ────────────────────────────────────────────────────
 
 export type InventoryItem = z.infer<typeof InventoryItemSchema>;
