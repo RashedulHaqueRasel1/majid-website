@@ -39,7 +39,7 @@ interface FavouriteResultViewProps {
   onBack: () => void;
   onDownload: () => void;
   isDownloading: boolean;
-  onRegenerate?: () => void; // নতুন প্রপ
+  onRegenerate?: () => Promise<void> | void;
 }
 
 const getRiskLabel = (score: number) => {
@@ -149,8 +149,11 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
   const handleRegenerate = async () => {
     if (onRegenerate) {
       setIsRegenerating(true);
-      await onRegenerate();
-      setIsRegenerating(false);
+      try {
+        await onRegenerate();
+      } finally {
+        setIsRegenerating(false);
+      }
     }
   };
 

@@ -46,7 +46,7 @@ interface SingleResultViewProps {
   onBack: () => void;
   onDownload: () => void;
   isDownloading: boolean;
-  onRegenerate?: () => void;
+  onRegenerate?: () => Promise<void> | void;
 }
 
 const getRiskLabel = (score: number) => {
@@ -381,8 +381,11 @@ export const SingleResultView = ({
   const handleRegenerate = async () => {
     if (onRegenerate) {
       setIsRegenerating(true);
-      await onRegenerate();
-      setIsRegenerating(false);
+      try {
+        await onRegenerate();
+      } finally {
+        setIsRegenerating(false);
+      }
     }
   };
 
@@ -748,7 +751,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         </div>
 
         {/* Device Specifications Section — curated key fields */}
-        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+        {/* <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
           <div className="flex items-center gap-3 mb-6">
             <div className="p-2 bg-lime-500/10 rounded-xl">
               <Smartphone size={18} className="text-lime-500" />
@@ -786,7 +789,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
               </div>
             ))}
           </div>
-        </div>
+        </div> */}
 
         {/* Technical Breakdown */}
         {technicalItems.length > 0 && (
@@ -815,13 +818,13 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         )}
 
         {/* Notice Section */}
-        {notice && (
+        {/* {notice && (
           <div className="lg:col-span-3 bg-amber-50 rounded-2xl p-4 border border-amber-200">
             <p className="text-sm text-amber-800">
               <span className="font-semibold">ℹ️ Notice:</span> {notice}
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Metadata Footer */}
         <div className="lg:col-span-3 bg-slate-50 rounded-2xl p-5 border border-slate-200">

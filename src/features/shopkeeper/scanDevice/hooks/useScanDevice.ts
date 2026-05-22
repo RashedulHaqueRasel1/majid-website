@@ -210,7 +210,12 @@ export const useScanDevice = () => {
   );
 
   const handleRegenerateScan = useCallback(
-    async (imeiInput: string, serviceId: number, onComplete?: () => void) => {
+    async (
+      imeiInput: string,
+      serviceId: number,
+      _generateNew: boolean = true,
+      onComplete?: () => void,
+    ) => {
       if (!imeiInput || !serviceId) return;
 
       console.log("🔄 Regenerating scan with generate: new");
