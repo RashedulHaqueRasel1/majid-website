@@ -26,7 +26,7 @@ export const checkIMEIApi = async (
 
   console.log("📤 API Payload:", payload);
 
-  const response = await axiosInstance.post("/imei/check", payload);
+  const response = await axiosInstance.post("/imei/check-v2", payload);
   return response.data;
 };
 

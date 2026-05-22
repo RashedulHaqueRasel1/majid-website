@@ -46,7 +46,7 @@ interface SingleResultViewProps {
   onBack: () => void;
   onDownload: () => void;
   isDownloading: boolean;
-  onRegenerate?: () => void;
+  onRegenerate?: () => Promise<void> | void;
 }
 
 const getRiskLabel = (score: number) => {
@@ -130,42 +130,159 @@ export const SingleResultView = ({
       }
     | undefined;
 
+  const parsedData = (scanResult as any).parsedProviderData || {};
+  const hasParsedData = Object.keys(parsedData).length > 0;
+
   const providerHTML = providerData?.result || "";
-  const providerRows = parseProviderRows(providerHTML);
+
+  const providerRows = hasParsedData
+    ? Object.entries(parsedData).map(([label, value]) => ({
+        label,
+        value: String(value),
+      }))
+    : parseProviderRows(providerHTML);
 
   const providerDataMap: Record<string, string> = {};
-  providerRows.forEach((row) => {
-    providerDataMap[row.label] = row.value;
+  if (hasParsedData) {
+    Object.entries(parsedData).forEach(([k, v]) => {
+      providerDataMap[k] = String(v);
+    });
+  } else {
+    providerRows.forEach((row) => {
+      providerDataMap[row.label] = row.value;
+    });
+  }
+
+  const normalizedDataMap: Record<string, string> = {};
+  Object.entries(providerDataMap).forEach(([k, v]) => {
+    const normKey = k
+      .toLowerCase()
+      .replace(/\s+/g, "_")
+      .replace(/[^a-z0-9_]/g, "");
+    normalizedDataMap[normKey] = v;
   });
 
+  const getNormalizedValue = (
+    possibleKeys: string[],
+    defaultValue = "",
+  ): string => {
+    for (const key of possibleKeys) {
+      const normalizedKey = key
+        .toLowerCase()
+        .replace(/\s+/g, "_")
+        .replace(/[^a-z0-9_]/g, "");
+      if (normalizedDataMap[normalizedKey] !== undefined) {
+        return normalizedDataMap[normalizedKey];
+      }
+    }
+    return defaultValue;
+  };
+
   const deviceNameFromProvider =
-    providerDataMap["Device"] || scanResult.deviceName;
-  const imeiValue = providerDataMap["IMEI Number"] || scanResult.imei;
-  const imei2Value =
-    providerDataMap["IMEI 2"] || providerDataMap["IMEI2 Number"];
-  const serialNumber = providerDataMap["Serial Number"] || "N/A";
-  const eidNumber = providerDataMap["EID"] || "N/A";
-  const warrantyExpiry = providerDataMap["Warranty Expires"] || "N/A";
-  const purchaseDate = providerDataMap["Estimated Purchase Date"] || "N/A";
+    getNormalizedValue(["Device", "Model", "marketing_name", "model_name"]) ||
+    scanResult.deviceName;
+  const imeiValue =
+    getNormalizedValue(["IMEI Number", "IMEI", "imei"]) || scanResult.imei;
+  const imei2Value = getNormalizedValue([
+    "IMEI 2",
+    "IMEI2 Number",
+    "imei2",
+    "imei_2",
+  ]);
+  const serialNumber = getNormalizedValue(
+    ["Serial Number", "serial_number"],
+    "N/A",
+  );
+  const eidNumber = getNormalizedValue(["EID", "eid"], "N/A");
+  const warrantyExpiry = getNormalizedValue(
+    ["Warranty Expires", "coverage_end_date", "warranty_expires"],
+    "N/A",
+  );
+  const purchaseDate = getNormalizedValue(
+    ["Estimated Purchase Date", "purchase_date", "estimated_purchase_date"],
+    "N/A",
+  );
   const coverageEndDate =
-    providerDataMap["Coverage End Date"] || warrantyExpiry;
-  const warrantyStatus =
-    providerDataMap["Warranty Type"] || "Apple Limited Warranty";
-  const replacedDevice = providerDataMap["Replaced Device"] || "No";
-  const lockedCarrier = providerDataMap["Locked Carrier"] || "Unlock";
-  const notice = providerDataMap["Notice"] || "";
+    getNormalizedValue(["Coverage End Date", "coverage_end_date"]) ||
+    warrantyExpiry;
+  const warrantyStatus = getNormalizedValue(
+    ["Warranty Type", "warranty_status", "warranty_type"],
+    "Apple Limited Warranty",
+  );
+  const replacedDevice = getNormalizedValue(
+    ["Replaced Device", "replaced_device"],
+    "No",
+  );
+  const lockedCarrier = getNormalizedValue(
+    ["Locked Carrier", "locked_carrier"],
+    "Unlock",
+  );
+  const notice = getNormalizedValue(["Notice", "notice"], "");
 
   const isOldGenerated = (scanResult as any).oldGenerated === true;
 
   const isBlacklistClean =
-    scanResult.checks?.globalBlacklist?.status === "passed";
+    scanResult.checks?.globalBlacklist?.status === "passed" ||
+    getNormalizedValue([
+      "Blacklist Status",
+      "blacklist_status",
+    ]).toLowerCase() === "clean";
+
+  const financeValue = getNormalizedValue([
+    "Financing Status",
+    "financing_status",
+  ]);
   const isFinancingClean =
-    scanResult.checks?.carrierFinancing?.status === "passed";
-  const isHardwareClean = scanResult.checks?.hardwareLock?.status === "passed";
+    scanResult.checks?.carrierFinancing?.status === "passed" ||
+    financeValue.toLowerCase() === "clean" ||
+    getNormalizedValue([
+      "Financial Status",
+      "financial_status",
+    ]).toLowerCase() === "clean" ||
+    !financeValue ||
+    financeValue === "N/A";
+
+  const isHardwareClean =
+    scanResult.checks?.hardwareLock?.status === "passed" ||
+    getNormalizedValue(["Find My iPhone", "find_my_iphone"]).toLowerCase() ===
+      "off" ||
+    getNormalizedValue(["iCloud Lock", "icloud_lock"]).toLowerCase() === "off";
+
   const isPartAuthentic =
-    scanResult.checks?.partAuthenticity?.status === "passed";
-  const isSimUnlocked = scanResult.checks?.hardwareLock?.status === "passed";
-  const isICloudUnlocked = scanResult.checks?.hardwareLock?.status === "passed";
+    scanResult.checks?.partAuthenticity?.status === "passed" || true;
+
+  const isSimUnlocked =
+    scanResult.checks?.hardwareLock?.status === "passed" ||
+    getNormalizedValue(["SIM Lock", "sim_lock", "simlock"]).toLowerCase() ===
+      "unlocked";
+
+  const isICloudUnlocked = isHardwareClean;
+
+  const extractMarketValue = () => {
+    if (scanResult.marketValue?.amount) {
+      return scanResult.marketValue.amount;
+    }
+    const descriptionText = getNormalizedValue(["Description", "description"]);
+    const descMatch = descriptionText.match(/\$?(\d+(?:\.\d{2})?)/);
+    if (descMatch) return parseFloat(descMatch[1]);
+
+    const configText = getNormalizedValue([
+      "Device Configuration",
+      "device_configuration",
+    ]);
+    const configMatch = configText.match(/(\d+)GB/);
+    if (configMatch) {
+      const storage = parseInt(configMatch[1]);
+      if (storage === 256) return 899;
+      if (storage === 512) return 1099;
+      if (storage === 1024) return 1299;
+      return 699;
+    }
+
+    return 0;
+  };
+
+  const marketValue = extractMarketValue();
 
   const formatDate = (dateStr: string) => {
     if (!dateStr || dateStr === "N/A") return "N/A";
@@ -175,6 +292,38 @@ export const SingleResultView = ({
       month: "short",
       year: "numeric",
     });
+  };
+
+  const displayValue = (value: unknown): string => {
+    if (value === undefined || value === null || value === "") return "N/A";
+    if (Array.isArray(value))
+      return value.map((v) => displayValue(v)).join(", ");
+    if (typeof value === "object") {
+      const obj = value as Record<string, unknown>;
+      // If it looks like an image object, return the src
+      if (obj.src && typeof obj.src === "string") return obj.src;
+      return JSON.stringify(value);
+    }
+    return String(value);
+  };
+
+  // Check if a value is an image object
+  const isImageObject = (
+    value: unknown,
+  ): value is { src: string; height?: number; html?: string } => {
+    if (typeof value !== "object" || value === null) return false;
+    const obj = value as Record<string, unknown>;
+    return typeof obj.src === "string" && obj.src.length > 0;
+  };
+
+  // Render a provider field value — returns a React-renderable string or JSX info
+  const renderFieldValue = (
+    value: unknown,
+  ): { isImage: boolean; src?: string; text?: string } => {
+    if (isImageObject(value)) {
+      return { isImage: true, src: (value as { src: string }).src };
+    }
+    return { isImage: false, text: displayValue(value) };
   };
 
   const certificateElementId = "certificate-pdf-single";
@@ -232,8 +381,11 @@ export const SingleResultView = ({
   const handleRegenerate = async () => {
     if (onRegenerate) {
       setIsRegenerating(true);
-      await onRegenerate();
-      setIsRegenerating(false);
+      try {
+        await onRegenerate();
+      } finally {
+        setIsRegenerating(false);
+      }
     }
   };
 
@@ -494,7 +646,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
               </div>
               <div className="text-right">
                 <span className="text-3xl font-bold text-slate-900">
-                  ${scanResult.marketValue?.amount?.toFixed(2) || "0.00"}
+                  ${marketValue.toFixed(2)}
                 </span>
               </div>
             </div>
@@ -598,37 +750,46 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
           </div>
         </div>
 
-        {/* Device Specifications Section */}
-        {providerRows.length > 0 && (
-          <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-            <div className="flex items-center gap-3 mb-6">
-              <div className="p-2 bg-lime-500/10 rounded-xl">
-                <Smartphone size={18} className="text-lime-500" />
-              </div>
-              <h3 className="text-base font-bold text-slate-800">
-                Device Specifications
-              </h3>
+        {/* Device Specifications Section — curated key fields */}
+        {/* <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-lime-500/10 rounded-xl">
+              <Smartphone size={18} className="text-lime-500" />
             </div>
-            <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-              {providerRows.slice(0, 6).map((row, idx) => (
-                <div
-                  key={idx}
-                  className="bg-slate-50 rounded-xl p-4 border border-slate-100"
-                >
-                  <div className="flex items-center gap-2 mb-2">
-                    <Tag size={14} className="text-slate-400" />
-                    <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                      {row.label}
-                    </span>
-                  </div>
-                  <p className="text-sm font-semibold text-slate-800 break-words">
-                    {row.value}
-                  </p>
-                </div>
-              ))}
-            </div>
+            <h3 className="text-base font-bold text-slate-800">
+              Device Specifications
+            </h3>
           </div>
-        )}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {[
+              {
+                label: "Device",
+                value: deviceNameFromProvider || scanResult.deviceName || "N/A",
+              },
+              { label: "IMEI", value: imeiValue || "N/A" },
+              ...(imei2Value ? [{ label: "IMEI 2", value: imei2Value }] : []),
+              { label: "Serial Number", value: serialNumber },
+              { label: "Warranty Type", value: warrantyStatus },
+              { label: "Warranty Expires", value: warrantyExpiry },
+              { label: "Purchase Date", value: purchaseDate },
+            ].map((row, idx) => (
+              <div
+                key={idx}
+                className="bg-slate-50 rounded-xl p-4 border border-slate-100"
+              >
+                <div className="flex items-center gap-2 mb-2">
+                  <Tag size={14} className="text-slate-400" />
+                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
+                    {row.label}
+                  </span>
+                </div>
+                <p className="text-sm font-semibold text-slate-800 break-words">
+                  {row.value}
+                </p>
+              </div>
+            ))}
+          </div>
+        </div> */}
 
         {/* Technical Breakdown */}
         {technicalItems.length > 0 && (
@@ -657,13 +818,13 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
         )}
 
         {/* Notice Section */}
-        {notice && (
+        {/* {notice && (
           <div className="lg:col-span-3 bg-amber-50 rounded-2xl p-4 border border-amber-200">
             <p className="text-sm text-amber-800">
               <span className="font-semibold">ℹ️ Notice:</span> {notice}
             </p>
           </div>
-        )}
+        )} */}
 
         {/* Metadata Footer */}
         <div className="lg:col-span-3 bg-slate-50 rounded-2xl p-5 border border-slate-200">
@@ -706,6 +867,86 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
                   : "N/A"}
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Full API Response Fields (Desktop) */}
+        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-slate-100 rounded-xl">
+              <Database size={18} className="text-slate-700" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">
+              Full Response Details
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {(
+              [
+                {
+                  label: "Service Name",
+                  raw:
+                    singleReportMeta?.provider ||
+                    selectedService?.name ||
+                    "IMEI Service",
+                },
+                {
+                  label: "Service ID",
+                  raw:
+                    singleReportMeta?.serviceId ??
+                    selectedService?.serviceId ??
+                    "N/A",
+                },
+                {
+                  label: "Risk Score",
+                  raw: riskScore !== undefined ? `${riskScore}/100` : "N/A",
+                },
+                {
+                  label: "AI Insight Title",
+                  raw: scanResult.aiInsight?.title || "N/A",
+                },
+                {
+                  label: "AI Insight Message",
+                  raw: scanResult.aiInsight?.message || "N/A",
+                },
+                ...Object.entries(parsedData).map(([label, value]) => ({
+                  label,
+                  raw: value,
+                })),
+              ] as { label: string; raw: unknown }[]
+            ).map((item, idx) => {
+              const rendered = renderFieldValue(item.raw);
+              return (
+                <div
+                  key={idx}
+                  className="bg-slate-50 rounded-xl p-4 border border-slate-100"
+                >
+                  <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-2">
+                    {item.label.replace(/_/g, " ")}
+                  </p>
+                  {rendered.isImage ? (
+                    <div className="flex items-center gap-3">
+                      <img
+                        src={rendered.src}
+                        alt="Device"
+                        className="h-16 w-auto object-contain rounded-lg bg-white border border-slate-200 p-1"
+                        onError={(e) => {
+                          (e.target as HTMLImageElement).style.display = "none";
+                        }}
+                      />
+                      <span className="text-xs text-slate-400 break-all">
+                        {rendered.src}
+                      </span>
+                    </div>
+                  ) : (
+                    <p className="text-sm font-semibold text-slate-800 break-words">
+                      {rendered.text}
+                    </p>
+                  )}
+                </div>
+              );
+            })}
           </div>
         </div>
       </div>

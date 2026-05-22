@@ -105,10 +105,12 @@ export default function ScanDevice() {
         }
         isDownloading={isDownloading}
         onRegenerate={() => {
-          clearResults();
-          if (selectedService) {
-            handleRegenerateScan(imei, selectedService.serviceId || 6);
-          }
+          const serviceId =
+            singleReportMeta?.serviceId ??
+            selectedService?.serviceId ??
+            favouriteResult.bundledServiceId ??
+            6;
+          return handleRegenerateScan(imei, serviceId, true);
         }}
       />
     );
@@ -131,12 +133,9 @@ export default function ScanDevice() {
         isDownloading={isDownloading}
         onRegenerate={() => {
           clearResults();
-          if (selectedService) {
-            handleRegenerateScan(
-              scanResult.imei,
-              selectedService.serviceId || 6,
-            );
-          }
+          const serviceId =
+            singleReportMeta?.serviceId ?? selectedService?.serviceId ?? 6;
+          return handleRegenerateScan(scanResult.imei, serviceId, true);
         }}
       />
     );
@@ -161,7 +160,7 @@ export default function ScanDevice() {
             }}
             onRegenerateItem={(imei, serviceId) => {
               clearResults();
-              return handleRegenerateScan(imei, serviceId);
+              return handleRegenerateScan(imei, serviceId, true);
             }}
           />
         </div>
