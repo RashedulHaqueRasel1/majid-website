@@ -69,7 +69,10 @@ export const FavouriteResultView = ({
   onRegenerate,
 }: FavouriteResultViewProps) => {
   const providerData = scanResult.providerResults;
-  const riskScore = scanResult.riskMeter;
+  const riskScore =
+    typeof scanResult.riskMeter === "number"
+      ? scanResult.riskMeter
+      : Number(scanResult.riskMeter?.score ?? 0);
   const riskInfo = getRiskLabel(riskScore);
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
@@ -78,6 +81,13 @@ export const FavouriteResultView = ({
   const isICloudUnlocked = providerData.icloud_lock?.toLowerCase() === "off";
   const isBlacklistClean =
     providerData.blacklist_status?.toLowerCase() === "clean";
+
+  const displayValue = (value: unknown) => {
+    if (value === undefined || value === null || value === "") return "N/A";
+    if (Array.isArray(value)) return value.join(", ");
+    if (typeof value === "object") return JSON.stringify(value);
+    return String(value);
+  };
 
   // Check if data is old generated
   const isOldGenerated = (scanResult as any).oldGenerated === true;
@@ -123,7 +133,7 @@ ${providerData.imei2 ? `IMEI2: ${providerData.imei2}` : ""}
 Serial Number: ${providerData.serial_number || "N/A"}
 EID: ${providerData.eid || "N/A"}
 Warranty Status: ${providerData.warranty_status || "Limited Warranty"}
-Purchase Date: ${formatDate(providerData.purchase_date)}
+Purchase Date: ${formatDate(providerData.purchase_date || "")}
 Coverage End Date: ${providerData.coverage_end_date || "N/A"}
 Find My iPhone: ${isICloudUnlocked ? "OFF" : "ON"}
 iCloud Status: ${isBlacklistClean ? "CLEAN" : "FLAGGED"}
@@ -252,7 +262,7 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
           </p>
           <p>
             <span className="font-semibold">Purchase Date:</span>{" "}
-            {formatDate(providerData.purchase_date)}
+            {formatDate(providerData.purchase_date || "")}
           </p>
           <p>
             <span className="font-semibold">Coverage End:</span>{" "}
@@ -657,12 +667,174 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
             </div>
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
+                Service Category
+              </p>
+              <p className="text-sm font-bold text-slate-700">
+                {scanResult.bundledServiceCategory || "N/A"}
+              </p>
+            </div>
+            <div>
+              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                 Risk Score
               </p>
               <p className="text-sm font-bold text-slate-700">
                 {riskScore}/100
               </p>
             </div>
+          </div>
+        </div>
+
+        {/* Full API Response Fields (Desktop) */}
+        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
+          <div className="flex items-center gap-3 mb-6">
+            <div className="p-2 bg-slate-100 rounded-xl">
+              <Database size={18} className="text-slate-700" />
+            </div>
+            <h3 className="text-base font-bold text-slate-800">
+              Full Response Details
+            </h3>
+          </div>
+
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {[
+              { label: "bundledServiceId", value: scanResult.bundledServiceId },
+              {
+                label: "bundledServiceName",
+                value: scanResult.bundledServiceName,
+              },
+              {
+                label: "bundledServiceCategory",
+                value: scanResult.bundledServiceCategory,
+              },
+              {
+                label: "riskMeter",
+                value:
+                  typeof scanResult.riskMeter === "number"
+                    ? scanResult.riskMeter
+                    : JSON.stringify(scanResult.riskMeter ?? {}),
+              },
+              {
+                label: "aiInsight.title",
+                value: scanResult.aiInsight?.title,
+              },
+              {
+                label: "aiInsight.message",
+                value: scanResult.aiInsight?.message,
+              },
+              {
+                label: "providerResults.description",
+                value: providerData.description,
+              },
+              { label: "providerResults.model", value: providerData.model },
+              { label: "providerResults.imei", value: providerData.imei },
+              { label: "providerResults.imei2", value: providerData.imei2 },
+              { label: "providerResults.meid", value: providerData.meid },
+              {
+                label: "providerResults.serial_number",
+                value: providerData.serial_number,
+              },
+              {
+                label: "providerResults.warranty_status",
+                value: providerData.warranty_status,
+              },
+              {
+                label: "providerResults.purchase_date",
+                value: providerData.purchase_date,
+              },
+              {
+                label: "providerResults.replaced_device",
+                value: providerData.replaced_device,
+              },
+              {
+                label: "providerResults.simlock",
+                value: providerData.simlock,
+              },
+              {
+                label: "providerResults.icloud_lock",
+                value: providerData.icloud_lock,
+              },
+              {
+                label: "providerResults.manufacturer",
+                value: providerData.manufacturer,
+              },
+              {
+                label: "providerResults.marketing_name",
+                value: providerData.marketing_name,
+              },
+              {
+                label: "providerResults.operating_system",
+                value: providerData.operating_system,
+              },
+              {
+                label: "providerResults.blacklist_status",
+                value: providerData.blacklist_status,
+              },
+              {
+                label: "providerResults.device_configuration",
+                value: providerData.device_configuration,
+              },
+              {
+                label: "providerResults.model_name",
+                value: providerData.model_name,
+              },
+              {
+                label: "providerResults.material_number",
+                value: providerData.material_number,
+              },
+              {
+                label: "providerResults.basic_material",
+                value: providerData.basic_material,
+              },
+              { label: "providerResults.eid", value: providerData.eid },
+              {
+                label: "providerResults.applecare_description",
+                value: providerData.applecare_description,
+              },
+              {
+                label: "providerResults.coverage_start_date",
+                value: providerData.coverage_start_date,
+              },
+              {
+                label: "providerResults.coverage_end_date",
+                value: providerData.coverage_end_date,
+              },
+              {
+                label: "providerResults.limited_warranty",
+                value: providerData.limited_warranty,
+              },
+              {
+                label: "providerResults.simpolicy_unlock_status",
+                value: providerData.simpolicy_unlock_status,
+              },
+              {
+                label: "providerResults.initial_activation_policy_description",
+                value: providerData.initial_activation_policy_description,
+              },
+              {
+                label: "providerResults.locked_carrier",
+                value: providerData.locked_carrier,
+              },
+              {
+                label: "providerResults.financing_status",
+                value: providerData.financing_status,
+              },
+              {
+                label: "providerResults.purchase_country",
+                value: providerData.purchase_country,
+              },
+            ].map((item) => (
+              <div
+                key={item.label}
+                className="bg-slate-50 rounded-xl p-4 border border-slate-100"
+              >
+                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 break-all">
+                  {item.label}
+                </p>
+                <p className="text-sm font-semibold text-slate-800 break-words">
+                  {displayValue(item.value)}
+                </p>
+              </div>
+            ))}
           </div>
         </div>
       </div>

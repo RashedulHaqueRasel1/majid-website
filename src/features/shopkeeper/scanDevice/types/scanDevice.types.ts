@@ -150,46 +150,52 @@ export interface BatchImeiResponse {
   data: BatchImeiItemResult[];
 }
 export interface FavouriteProviderResults {
-  description: string;
-  model: string;
-  imei: string;
-  imei2: string;
-  meid: string;
-  serial_number: string;
-  warranty_status: string;
-  purchase_date: string;
-  replaced_device: string;
-  simlock: string;
-  icloud_lock: string;
-  manufacturer: string;
-  marketing_name: string;
-  operating_system: string;
-  blacklist_status: string;
-  device_configuration: string;
-  model_name: string;
-  material_number: string;
-  basic_material: string;
-  eid: string;
-  applecare_description: string;
-  coverage_start_date: string;
-  coverage_end_date: string;
-  limited_warranty: string;
-  simpolicy_unlock_status: string;
-  initial_activation_policy_description: string;
-  locked_carrier: string;
-  financing_status?: string; // যোগ করা হয়েছে (optional)
+  description?: string;
+  model?: string;
+  imei?: string;
+  imei2?: string;
+  meid?: string;
+  serial_number?: string;
+  warranty_status?: string;
+  purchase_date?: string;
+  replaced_device?: string;
+  simlock?: string;
+  icloud_lock?: string;
+  manufacturer?: string;
+  marketing_name?: string;
+  operating_system?: string;
+  blacklist_status?: string;
+  device_configuration?: string;
+  model_name?: string;
+  material_number?: string;
+  basic_material?: string;
+  eid?: string;
+  applecare_description?: string;
+  coverage_start_date?: string;
+  coverage_end_date?: string;
+  limited_warranty?: string;
+  simpolicy_unlock_status?: string;
+  initial_activation_policy_description?: string;
+  locked_carrier?: string;
+  financing_status?: string;
   purchase_country?: string;
 }
 
 export interface FavouriteIMEIData {
   bundledServiceId: number;
   bundledServiceName: string;
-  bundledServiceCategory: string;
+  bundledServiceCategory?: string;
   providerResults: FavouriteProviderResults;
-  riskMeter: number;
+  riskMeter:
+    | number
+    | {
+        score?: number;
+        label?: string;
+        riskLevel?: string;
+      };
   aiInsight: {
-    title: string;
-    message: string;
+    title?: string;
+    message?: string;
   };
 }
 

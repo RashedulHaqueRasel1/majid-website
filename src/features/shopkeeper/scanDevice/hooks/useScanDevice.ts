@@ -32,15 +32,18 @@ export const useScanDevice = () => {
     return /^\d{15}$/.test(imei);
   };
 
-  const parseIMEIInput = useCallback((input: string): string[] => {
-    if (!input || input.trim() === "") return [];
-    const items = input
-      .split(/[,\n\r\t;]+/)
-      .map((item) => item.trim())
-      .filter((item) => item.length > 0 && isValidIMEI(item));
-    console.log("📝 Parsed IMEIs:", items);
-    return items;
-  }, []);
+  const parseIMEIInput = useCallback(
+    (input: string): string[] => {
+      if (!input || input.trim() === "") return [];
+      const items = input
+        .split(/[,\n\r\t;]+/)
+        .map((item) => item.trim())
+        .filter((item) => item.length > 0 && isValidIMEI(item));
+      console.log("📝 Parsed IMEIs:", items);
+      return items;
+    },
+    [isValidIMEI],
+  );
 
   // Check if selected service is favourite
   const isFavouriteService = useCallback((serviceId: number): boolean => {
@@ -172,7 +175,9 @@ export const useScanDevice = () => {
               setTimeout(() => {
                 setScanResult(firstItem.data);
                 setSingleReportMeta({
-                  provider: firstItem.provider,
+                  provider:
+                    firstItem.provider ||
+                    (firstItem.data as { provider?: string })?.provider,
                   serviceId: firstItem.serviceId || serviceId,
                 });
                 setIsScanning(false);
@@ -201,7 +206,7 @@ export const useScanDevice = () => {
         setIsScanning(false);
       }
     },
-    [parseIMEIInput, isFavouriteService],
+    [parseIMEIInput, isFavouriteService, isValidIMEI],
   );
 
   const handleRegenerateScan = useCallback(
@@ -334,7 +339,9 @@ export const useScanDevice = () => {
               setTimeout(() => {
                 setScanResult(firstItem.data);
                 setSingleReportMeta({
-                  provider: firstItem.provider,
+                  provider:
+                    firstItem.provider ||
+                    (firstItem.data as { provider?: string })?.provider,
                   serviceId: firstItem.serviceId || serviceId,
                 });
                 setIsScanning(false);
@@ -363,7 +370,7 @@ export const useScanDevice = () => {
         setIsScanning(false);
       }
     },
-    [parseIMEIInput, isFavouriteService],
+    [parseIMEIInput, isFavouriteService, isValidIMEI],
   );
 
   const clearResults = () => {
