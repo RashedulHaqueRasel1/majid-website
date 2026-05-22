@@ -266,7 +266,7 @@ const pdfStyles = StyleSheet.create({
   },
 });
 
-const InvoicePDF = ({
+export const InvoicePDF = ({
   customer,
   items,
   total,
@@ -331,7 +331,7 @@ const InvoicePDF = ({
               { fontSize: 7.5, color: "#94a3b8", marginTop: 4 },
             ]}
           >
-            ID: {customer?.id || "N/A"}
+            ID: {customer?.customerId || "N/A"}
           </Text>
 
           <Text style={pdfStyles.paymentMethod}>
@@ -460,7 +460,7 @@ export default function CreateInvoice() {
   const seesion = useSession();
   const shopkeeper = seesion.data?.user.id;
   const [selectedDeviceIds, setSelectedDeviceIds] = useState<string[]>([]);
-  const { mutate: createInvoiceUser } = useCreateInvoiceUser();
+  const { mutateAsync: createInvoiceUserAsync } = useCreateInvoiceUser();
   const getInvoiceUser = useMyInvoiceGet(shopkeeper || "223423423");
   const [selectedCustomerId, setSelectedCustomerId] = useState("");
 
@@ -469,9 +469,10 @@ export default function CreateInvoice() {
     lastName: "",
     email: "",
     phone: "",
-    card: "",
     address: "",
-    id: "",
+    paymentType: "",
+    alreadyPaid: 0,
+    customerId: "",
   });
 
   const customers = getInvoiceUser?.data?.data || [];
@@ -528,57 +529,76 @@ export default function CreateInvoice() {
   const handleCreateInvoice = async () => {
     if (!selectedDevicesData.length) return;
 
-    const doc = (
-      <InvoicePDF
-        customer={customer}
-        items={selectedDevicesData}
-        total={totalPrice}
-        shopkeeper={profileData?.data}
-        alreadyPaid={alreadyPaid}
-        dueAmount={dueAmount}
-        paymentType={paymentType}
-        card={customer.card}
-      />
-    );
+    try {
+      let finalCustomerId = selectedCustomerId;
 
-    const blob = await pdf(doc).toBlob();
+      if (!selectedCustomerId) {
+        const customerResponse = await createInvoiceUserAsync({
+          firstName: customer.firstName,
+          lastName: customer.lastName,
+          email: customer.email,
+          phone: customer.phone,
+          address: customer.address,
+          shopkeeperId: shopkeeper || "223423423",
+          paymentType: paymentType,
+          alreadyPaid: alreadyPaid,
+          customerId: customer.customerId,
+        });
 
-    const file = new File(
-      [blob],
-      `invoice_${customer.firstName || "gadget"}.pdf`,
-      {
-        type: "application/pdf",
-      },
-    );
+        finalCustomerId = customerResponse?.data?._id;
 
-    createInvoice(
-      {
-        shopkeeperId: shopkeeper || "223423423",
-        type: "Custom invoice",
-        invoice: file,
-      },
-      {
-        onSuccess: () => {
-          toast.success("Invoice added successfully");
+        if (!finalCustomerId) {
+          toast.error("Customer creation failed");
+          return;
+        }
+      }
+
+      // Generate PDF
+      const doc = (
+        <InvoicePDF
+          customer={customer}
+          items={selectedDevicesData}
+          total={totalPrice}
+          shopkeeper={profileData?.data}
+          alreadyPaid={alreadyPaid}
+          dueAmount={dueAmount}
+          paymentType={paymentType}
+        />
+      );
+
+      const blob = await pdf(doc).toBlob();
+
+      const file = new File(
+        [blob],
+        `invoice_${customer.firstName || "gadget"}.pdf`,
+        {
+          type: "application/pdf",
         },
-        onError: () => {
-          toast.error("Addition failed");
-        },
-      },
-    );
+      );
 
-    if (!selectedCustomerId) {
-      createInvoiceUser({
-        firstName: customer.firstName,
-        lastName: customer.lastName,
-        email: customer.email,
-        phone: customer.phone,
-        address: customer.address,
-        shopkeeperId: shopkeeper || "223423423",
-      });
+      // Create invoice after customer creation
+      createInvoice(
+        {
+          shopkeeperId: shopkeeper || "223423423",
+          customerInfo: finalCustomerId,
+          type: "Custom invoice",
+          invoice: file,
+          itemsIds: selectedDeviceIds,
+        },
+        {
+          onSuccess: () => {
+            toast.success("Invoice added successfully");
+          },
+          onError: () => {
+            toast.error("Addition failed");
+          },
+        },
+      );
+    } catch (error) {
+      console.error(error);
+      toast.error("Something went wrong");
     }
   };
-
   return (
     <div className="px-4 py-8 md:px-8 lg:px-10 font-poppins min-h-screen bg-background">
       <div className="mx-auto space-y-8">
@@ -628,9 +648,13 @@ export default function CreateInvoice() {
                         email: selectedCustomer.email || "",
                         phone: selectedCustomer.phone || "",
                         address: selectedCustomer.address || "",
-                        card: "",
-                        id: selectedCustomer._id,
+                        paymentType: selectedCustomer.paymentType || "cash",
+                        alreadyPaid: selectedCustomer.alreadyPaid || 0,
+                        customerId: selectedCustomer.customerId || "",
                       });
+
+                      setPaymentType(selectedCustomer.paymentType || "cash");
+                      setAlreadyPaid(selectedCustomer.alreadyPaid || 0);
                     }
                   }}
                 >
@@ -799,7 +823,7 @@ export default function CreateInvoice() {
                   type="number"
                   className="rounded-2xl h-12 border-primary bg-background font-bold"
                   placeholder="0.00"
-                  value={alreadyPaid || ""}
+                  value={alreadyPaid}
                   onChange={(e) => setAlreadyPaid(Number(e.target.value))}
                 />
               </div>
@@ -811,9 +835,9 @@ export default function CreateInvoice() {
                   type="number"
                   className="rounded-2xl h-12 border-primary bg-background font-bold"
                   placeholder="0.00"
-                  value={customer.id || ""}
+                  value={customer.customerId || ""}
                   onChange={(e) =>
-                    setCustomer({ ...customer, id: e.target.value })
+                    setCustomer({ ...customer, customerId: e.target.value })
                   }
                 />
               </div>

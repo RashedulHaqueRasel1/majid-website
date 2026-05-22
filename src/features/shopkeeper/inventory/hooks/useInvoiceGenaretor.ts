@@ -12,6 +12,9 @@ export function useCreateInvoiceUser() {
       phone: string;
       address: string;
       shopkeeperId: string;
+      paymentType?: string;
+      alreadyPaid?: number;
+      customerId?: string;
     }) => createInvoiceUser(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INVENTORY_KEYS.all });
@@ -20,8 +23,6 @@ export function useCreateInvoiceUser() {
 }
 
 export function useMyInvoiceGet(id: string) {
-  console.log(id);
-  console.log("sdfrsdfsdfs");
   return useQuery({
     queryKey: ["my-invoice", id],
     queryFn: () => getMyInvoiceUser(id),

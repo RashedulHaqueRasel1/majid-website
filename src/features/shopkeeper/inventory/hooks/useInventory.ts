@@ -101,6 +101,8 @@ export function useCreateInvoice() {
       shopkeeperId: string;
       type: string;
       invoice: File;
+      customerInfo?: string;
+      itemsIds?: string[];
     }) => createInvoice(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INVENTORY_KEYS.all });

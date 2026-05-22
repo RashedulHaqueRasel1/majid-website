@@ -135,12 +135,21 @@ export const createInvoice = async (input: {
   shopkeeperId: string;
   type: string;
   invoice: File;
+  customerInfo?: string;
+  itemsIds?: string[];
 }) => {
   const formData = new FormData();
 
   formData.append("shopkeeperId", input.shopkeeperId);
   formData.append("type", input.type);
   formData.append("invoice", input.invoice);
+
+  if (input.customerInfo) formData.append("customerInfo", input.customerInfo);
+  if (input.itemsIds?.length) {
+    input.itemsIds.forEach((id: string) => {
+      formData.append("itemsIds", id);
+    });
+  }
 
   const response = await api.post(`/invoices/create`, formData, {
     headers: {

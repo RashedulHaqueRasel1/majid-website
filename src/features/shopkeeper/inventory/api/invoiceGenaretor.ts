@@ -8,6 +8,9 @@ export const createInvoiceUser = async (input: {
   phone: string;
   address: string;
   shopkeeperId: string;
+  paymentType?: string;
+  alreadyPaid?: number;
+  customerId?: string;
 }) => {
   const response = await api.post(`/customer/create`, input, {
     headers: {
