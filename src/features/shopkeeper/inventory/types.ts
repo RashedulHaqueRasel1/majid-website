@@ -289,7 +289,9 @@ export type Customer = {
   phone: string;
   address: string;
   shopkeeperId: string;
-
+  customerId?: string;
+  alreadyPaid?: number;
+  paymentType?: string;
   // optional fields
   salesMethod?: string;
   actualSalePrice?: number;
