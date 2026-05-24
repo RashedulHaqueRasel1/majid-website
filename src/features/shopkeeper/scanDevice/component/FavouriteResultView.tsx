@@ -34,6 +34,7 @@ import {
 import { useState } from "react";
 import { SmartInvoicePDF, INVOICE_PDF_WIDTH } from "./SmartInvoicePDF";
 import { InvoiceModal, InvoiceFormData } from "./InvoiceModal";
+import { CertificatePDF } from "./CertificatePDF";
 
 interface FavouriteResultViewProps {
   scanResult: FavouriteIMEIData;
@@ -934,6 +935,33 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
         scanResult={transformToIMEIResult(scanResult, imei)}
         isGenerating={isGeneratingInvoice}
       />
+
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: "-10000px",
+          width: "1100px",
+          pointerEvents: "none",
+          zIndex: 0,
+          overflow: "hidden",
+        }}
+      >
+        <CertificatePDF
+          data={transformToIMEIResult(scanResult, imei)}
+          id="certificate-pdf-favourite"
+          providerName={
+            singleReportMeta?.provider ||
+            selectedService?.name ||
+            scanResult.bundledServiceName
+          }
+          serviceId={
+            singleReportMeta?.serviceId ??
+            selectedService?.serviceId ??
+            scanResult.bundledServiceId
+          }
+        />
+      </div>
     </div>
   );
 };

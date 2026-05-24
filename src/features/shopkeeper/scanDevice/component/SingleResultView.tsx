@@ -328,6 +328,10 @@ export const SingleResultView = ({
 
   const certificateElementId = "certificate-pdf-single";
   const invoiceElementId = "smart-invoice-pdf-container";
+  const waitForPdfRender = () =>
+    new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
 
   const handleDownloadCertificate = async () => {
     setIsCertificateDownloading(true);
@@ -367,6 +371,7 @@ export const SingleResultView = ({
     setIsInvoiceModalOpen(false);
 
     try {
+      await waitForPdfRender();
       await downloadCertificatePdf(
         [invoiceElementId],
         `Invoice_${scanResult.imei}.pdf`,
@@ -937,7 +942,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
           left: "-10000px",
           width: "1100px",
           pointerEvents: "none",
-          zIndex: -1,
+          zIndex: 0,
           overflow: "hidden",
         }}
       >
