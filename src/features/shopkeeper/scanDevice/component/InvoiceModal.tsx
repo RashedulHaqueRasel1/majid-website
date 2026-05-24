@@ -25,8 +25,9 @@ interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (invoiceData: InvoiceFormData) => void;
-  scanResult: IMEIResult;
+  scanResult?: IMEIResult;
   isGenerating: boolean;
+  defaultPrice?: number;
 }
 
 export interface InvoiceFormData {
@@ -62,9 +63,12 @@ export const InvoiceModal = ({
   onGenerate,
   scanResult,
   isGenerating,
+  defaultPrice,
 }: InvoiceModalProps) => {
   const { data: session } = useSession();
-  const marketValue = scanResult.marketValue?.amount || 599;
+  const marketValue = scanResult?.marketValue?.amount || defaultPrice || 599;
+  const deviceName = scanResult?.deviceName || "Unknown Device";
+
   const [isCreatingCustomer, setIsCreatingCustomer] = useState(false);
   const [customerError, setCustomerError] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<FieldError[]>([]);
@@ -131,7 +135,7 @@ export const InvoiceModal = ({
     return errors.length === 0;
   };
 
-  // Create customer API call with better error handling
+  // Create customer API call
   const createCustomer = async (): Promise<{
     success: boolean;
     customerId?: string;
@@ -149,8 +153,6 @@ export const InvoiceModal = ({
         (session?.user as any)?.shopkeeperId || (session?.user as any)?.id,
     };
 
-    console.log("Creating customer with payload:", payload);
-
     try {
       const response = await axiosInstance.post("/customer/create", payload);
 
@@ -159,12 +161,11 @@ export const InvoiceModal = ({
         return { success: true, customerId };
       }
 
-      // Handle duplicate email case
       if (response.data?.message?.includes("already exists")) {
         return {
           success: false,
           error:
-            "Customer with this email already exists. Please use a different email or update existing customer.",
+            "Customer with this email already exists. Please use a different email.",
         };
       }
 
@@ -173,9 +174,6 @@ export const InvoiceModal = ({
         error: response.data?.message || "Failed to create customer",
       };
     } catch (error: any) {
-      console.error("Failed to create customer:", error);
-
-      // Check for duplicate email error in response
       if (
         error.response?.data?.message?.includes("already exists") ||
         error.response?.data?.errorSources?.[0]?.message?.includes(
@@ -213,7 +211,7 @@ export const InvoiceModal = ({
       ...formData,
       tradeInDetails: {
         tradeInValue: value,
-        deviceName: scanResult.deviceName || "Unknown Device",
+        deviceName: deviceName,
         remainingAmount: Math.abs(remaining),
         isReceiving: remaining < 0,
       },
@@ -245,7 +243,6 @@ export const InvoiceModal = ({
   };
 
   const handleSubmit = async () => {
-    // First validate form
     if (!validateForm()) {
       return;
     }
@@ -254,28 +251,19 @@ export const InvoiceModal = ({
     setCustomerError(null);
 
     try {
-      // Create customer in database
       const result = await createCustomer();
 
       if (result.success && result.customerId) {
-        console.log(
-          "Customer created successfully with ID:",
-          result.customerId,
-        );
-
-        // Prepare invoice data with customer ID
         const invoiceData: InvoiceFormData = {
           ...formData,
           customerId: result.customerId,
         };
-
         onGenerate(invoiceData);
+        onClose();
       } else {
-        // Show error message without closing modal
         setCustomerError(
           result.error || "Failed to create customer. Please try again.",
         );
-        // Don't close modal, let user fix the issue
       }
     } catch (error) {
       console.error("Error in customer creation:", error);
@@ -288,7 +276,6 @@ export const InvoiceModal = ({
   const remainingAmount = formData.tradeInDetails?.remainingAmount || 0;
   const isReceiving = formData.tradeInDetails?.isReceiving || false;
 
-  // Helper to get field error message
   const getFieldError = (field: string): string | undefined => {
     return fieldErrors.find((e) => e.field === field)?.message;
   };
@@ -577,7 +564,7 @@ export const InvoiceModal = ({
                       </label>
                       <input
                         type="text"
-                        value={scanResult.deviceName || "Unknown Device"}
+                        value={deviceName}
                         disabled
                         className="w-full px-4 py-2 bg-white border border-amber-200 rounded-lg text-sm"
                       />

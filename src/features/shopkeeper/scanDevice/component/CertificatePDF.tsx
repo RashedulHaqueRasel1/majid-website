@@ -8,7 +8,6 @@ import {
   CheckCircle2,
   CircleAlert,
   Shield,
-  Smartphone,
 } from "lucide-react";
 import { IMEIResult } from "../types/scanDevice.types";
 
@@ -20,13 +19,30 @@ interface CertificatePDFProps {
 }
 
 export const CERTIFICATE_PDF_WIDTH = 800;
-export const CERTIFICATE_PDF_HEIGHT = 1450; // বাড়ানো হয়েছে
+export const CERTIFICATE_PDF_HEIGHT = 1450;
 
 // Helper functions
 function getText(value: unknown, fallback = "N/A") {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number") return String(value);
+  if (typeof value === "boolean") return value ? "Yes" : "No";
+  if (value && typeof value === "object") {
+    const obj = value as Record<string, unknown>;
+    if (typeof obj.src === "string") return obj.src;
+  }
   return fallback;
+}
+
+function formatLabel(value: string) {
+  return value
+    .replace(/_/g, " ")
+    .replace(/\s+/g, " ")
+    .trim()
+    .replace(/\b\w/g, (char) => char.toUpperCase());
+}
+
+function normalizeLabel(value: string) {
+  return value.toLowerCase().replace(/[^a-z0-9]/g, "");
 }
 
 function stripHtml(value: string) {
@@ -63,13 +79,48 @@ function parseProviderRows(rawHtml?: string) {
   return rows;
 }
 
+function getParsedRows(data: IMEIResult) {
+  const parsedProviderData = (
+    data as unknown as { parsedProviderData?: unknown }
+  ).parsedProviderData;
+
+  if (!parsedProviderData || typeof parsedProviderData !== "object") return [];
+
+  return Object.entries(parsedProviderData as Record<string, unknown>)
+    .filter(
+      ([, value]) => value !== undefined && value !== null && value !== "",
+    )
+    .map(([label, value]) => ({
+      label: formatLabel(label),
+      value: getText(value),
+      rawValue: value,
+    }));
+}
+
+function getAllProviderRows(data: IMEIResult) {
+  const providerData = data.providerData as { result?: string } | undefined;
+  const parsedRows = getParsedRows(data);
+  const htmlRows = parseProviderRows(providerData?.result).map((row) => ({
+    ...row,
+    rawValue: row.value,
+  }));
+  const seen = new Set<string>();
+
+  return [...parsedRows, ...htmlRows].filter((row) => {
+    const key = normalizeLabel(row.label);
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  });
+}
+
 function findProviderValue(
   rows: { label: string; value: string }[],
   searchTerms: string[],
 ) {
   for (const row of rows) {
     for (const term of searchTerms) {
-      if (row.label.toLowerCase().includes(term.toLowerCase())) {
+      if (normalizeLabel(row.label).includes(normalizeLabel(term))) {
         return row.value;
       }
     }
@@ -81,9 +132,19 @@ export const CertificatePDF = React.forwardRef<
   HTMLDivElement,
   CertificatePDFProps
 >(({ data, id, providerName, serviceId }, ref) => {
-  // Parse provider data from HTML
-  const providerData = data.providerData as { result?: string } | undefined;
-  const providerRows = parseProviderRows(providerData?.result);
+  const providerRows = getAllProviderRows(data);
+  const imageRow = providerRows.find((row) => {
+    const raw = row.rawValue;
+    return (
+      raw &&
+      typeof raw === "object" &&
+      typeof (raw as { src?: unknown }).src === "string"
+    );
+  });
+  const imageSrc =
+    imageRow && typeof imageRow.rawValue === "object"
+      ? ((imageRow.rawValue as { src?: string }).src ?? "")
+      : "";
 
   // Extract values from provider rows
   const deviceName =
@@ -105,6 +166,15 @@ export const CertificatePDF = React.forwardRef<
   const coverageBenefits =
     findProviderValue(providerRows, ["Coverage Benefits", "Benefits"]) || "";
   const notice = findProviderValue(providerRows, ["Notice"]) || "";
+  const warrantyType =
+    findProviderValue(providerRows, ["Warranty Type"]) || "N/A";
+  const activationStatus =
+    findProviderValue(providerRows, ["Activation Status"]) || "N/A";
+  const registrationStatus =
+    findProviderValue(providerRows, ["Registration Status"]) || "N/A";
+  const openRepair = findProviderValue(providerRows, ["Open Repair"]) || "N/A";
+  const replacedDevice =
+    findProviderValue(providerRows, ["Replaced Device"]) || "N/A";
 
   // Risk meter data
   const riskScore = data.riskMeter?.score ?? 0;
@@ -162,7 +232,9 @@ export const CertificatePDF = React.forwardRef<
     line: "#E5E7EB",
     section: "#F3F4F6",
     brand: "#84CC16",
-    brandBlue: "#60A5FA",
+    brandDark: "#65A30D",
+    brandSoft: "#F7FEE7",
+    brandLine: "#D9F99D",
     warning: "#D97706",
     warningBg: "#FEF3C7",
     warningSoft: "#FFFBEB",
@@ -174,13 +246,13 @@ export const CertificatePDF = React.forwardRef<
       id={id}
       style={{
         width: `${CERTIFICATE_PDF_WIDTH}px`,
-        height: `${CERTIFICATE_PDF_HEIGHT}px`,
+        minHeight: `${CERTIFICATE_PDF_HEIGHT}px`,
         backgroundColor: "white",
         fontFamily: "'Inter', sans-serif",
         padding: "40px 34px 50px",
         boxSizing: "border-box",
         position: "relative",
-        overflow: "hidden",
+        overflow: "visible",
       }}
     >
       <div
@@ -190,7 +262,7 @@ export const CertificatePDF = React.forwardRef<
           backgroundColor: "#ffffff",
           boxShadow: "0 20px 45px rgba(15, 23, 42, 0.08)",
           padding: "30px 28px 35px",
-          height: "100%",
+          minHeight: `${CERTIFICATE_PDF_HEIGHT - 90}px`,
           display: "flex",
           flexDirection: "column",
         }}
@@ -227,7 +299,7 @@ export const CertificatePDF = React.forwardRef<
                   width: "34px",
                   height: "34px",
                   borderRadius: "999px",
-                  backgroundColor: colors.brandBlue,
+                  backgroundColor: colors.brand,
                   display: "flex",
                   alignItems: "center",
                   justifyContent: "center",
@@ -290,6 +362,30 @@ export const CertificatePDF = React.forwardRef<
           </div>
           <div style={{ padding: "18px" }}>
             <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
+              {imageSrc && (
+                <div
+                  style={{
+                    width: "110px",
+                    height: "110px",
+                    border: `1px solid ${colors.line}`,
+                    borderRadius: "16px",
+                    display: "flex",
+                    alignItems: "center",
+                    justifyContent: "center",
+                    backgroundColor: "#ffffff",
+                  }}
+                >
+                  <img
+                    src={imageSrc}
+                    alt="Device"
+                    style={{
+                      maxWidth: "90px",
+                      maxHeight: "90px",
+                      objectFit: "contain",
+                    }}
+                  />
+                </div>
+              )}
               <div style={{ flex: "1", minWidth: "250px" }}>
                 <div style={{ marginBottom: "12px" }}>
                   <div
@@ -380,6 +476,51 @@ export const CertificatePDF = React.forwardRef<
                     </div>
                   </div>
                 )}
+                <div style={{ marginBottom: "12px" }}>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      color: colors.pale,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Warranty Type
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                    {warrantyType}
+                  </div>
+                </div>
+                <div style={{ marginBottom: "12px" }}>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      color: colors.pale,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Activation / Registration
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                    {activationStatus} / {registrationStatus}
+                  </div>
+                </div>
+                <div style={{ marginBottom: "12px" }}>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 800,
+                      color: colors.pale,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    Replaced / Open Repair
+                  </div>
+                  <div style={{ fontSize: "13px", fontWeight: 600 }}>
+                    {replacedDevice} / {openRepair}
+                  </div>
+                </div>
                 {coverageBenefits && (
                   <div style={{ marginBottom: "12px" }}>
                     <div
@@ -409,17 +550,17 @@ export const CertificatePDF = React.forwardRef<
             borderRadius: "12px",
             overflow: "hidden",
             marginBottom: "18px",
-            backgroundColor: "#F0FDF4",
+            backgroundColor: colors.brandSoft,
           }}
         >
           <div
             style={{
-              backgroundColor: "#DCFCE7",
+              backgroundColor: colors.brandSoft,
               padding: "12px 18px",
               fontSize: "14px",
               fontWeight: 800,
-              color: "#166534",
-              borderBottom: `1px solid #BBF7D0`,
+              color: colors.brandDark,
+              borderBottom: `1px solid ${colors.brandLine}`,
             }}
           >
             AI Analysis
@@ -449,12 +590,12 @@ export const CertificatePDF = React.forwardRef<
         >
           <div
             style={{
-              backgroundColor: colors.warningBg,
+              backgroundColor: colors.brandSoft,
               padding: "12px 18px",
               fontSize: "14px",
               fontWeight: 800,
-              color: "#92400E",
-              borderBottom: `1px solid #FDE68A`,
+              color: colors.brandDark,
+              borderBottom: `1px solid ${colors.brandLine}`,
             }}
           >
             Risk Analysis
@@ -474,12 +615,12 @@ export const CertificatePDF = React.forwardRef<
               </span>
               <span
                 style={{
-                  backgroundColor: colors.warningBg,
+                  backgroundColor: colors.brandSoft,
                   padding: "4px 12px",
                   borderRadius: "20px",
                   fontSize: "12px",
                   fontWeight: 700,
-                  color: "#92400E",
+                  color: colors.brandDark,
                 }}
               >
                 {riskScore}/100 - {riskLabel}
@@ -510,7 +651,7 @@ export const CertificatePDF = React.forwardRef<
                   {isPassed ? (
                     <CheckCircle2
                       size={14}
-                      color={colors.brandBlue}
+                      color={colors.brand}
                       style={{ marginTop: "2px" }}
                     />
                   ) : (
@@ -547,7 +688,7 @@ export const CertificatePDF = React.forwardRef<
                 gap: "8px",
               }}
             >
-              <Shield size={14} color={colors.brandBlue} />
+              <Shield size={14} color={colors.brand} />
               <span style={{ fontSize: "11px", fontWeight: 600 }}>
                 Conclusion: {conclusion}
               </span>
@@ -590,6 +731,72 @@ export const CertificatePDF = React.forwardRef<
           </div>
         </div>
 
+        {/* Complete Provider Response */}
+        {providerRows.length > 0 && (
+          <div
+            style={{
+              border: `1px solid ${colors.line}`,
+              borderRadius: "12px",
+              overflow: "hidden",
+              marginBottom: "18px",
+            }}
+          >
+            <div
+              style={{
+                backgroundColor: colors.brandSoft,
+                padding: "12px 18px",
+                fontSize: "14px",
+                fontWeight: 800,
+                color: colors.brandDark,
+                borderBottom: `1px solid ${colors.brandLine}`,
+              }}
+            >
+              Complete IMEI Check Data
+            </div>
+            <div
+              style={{
+                padding: "14px 18px",
+                display: "grid",
+                gridTemplateColumns: "1fr 1fr",
+                gap: "10px",
+              }}
+            >
+              {providerRows.map((row, index) => (
+                <div
+                  key={`${row.label}-${index}`}
+                  style={{
+                    borderBottom: `1px solid ${colors.line}`,
+                    paddingBottom: "8px",
+                    minHeight: "42px",
+                  }}
+                >
+                  <div
+                    style={{
+                      fontSize: "9px",
+                      fontWeight: 800,
+                      color: colors.pale,
+                      textTransform: "uppercase",
+                    }}
+                  >
+                    {row.label}
+                  </div>
+                  <div
+                    style={{
+                      fontSize: "11px",
+                      fontWeight: 600,
+                      color: colors.ink,
+                      wordBreak: "break-word",
+                      lineHeight: 1.35,
+                    }}
+                  >
+                    {row.value}
+                  </div>
+                </div>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Footer */}
         <div
           style={{
@@ -608,7 +815,7 @@ export const CertificatePDF = React.forwardRef<
             </span>
           </div>
           <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <Calendar size={12} color={colors.brandBlue} />
+            <Calendar size={12} color={colors.brand} />
             <span style={{ fontSize: "10px" }}>Generated: {reportDate}</span>
           </div>
         </div>

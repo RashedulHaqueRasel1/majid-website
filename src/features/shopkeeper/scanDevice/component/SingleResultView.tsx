@@ -38,6 +38,8 @@ import { InvoiceModal, InvoiceFormData } from "./InvoiceModal";
 import { useCertificateDownload } from "../hooks/useCertificateDownload";
 import { useState } from "react";
 import { SmartInvoicePDF } from "./SmartInvoicePDF";
+import { checkIMEIApi } from "../../scanDevice/api/scanDevice.api";
+import axiosInstance from "@/lib/instance/axios-instance";
 
 interface SingleResultViewProps {
   scanResult: IMEIResult;
@@ -46,7 +48,7 @@ interface SingleResultViewProps {
   onBack: () => void;
   onDownload: () => void;
   isDownloading: boolean;
-  onRegenerate?: () => Promise<void> | void;
+  onRegenerate?: (imei: string, serviceId: number) => Promise<void>;
 }
 
 const getRiskLabel = (score: number) => {
@@ -98,8 +100,8 @@ export const SingleResultView = ({
   selectedService,
   onBack,
   onDownload,
-  isDownloading: parentIsDownloading,
   onRegenerate,
+  isDownloading: parentIsDownloading,
 }: SingleResultViewProps) => {
   const checksArray = getChecksArray(scanResult);
   const technicalItems = getTechnicalBreakdownItems(scanResult);
@@ -183,6 +185,7 @@ export const SingleResultView = ({
     scanResult.deviceName;
   const imeiValue =
     getNormalizedValue(["IMEI Number", "IMEI", "imei"]) || scanResult.imei;
+
   const imei2Value = getNormalizedValue([
     "IMEI 2",
     "IMEI2 Number",
@@ -300,14 +303,12 @@ export const SingleResultView = ({
       return value.map((v) => displayValue(v)).join(", ");
     if (typeof value === "object") {
       const obj = value as Record<string, unknown>;
-      // If it looks like an image object, return the src
       if (obj.src && typeof obj.src === "string") return obj.src;
       return JSON.stringify(value);
     }
     return String(value);
   };
 
-  // Check if a value is an image object
   const isImageObject = (
     value: unknown,
   ): value is { src: string; height?: number; html?: string } => {
@@ -316,7 +317,6 @@ export const SingleResultView = ({
     return typeof obj.src === "string" && obj.src.length > 0;
   };
 
-  // Render a provider field value — returns a React-renderable string or JSX info
   const renderFieldValue = (
     value: unknown,
   ): { isImage: boolean; src?: string; text?: string } => {
@@ -328,6 +328,10 @@ export const SingleResultView = ({
 
   const certificateElementId = "certificate-pdf-single";
   const invoiceElementId = "smart-invoice-pdf-container";
+  const waitForPdfRender = () =>
+    new Promise((resolve) => {
+      requestAnimationFrame(() => requestAnimationFrame(resolve));
+    });
 
   const handleDownloadCertificate = async () => {
     setIsCertificateDownloading(true);
@@ -367,6 +371,7 @@ export const SingleResultView = ({
     setIsInvoiceModalOpen(false);
 
     try {
+      await waitForPdfRender();
       await downloadCertificatePdf(
         [invoiceElementId],
         `Invoice_${scanResult.imei}.pdf`,
@@ -379,13 +384,41 @@ export const SingleResultView = ({
   };
 
   const handleRegenerate = async () => {
-    if (onRegenerate) {
-      setIsRegenerating(true);
-      try {
-        await onRegenerate();
-      } finally {
-        setIsRegenerating(false);
-      }
+    if (!onRegenerate) {
+      console.error("onRegenerate callback not provided");
+      alert(
+        "Regenerate function not available. Please refresh the page and try again.",
+      );
+      return;
+    }
+
+    const serviceId = selectedService?.serviceId ?? 6;
+    // Use scanResult.imei first (most reliable), fallback to imeiValue
+    const currentImei = scanResult?.imei || imeiValue;
+
+    console.log("📌 Service ID:", serviceId);
+    console.log("📌 IMEI from scanResult:", currentImei);
+    console.log("📌 All available IMEI sources:", {
+      "scanResult.imei": scanResult?.imei,
+      imeiValue: imeiValue,
+      "providerData.imei": providerData?.imei,
+    });
+
+    if (!currentImei || !/^\d{15}$/.test(currentImei)) {
+      alert(`Valid IMEI not found. Found: "${currentImei}"`);
+      return;
+    }
+
+    setIsRegenerating(true);
+    try {
+      await onRegenerate(currentImei, serviceId);
+      // Success - parent component will handle the update
+      alert("Report regenerated successfully!");
+    } catch (error: any) {
+      console.error("Regenerate error:", error);
+      alert(error.message || "Failed to regenerate report");
+    } finally {
+      setIsRegenerating(false);
     }
   };
 
@@ -750,47 +783,6 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
           </div>
         </div>
 
-        {/* Device Specifications Section — curated key fields */}
-        {/* <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-lime-500/10 rounded-xl">
-              <Smartphone size={18} className="text-lime-500" />
-            </div>
-            <h3 className="text-base font-bold text-slate-800">
-              Device Specifications
-            </h3>
-          </div>
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-            {[
-              {
-                label: "Device",
-                value: deviceNameFromProvider || scanResult.deviceName || "N/A",
-              },
-              { label: "IMEI", value: imeiValue || "N/A" },
-              ...(imei2Value ? [{ label: "IMEI 2", value: imei2Value }] : []),
-              { label: "Serial Number", value: serialNumber },
-              { label: "Warranty Type", value: warrantyStatus },
-              { label: "Warranty Expires", value: warrantyExpiry },
-              { label: "Purchase Date", value: purchaseDate },
-            ].map((row, idx) => (
-              <div
-                key={idx}
-                className="bg-slate-50 rounded-xl p-4 border border-slate-100"
-              >
-                <div className="flex items-center gap-2 mb-2">
-                  <Tag size={14} className="text-slate-400" />
-                  <span className="text-[9px] font-bold text-slate-400 uppercase tracking-wider">
-                    {row.label}
-                  </span>
-                </div>
-                <p className="text-sm font-semibold text-slate-800 break-words">
-                  {row.value}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div> */}
-
         {/* Technical Breakdown */}
         {technicalItems.length > 0 && (
           <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
@@ -816,15 +808,6 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             </div>
           </div>
         )}
-
-        {/* Notice Section */}
-        {/* {notice && (
-          <div className="lg:col-span-3 bg-amber-50 rounded-2xl p-4 border border-amber-200">
-            <p className="text-sm text-amber-800">
-              <span className="font-semibold">ℹ️ Notice:</span> {notice}
-            </p>
-          </div>
-        )} */}
 
         {/* Metadata Footer */}
         <div className="lg:col-span-3 bg-slate-50 rounded-2xl p-5 border border-slate-200">
@@ -959,7 +942,7 @@ SIM-Lock Status: ${isSimUnlocked ? "UNLOCKED" : "LOCKED"}
           left: "-10000px",
           width: "1100px",
           pointerEvents: "none",
-          zIndex: -1,
+          zIndex: 0,
           overflow: "hidden",
         }}
       >

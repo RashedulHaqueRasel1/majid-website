@@ -9,7 +9,6 @@ import {
   Smartphone,
   Sparkles,
   ShieldCheck,
-  CheckCircle2,
   AlertTriangle,
   FileText,
   Lock,
@@ -21,15 +20,21 @@ import {
   Tag,
   Database,
   Wifi,
-  CheckCircle,
+  CheckCircle2,
   XCircle,
   Unlock,
   Copy,
   RefreshCw,
   Clock,
 } from "lucide-react";
-import { FavouriteIMEIData } from "../../scanDevice/types/scanDevice.types";
+import {
+  FavouriteIMEIData,
+  IMEIResult,
+} from "../../scanDevice/types/scanDevice.types";
 import { useState } from "react";
+import { SmartInvoicePDF, INVOICE_PDF_WIDTH } from "./SmartInvoicePDF";
+import { InvoiceModal, InvoiceFormData } from "./InvoiceModal";
+import { CertificatePDF } from "./CertificatePDF";
 
 interface FavouriteResultViewProps {
   scanResult: FavouriteIMEIData;
@@ -39,8 +44,20 @@ interface FavouriteResultViewProps {
   onBack: () => void;
   onDownload: () => void;
   isDownloading: boolean;
-  onRegenerate?: () => Promise<void> | void;
+  onRegenerate?: () => void;
 }
+
+// Helper function to safely get risk score
+const getRiskScoreValue = (riskMeter: any): number => {
+  if (typeof riskMeter === "number") return riskMeter;
+  if (
+    riskMeter &&
+    typeof riskMeter === "object" &&
+    typeof riskMeter.score === "number"
+  )
+    return riskMeter.score;
+  return 0;
+};
 
 const getRiskLabel = (score: number) => {
   if (score <= 25)
@@ -58,6 +75,179 @@ const getRiskLabel = (score: number) => {
   return { label: "High Risk", color: "bg-red-500", text: "text-red-500" };
 };
 
+// Transform FavouriteIMEIData to IMEIResult format for PDF
+const transformToIMEIResult = (
+  scanResult: FavouriteIMEIData,
+  imei: string,
+): IMEIResult => {
+  const providerData = scanResult.providerResults;
+  const riskScoreValue = getRiskScoreValue(scanResult.riskMeter);
+
+  const getRiskLevel = (score: number) => {
+    if (score <= 25) return "Low Risk";
+    if (score <= 60) return "Medium Risk";
+    return "High Risk";
+  };
+
+  const extractStorage = () => {
+    const configMatch = providerData.device_configuration?.match(/(\d+)GB/);
+    if (configMatch) return parseInt(configMatch[1]);
+    const descMatch = providerData.description?.match(/(\d+)GB/);
+    if (descMatch) return parseInt(descMatch[1]);
+    return 256;
+  };
+
+  const extractColor = () => {
+    const colors = [
+      "Natural Titanium",
+      "Black Titanium",
+      "White Titanium",
+      "Blue Titanium",
+      "Purple",
+      "Gold",
+      "Silver",
+      "Space Black",
+      "Midnight",
+      "Starlight",
+    ];
+    const allText = `${providerData.description} ${providerData.device_configuration}`;
+    for (const color of colors) {
+      if (allText.includes(color)) return color;
+    }
+    return "Natural Titanium";
+  };
+
+  const isBlacklistClean =
+    providerData.blacklist_status?.toLowerCase() === "clean";
+  const isSimUnlocked = providerData.simlock?.toLowerCase() === "unlocked";
+  const warrantyExpiry = providerData.coverage_end_date || "N/A";
+  const purchaseDate = providerData.purchase_date || "N/A";
+  const storage = extractStorage();
+
+  return {
+    _id: undefined,
+    deviceName:
+      providerData.marketing_name || providerData.model_name || "iPhone",
+    imei: providerData.imei || imei,
+    deviceStatus: isBlacklistClean
+      ? "Verified - Clean"
+      : "Flagged - Check Required",
+    riskMeter: {
+      riskLevel: getRiskLevel(riskScoreValue),
+      score: riskScoreValue,
+      label: getRiskLevel(riskScoreValue),
+    },
+    marketValue: {
+      amount: storage === 256 ? 899 : storage === 512 ? 1099 : 1299,
+      currency: "USD",
+    },
+    aiInsight: {
+      title: scanResult.aiInsight?.title || "Device Analysis Complete",
+      message:
+        scanResult.aiInsight?.message ||
+        "Analysis complete. Device appears safe based on 140+ global database checks.",
+    },
+    checks: {
+      globalBlacklist: {
+        title: "Global Blacklist",
+        description: isBlacklistClean
+          ? "Clean / Not Reported in any database"
+          : "Reported / Blocked in global databases",
+        status: isBlacklistClean ? "passed" : "failed",
+      },
+      carrierFinancing: {
+        title: "Carrier Financing",
+        description:
+          providerData.financing_status === "active"
+            ? "Active payment plan detected"
+            : "No active payment plan detected",
+        status:
+          providerData.financing_status === "active" ? "failed" : "passed",
+      },
+      hardwareLock: {
+        title: "SIM / Hardware Lock",
+        description: isSimUnlocked
+          ? "Carrier Unlocked - Works with any carrier"
+          : "Carrier Locked - Restricted to specific carrier",
+        status: isSimUnlocked ? "passed" : "failed",
+      },
+      partAuthenticity: {
+        title: "Part Authenticity",
+        description:
+          "All original components verified through Apple diagnostics",
+        status: "passed",
+      },
+    },
+    technicalBreakdown: {
+      storage: {
+        total: `${storage}GB`,
+        free: "N/A",
+        label: `${storage}GB Storage`,
+      },
+      batteryHealth: { percentage: 95, cycleCount: 0, label: "Good Condition" },
+      processor: "A-Series Chip",
+      modem: "5G Capable",
+      display: "Super Retina XDR",
+      warranty: {
+        status:
+          warrantyExpiry !== "N/A"
+            ? `Valid until ${warrantyExpiry}`
+            : "Limited Warranty",
+        label: warrantyExpiry !== "N/A" ? "Under Warranty" : "Limited Warranty",
+      },
+      origin: {
+        country: providerData.purchase_country || "Unknown",
+        modelNumber: providerData.model || "N/A",
+        label: providerData.purchase_country || "International Version",
+      },
+      activation: {
+        lockStatus: providerData.icloud_lock === "off" ? "Unlocked" : "Locked",
+        simType: isSimUnlocked ? "Unlocked SIM" : "Locked SIM",
+        label: providerData.icloud_lock === "off" ? "iCloud Off" : "iCloud On",
+      },
+    },
+    reportActions: {
+      smartInvoiceCreated: false,
+      pdfCertificateUrl: null,
+      isPdfGenerated: false,
+    },
+    providerData: {
+      result: `
+Device: ${providerData.marketing_name || providerData.model_name || "iPhone"}
+IMEI Number: ${providerData.imei || imei}
+${providerData.imei2 ? `IMEI2: ${providerData.imei2}` : ""}
+Serial Number: ${providerData.serial_number || "N/A"}
+EID: ${providerData.eid || "N/A"}
+Model: ${providerData.model || "N/A"}
+Model Name: ${providerData.model_name || "N/A"}
+Color: ${extractColor()}
+Storage: ${storage}GB
+Operating System: ${providerData.operating_system || "iOS"}
+Warranty Expires: ${warrantyExpiry}
+Estimated Purchase Date: ${purchaseDate}
+Activation Status: ${providerData.warranty_status || "Active"}
+Warranty Status: ${providerData.warranty_status || "Limited Warranty"}
+Coverage Start Date: ${providerData.coverage_start_date || "N/A"}
+Coverage End Date: ${providerData.coverage_end_date || "N/A"}
+Limited Warranty: ${providerData.limited_warranty || "Yes"}
+AppleCare Description: ${providerData.applecare_description || "90 DAYS PHONE SUPPORT"}
+Purchase Country: ${providerData.purchase_country || "N/A"}
+SIM Lock Status: ${providerData.simlock || "Unknown"}
+iCloud Lock: ${providerData.icloud_lock || "Off"}
+Blacklist Status: ${providerData.blacklist_status || "Clean"}
+Locked Carrier: ${providerData.locked_carrier || "10 - Unlock"}
+SIM Policy Unlock Status: ${providerData.simpolicy_unlock_status || "UNLOCK"}
+Initial Activation Policy: ${providerData.initial_activation_policy_description || "10 - Unlock"}
+Replaced Device: ${providerData.replaced_device === "No" ? "No" : "Yes"}
+      `,
+    },
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
+    userId: undefined,
+    oldGenerated: (scanResult as any).oldGenerated || false,
+  };
+};
+
 export const FavouriteResultView = ({
   scanResult,
   imei,
@@ -69,52 +259,35 @@ export const FavouriteResultView = ({
   onRegenerate,
 }: FavouriteResultViewProps) => {
   const providerData = scanResult.providerResults;
-  const riskScore =
-    typeof scanResult.riskMeter === "number"
-      ? scanResult.riskMeter
-      : Number(scanResult.riskMeter?.score ?? 0);
-  const riskInfo = getRiskLabel(riskScore);
+  const riskScoreValue = getRiskScoreValue(scanResult.riskMeter);
+  const riskInfo = getRiskLabel(riskScoreValue);
   const [copied, setCopied] = useState(false);
   const [isRegenerating, setIsRegenerating] = useState(false);
+  const [showInvoiceModal, setShowInvoiceModal] = useState(false);
+  const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
 
   const isSimUnlocked = providerData.simlock?.toLowerCase() === "unlocked";
   const isICloudUnlocked = providerData.icloud_lock?.toLowerCase() === "off";
   const isBlacklistClean =
     providerData.blacklist_status?.toLowerCase() === "clean";
-
-  const displayValue = (value: unknown) => {
-    if (value === undefined || value === null || value === "") return "N/A";
-    if (Array.isArray(value)) return value.join(", ");
-    if (typeof value === "object") return JSON.stringify(value);
-    return String(value);
-  };
-
-  // Check if data is old generated
   const isOldGenerated = (scanResult as any).oldGenerated === true;
 
-  // Extract market value from description or device_configuration
   const extractMarketValue = () => {
-    // Check if description contains price
     const descMatch = providerData.description?.match(/\$?(\d+(?:\.\d{2})?)/);
     if (descMatch) return parseFloat(descMatch[1]);
-
-    // Check if device_configuration contains storage size
     const configMatch = providerData.device_configuration?.match(/(\d+)GB/);
     if (configMatch) {
       const storage = parseInt(configMatch[1]);
-      // Approximate market value based on storage
       if (storage === 256) return 899;
       if (storage === 512) return 1099;
       if (storage === 1024) return 1299;
       return 699;
     }
-
-    return 0; // No price found
+    return 0;
   };
 
   const marketValue = extractMarketValue();
 
-  // Helper function to format date
   const formatDate = (dateStr: string) => {
     if (!dateStr) return "N/A";
     const date = new Date(dateStr);
@@ -157,6 +330,84 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
     }
   };
 
+  const handleGenerateInvoice = async (invoiceData: InvoiceFormData) => {
+    setIsGeneratingInvoice(true);
+    try {
+      const imeiResult = transformToIMEIResult(scanResult, imei);
+      const shopkeeperDetails = {
+        shopName: "Tech Solutions BD",
+        shopAddress: "123, Gulshan Avenue, Dhaka-1212, Bangladesh",
+        phone: "+880 1234 567890",
+        email: "info@techsolutionsbd.com",
+        vatId: "VAT-123456789",
+      };
+
+      const tempDiv = document.createElement("div");
+      tempDiv.style.position = "absolute";
+      tempDiv.style.left = "-9999px";
+      tempDiv.style.top = "-9999px";
+      tempDiv.style.width = `${INVOICE_PDF_WIDTH}px`;
+      document.body.appendChild(tempDiv);
+
+      const ReactDOMServer = await import("react-dom/server");
+      const html2canvas = (await import("html2canvas")).default;
+      const { jsPDF } = await import("jspdf");
+
+      const pdfHtml = ReactDOMServer.renderToString(
+        <SmartInvoicePDF
+          data={imeiResult}
+          id="invoice-pdf"
+          invoiceData={invoiceData}
+          shopkeeperDetails={shopkeeperDetails}
+        />,
+      );
+
+      const fullHtml = `
+        <!DOCTYPE html>
+        <html>
+          <head>
+            <meta charset="UTF-8">
+            <title>Invoice ${imei.slice(-8)}</title>
+            <style>
+              * { margin: 0; padding: 0; box-sizing: border-box; }
+              body { font-family: 'Inter', sans-serif; background: white; display: flex; justify-content: center; align-items: center; min-height: 100vh; }
+            </style>
+          </head>
+          <body>${pdfHtml}</body>
+        </html>
+      `;
+
+      tempDiv.innerHTML = fullHtml;
+      await new Promise((resolve) => setTimeout(resolve, 500));
+
+      const canvas = await html2canvas(
+        tempDiv.querySelector("#invoice-pdf") || tempDiv,
+        {
+          scale: 2,
+          backgroundColor: "#ffffff",
+          logging: false,
+          useCORS: true,
+        },
+      );
+
+      const imgData = canvas.toDataURL("image/png");
+      const imgWidth = INVOICE_PDF_WIDTH;
+      const imgHeight = (canvas.height * INVOICE_PDF_WIDTH) / canvas.width;
+
+      const pdf = new jsPDF({ unit: "px", format: [imgWidth, imgHeight + 20] });
+      pdf.addImage(imgData, "PNG", 0, 0, imgWidth, imgHeight);
+      pdf.save(`invoice_${imei.slice(-8)}.pdf`);
+
+      document.body.removeChild(tempDiv);
+      setShowInvoiceModal(false);
+    } catch (error) {
+      console.error("Error generating invoice:", error);
+      alert("Failed to generate invoice. Please try again.");
+    } finally {
+      setIsGeneratingInvoice(false);
+    }
+  };
+
   return (
     <div className="p-4 md:py-10 max-w-6xl mx-auto space-y-6 font-sans text-slate-900 bg-[#F8FAFC] min-h-screen">
       {/* Back Navigation */}
@@ -195,7 +446,7 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
           <button
             onClick={handleRegenerate}
             disabled={isRegenerating}
-            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50 disabled:cursor-not-allowed"
+            className="flex items-center gap-2 px-4 py-2 bg-amber-600 hover:bg-amber-700 text-white rounded-lg text-sm font-semibold transition disabled:opacity-50"
           >
             {isRegenerating ? (
               <Loader2 size={16} className="animate-spin" />
@@ -209,7 +460,6 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
 
       {/* --- MOBILE VIEW --- */}
       <div className="block md:hidden bg-white border border-slate-200 rounded-[32px] p-5 shadow-sm relative">
-        {/* Old Data Warning for Mobile */}
         {isOldGenerated && (
           <div className="mb-4 p-3 bg-amber-50 border border-amber-200 rounded-xl">
             <div className="flex items-center gap-2 mb-2">
@@ -258,7 +508,6 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
             <span className="font-semibold">EID:</span>{" "}
             {providerData.eid || "N/A"}
           </p>
-
           <p>
             <span className="font-semibold">Warranty:</span>{" "}
             {providerData.warranty_status || "Limited Warranty"}
@@ -271,7 +520,6 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
             <span className="font-semibold">Coverage End:</span>{" "}
             {providerData.coverage_end_date || "N/A"}
           </p>
-
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">Find My iPhone:</span>
             <span
@@ -280,19 +528,16 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
               {!isICloudUnlocked ? "ON" : "OFF"}
             </span>
           </div>
-
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">iCloud Status:</span>
             <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase">
               {isBlacklistClean ? "CLEAN" : "FLAGGED"}
             </span>
           </div>
-
           <p>
             <span className="font-semibold">Locked Carrier:</span>{" "}
             {providerData.locked_carrier || "10 - Unlock"}
           </p>
-
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">SIM-Lock:</span>
             <span
@@ -301,7 +546,6 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
               {isSimUnlocked ? "UNLOCKED" : "LOCKED"}
             </span>
           </div>
-
           <div className="flex flex-wrap items-center justify-center gap-2">
             <span className="font-semibold">Replaced by Apple:</span>
             <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase">
@@ -317,11 +561,12 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
           <Copy size={22} />
         </button>
 
-        {/* Mobile Action Buttons */}
         <div className="mt-6 space-y-2">
-          <button className="w-full py-2.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm transition flex items-center justify-center gap-2">
-            <FileText size={14} />
-            Create Smart Invoice
+          <button
+            onClick={() => setShowInvoiceModal(true)}
+            className="w-full py-2.5 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm transition flex items-center justify-center gap-2"
+          >
+            <FileText size={14} /> Create Smart Invoice
           </button>
           <button
             onClick={onDownload}
@@ -385,7 +630,7 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
                 <div className="h-2 w-full bg-slate-100 rounded-full overflow-hidden">
                   <div
                     className={`h-full ${riskInfo.color} transition-all duration-1000`}
-                    style={{ width: `${riskScore}%` }}
+                    style={{ width: `${riskScoreValue}%` }}
                   />
                 </div>
                 <div className="flex justify-between mt-3">
@@ -393,7 +638,7 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
                     {riskInfo.label}
                   </span>
                   <span className="text-slate-400 font-medium">
-                    {riskScore}/100
+                    {riskScoreValue}/100
                   </span>
                 </div>
               </div>
@@ -458,14 +703,16 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
             Report Actions
           </span>
           <div className="space-y-3">
-            <button className="w-full py-3 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm hover:bg-lime-50 transition flex items-center justify-center gap-2">
-              <FileText size={16} />
-              Create Smart Invoice
+            <button
+              onClick={() => setShowInvoiceModal(true)}
+              className="w-full py-3 rounded-xl border-2 border-[#84CC16] text-[#84CC16] font-bold text-sm hover:bg-lime-50 transition flex items-center justify-center gap-2"
+            >
+              <FileText size={16} /> Create Smart Invoice
             </button>
             <button
               onClick={onDownload}
               disabled={isDownloading}
-              className="w-full py-3 rounded-xl bg-[#84CC16] text-white font-bold text-sm hover:bg-[#76b813] transition shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2 disabled:opacity-70 disabled:cursor-wait"
+              className="w-full py-3 rounded-xl bg-[#84CC16] text-white font-bold text-sm hover:bg-[#76b813] transition shadow-lg shadow-lime-500/20 flex items-center justify-center gap-2 disabled:opacity-70"
             >
               {isDownloading ? (
                 <Loader2 size={18} className="animate-spin" />
@@ -611,7 +858,7 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
               <span className="text-xs text-slate-500">iCloud Lock</span>
               {isICloudUnlocked ? (
                 <span className="text-xs font-bold text-emerald-600 flex items-center gap-1">
-                  <CheckCircle size={12} /> OFF (Clean)
+                  <CheckCircle2 size={12} /> OFF (Clean)
                 </span>
               ) : (
                 <span className="text-xs font-bold text-red-600 flex items-center gap-1">
@@ -670,176 +917,50 @@ Replaced Device: ${providerData.replaced_device === "No" ? "NO" : "YES"}
             </div>
             <div>
               <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
-                Service Category
-              </p>
-              <p className="text-sm font-bold text-slate-700">
-                {scanResult.bundledServiceCategory || "N/A"}
-              </p>
-            </div>
-            <div>
-              <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1">
                 Risk Score
               </p>
               <p className="text-sm font-bold text-slate-700">
-                {riskScore}/100
+                {riskScoreValue}/100
               </p>
             </div>
           </div>
         </div>
+      </div>
 
-        {/* Full API Response Fields (Desktop) */}
-        <div className="lg:col-span-3 bg-white rounded-2xl p-6 border border-slate-200 shadow-sm">
-          <div className="flex items-center gap-3 mb-6">
-            <div className="p-2 bg-slate-100 rounded-xl">
-              <Database size={18} className="text-slate-700" />
-            </div>
-            <h3 className="text-base font-bold text-slate-800">
-              Full Response Details
-            </h3>
-          </div>
+      {/* Invoice Modal */}
+      <InvoiceModal
+        isOpen={showInvoiceModal}
+        onClose={() => setShowInvoiceModal(false)}
+        onGenerate={handleGenerateInvoice}
+        scanResult={transformToIMEIResult(scanResult, imei)}
+        isGenerating={isGeneratingInvoice}
+      />
 
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-            {[
-              { label: "bundledServiceId", value: scanResult.bundledServiceId },
-              {
-                label: "bundledServiceName",
-                value: scanResult.bundledServiceName,
-              },
-              {
-                label: "bundledServiceCategory",
-                value: scanResult.bundledServiceCategory,
-              },
-              {
-                label: "riskMeter",
-                value:
-                  typeof scanResult.riskMeter === "number"
-                    ? scanResult.riskMeter
-                    : JSON.stringify(scanResult.riskMeter ?? {}),
-              },
-              {
-                label: "aiInsight.title",
-                value: scanResult.aiInsight?.title,
-              },
-              {
-                label: "aiInsight.message",
-                value: scanResult.aiInsight?.message,
-              },
-              {
-                label: "providerResults.description",
-                value: providerData.description,
-              },
-              { label: "providerResults.model", value: providerData.model },
-              { label: "providerResults.imei", value: providerData.imei },
-              { label: "providerResults.imei2", value: providerData.imei2 },
-              { label: "providerResults.meid", value: providerData.meid },
-              {
-                label: "providerResults.serial_number",
-                value: providerData.serial_number,
-              },
-              {
-                label: "providerResults.warranty_status",
-                value: providerData.warranty_status,
-              },
-              {
-                label: "providerResults.purchase_date",
-                value: providerData.purchase_date,
-              },
-              {
-                label: "providerResults.replaced_device",
-                value: providerData.replaced_device,
-              },
-              {
-                label: "providerResults.simlock",
-                value: providerData.simlock,
-              },
-              {
-                label: "providerResults.icloud_lock",
-                value: providerData.icloud_lock,
-              },
-              {
-                label: "providerResults.manufacturer",
-                value: providerData.manufacturer,
-              },
-              {
-                label: "providerResults.marketing_name",
-                value: providerData.marketing_name,
-              },
-              {
-                label: "providerResults.operating_system",
-                value: providerData.operating_system,
-              },
-              {
-                label: "providerResults.blacklist_status",
-                value: providerData.blacklist_status,
-              },
-              {
-                label: "providerResults.device_configuration",
-                value: providerData.device_configuration,
-              },
-              {
-                label: "providerResults.model_name",
-                value: providerData.model_name,
-              },
-              {
-                label: "providerResults.material_number",
-                value: providerData.material_number,
-              },
-              {
-                label: "providerResults.basic_material",
-                value: providerData.basic_material,
-              },
-              { label: "providerResults.eid", value: providerData.eid },
-              {
-                label: "providerResults.applecare_description",
-                value: providerData.applecare_description,
-              },
-              {
-                label: "providerResults.coverage_start_date",
-                value: providerData.coverage_start_date,
-              },
-              {
-                label: "providerResults.coverage_end_date",
-                value: providerData.coverage_end_date,
-              },
-              {
-                label: "providerResults.limited_warranty",
-                value: providerData.limited_warranty,
-              },
-              {
-                label: "providerResults.simpolicy_unlock_status",
-                value: providerData.simpolicy_unlock_status,
-              },
-              {
-                label: "providerResults.initial_activation_policy_description",
-                value: providerData.initial_activation_policy_description,
-              },
-              {
-                label: "providerResults.locked_carrier",
-                value: providerData.locked_carrier,
-              },
-              {
-                label: "providerResults.financing_status",
-                value: providerData.financing_status,
-              },
-              {
-                label: "providerResults.purchase_country",
-                value: providerData.purchase_country,
-              },
-            ].map((item) => (
-              <div
-                key={item.label}
-                className="bg-slate-50 rounded-xl p-4 border border-slate-100"
-              >
-                <p className="text-[9px] font-bold text-slate-400 uppercase tracking-wider mb-1 break-all">
-                  {item.label}
-                </p>
-                <p className="text-sm font-semibold text-slate-800 break-words">
-                  {displayValue(item.value)}
-                </p>
-              </div>
-            ))}
-          </div>
-        </div>
+      <div
+        style={{
+          position: "fixed",
+          top: 0,
+          left: "-10000px",
+          width: "1100px",
+          pointerEvents: "none",
+          zIndex: 0,
+          overflow: "hidden",
+        }}
+      >
+        <CertificatePDF
+          data={transformToIMEIResult(scanResult, imei)}
+          id="certificate-pdf-favourite"
+          providerName={
+            singleReportMeta?.provider ||
+            selectedService?.name ||
+            scanResult.bundledServiceName
+          }
+          serviceId={
+            singleReportMeta?.serviceId ??
+            selectedService?.serviceId ??
+            scanResult.bundledServiceId
+          }
+        />
       </div>
     </div>
   );
