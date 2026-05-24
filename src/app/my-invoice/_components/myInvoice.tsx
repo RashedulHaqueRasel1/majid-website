@@ -87,10 +87,13 @@ export default function RepairInvoice({ id }: { id: string }) {
       : "Unknown Shop";
 
   // Calculate timeline active step index
-  const currentStatus = request.status;
-  const activeStepIndex = timelineSteps.findIndex((step) =>
+  const currentStatus = request?.status;
+
+  const currentStepIndex = timelineSteps.findIndex((step) =>
     step.statuses.includes(currentStatus),
   );
+
+  const isCompletedStatus = currentStatus === "completed";
 
   // Quote info
   const quoteNotes = request.shopkeeperNotes?.filter((n) => n.cost) || [];
@@ -177,8 +180,11 @@ export default function RepairInvoice({ id }: { id: string }) {
 
                 <div className="relative border-l-2 border-border dark:border-yellow-400 ml-4 space-y-8 pb-4">
                   {timelineSteps.map((step, index) => {
-                    const isCompleted = index < activeStepIndex;
-                    const isActive = index === activeStepIndex;
+                    const isCompleted =
+                      isCompletedStatus || index < currentStepIndex;
+
+                    const isActive =
+                      !isCompletedStatus && index === currentStepIndex;
 
                     let dotStyle =
                       "bg-muted border-border text-muted-foreground"; // pending default

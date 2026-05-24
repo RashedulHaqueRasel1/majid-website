@@ -29,6 +29,16 @@ import RepairOfferModal from "@/features/customer/repairHistory/component/Repair
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog";
 
 const timelineSteps = [
   {
@@ -85,6 +95,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   const [noteCost, setNoteCost] = useState("");
   const [noteDays, setNoteDays] = useState("");
   const [noteImages, setNoteImages] = useState<File[]>([]);
+  const [isConfirmOpen, setIsConfirmOpen] = useState(false);
 
   const [lightbox, setLightbox] = useState<{
     urls: string[];
@@ -547,11 +558,14 @@ export default function RepairRequestDetails({ id }: { id: string }) {
         .toUpperCase()}.pdf`,
     );
   };
-  const currentStatus = request.status;
 
-  const activeStepIndex = timelineSteps.findIndex((step) =>
+  const currentStatus = request?.status;
+
+  const currentStepIndex = timelineSteps.findIndex((step) =>
     step.statuses.includes(currentStatus),
   );
+
+  const isCompletedStatus = currentStatus === "completed";
 
   const handleStatusUpdate = (status: string) => {
     updateStatus.mutate({ id, status });
@@ -656,8 +670,11 @@ export default function RepairRequestDetails({ id }: { id: string }) {
 
               <div className="relative border-l-2 border-border dark:border-yellow-400 ml-4 space-y-8 pb-4">
                 {timelineSteps.map((step, index) => {
-                  const isCompleted = index < activeStepIndex;
-                  const isActive = index === activeStepIndex;
+                  const isCompleted =
+                    isCompletedStatus || index < currentStepIndex;
+
+                  const isActive =
+                    !isCompletedStatus && index === currentStepIndex;
 
                   let dotStyle = "bg-muted border-border text-muted-foreground"; // pending default
 
@@ -1132,7 +1149,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                       });
                     }}
                     variant="outline"
-                    className="flex-1 rounded-full !bg-[#EF4444] hover:text-white font-bold h-11"
+                    className="flex-1 cursor-pointer rounded-full !bg-[#EF4444] hover:text-white font-bold h-11"
                   >
                     Order Assigned
                   </Button>
@@ -1145,7 +1162,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                       });
                     }}
                     variant="outline"
-                    className="flex-1 rounded-full !bg-[#84CC16] hover:text-white font-bold h-11"
+                    className="flex-1 cursor-pointer rounded-full !bg-[#84CC16] hover:text-white font-bold h-11"
                   >
                     Diagonosing Device
                   </Button>
@@ -1158,7 +1175,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                       });
                     }}
                     variant="outline"
-                    className="flex-1 rounded-full !bg-[#F59E0B] hover:text-white font-bold h-11"
+                    className="flex-1 cursor-pointer rounded-full !bg-[#F59E0B] hover:text-white font-bold h-11"
                   >
                     Repairing Device
                   </Button>
@@ -1168,7 +1185,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                       setShowOfferModal(true);
                     }}
                     variant="outline"
-                    className="flex-1 rounded-full !bg-[#3B82F6] hover:text-white font-bold h-11"
+                    className="flex-1 cursor-pointer rounded-full !bg-[#3B82F6] hover:text-white font-bold h-11"
                   >
                     Waiting for Parts
                   </Button>
@@ -1180,21 +1197,52 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                   />
 
                   <Button
-                    className="flex-1 rounded-full font-bold h-11 !bg-[#84CC16] text-primary-foreground shadow-lg shadow-primary/20"
-                    onClick={() =>
-                      updateResentQuote.mutate({
-                        id,
-                        status: "completed",
-                      })
-                    }
-                    disabled={updateResentQuote.isPending}
+                    className="flex-1 rounded-full font-bold h-11 cursor-pointer !bg-[#84CC16] text-primary-foreground shadow-lg shadow-primary/20"
+                    onClick={() => setIsConfirmOpen(true)}
+                    // disabled={updateResentQuote.isPending}
                   >
-                    {updateResentQuote.isPending ? (
-                      <Loader2 className="h-4 w-4 animate-spin" />
-                    ) : (
-                      "Completed"
-                    )}
+                    Completed
                   </Button>
+
+                  {isConfirmOpen && (
+                    <AlertDialog
+                      open={isConfirmOpen}
+                      onOpenChange={setIsConfirmOpen}
+                    >
+                      <AlertDialogContent>
+                        <AlertDialogHeader>
+                          <AlertDialogTitle className="text-xl font-bold text-amber-600 flex items-center gap-2">
+                            ⚠️ Attention Required!
+                          </AlertDialogTitle>
+                          <AlertDialogDescription className="text-base text-gray-700 pt-2 font-medium">
+                            Please make sure to collect the{" "}
+                            <strong>IMEI or Serial number</strong> from the
+                            phone before completing this process.
+                          </AlertDialogDescription>
+                        </AlertDialogHeader>
+                        <AlertDialogFooter className="mt-4">
+                          <AlertDialogCancel
+                            className=" hover:text-foreground"
+                            onClick={() => setIsConfirmOpen(false)}
+                          >
+                            Cancel
+                          </AlertDialogCancel>
+                          <AlertDialogAction
+                            className="bg-[#84CC16] hover:bg-[#6da812] text-white"
+                            onClick={() => {
+                              setIsConfirmOpen(false); // Closes the modal
+                              updateResentQuote.mutate({
+                                id,
+                                status: "completed",
+                              }); // Triggers the mutation
+                            }}
+                          >
+                            Yes, Collected & Complete
+                          </AlertDialogAction>
+                        </AlertDialogFooter>
+                      </AlertDialogContent>
+                    </AlertDialog>
+                  )}
                 </div>
               </div>
             </div>
