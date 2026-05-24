@@ -6,8 +6,8 @@ import {
   BadgeCheck,
   Calendar,
   CheckCircle2,
-  CircleAlert,
   Shield,
+  TriangleAlert,
 } from "lucide-react";
 import { IMEIResult } from "../types/scanDevice.types";
 
@@ -18,10 +18,29 @@ interface CertificatePDFProps {
   serviceId?: number;
 }
 
+type ProviderRow = {
+  label: string;
+  value: string;
+  rawValue: unknown;
+};
+
 export const CERTIFICATE_PDF_WIDTH = 800;
 export const CERTIFICATE_PDF_HEIGHT = 1450;
 
-// Helper functions
+const colors = {
+  ink: "#172033",
+  muted: "#64748B",
+  line: "#E2E8F0",
+  panel: "#F8FAFC",
+  primary: "#84CC16",
+  primaryDark: "#65A30D",
+  blue: "#2563EB",
+  yellow: "#FDE68A",
+  yellowSoft: "#FFFBEB",
+  yellowLine: "#FACC15",
+  warning: "#D97706",
+};
+
 function getText(value: unknown, fallback = "N/A") {
   if (typeof value === "string" && value.trim()) return value.trim();
   if (typeof value === "number") return String(value);
@@ -46,40 +65,15 @@ function normalizeLabel(value: string) {
 }
 
 function stripHtml(value: string) {
-  if (!value) return "";
   return value
     .replace(/<br\s*\/?>/gi, "\n")
-    .replace(/<\/?(font|span|b|strong|i|em)[^>]*>/gi, "")
+    .replace(/<\/?[^>]+(>|$)/g, "")
     .replace(/&nbsp;/gi, " ")
     .replace(/&amp;/gi, "&")
-    .replace(/<img[^>]*>/gi, "")
     .trim();
 }
 
-function parseProviderRows(rawHtml?: string) {
-  if (!rawHtml) return [];
-
-  const cleanText = stripHtml(rawHtml);
-  const rows: { label: string; value: string }[] = [];
-  const lines = cleanText.split("\n");
-
-  for (const line of lines) {
-    const trimmed = line.trim();
-    if (!trimmed) continue;
-
-    const colonIndex = trimmed.indexOf(":");
-    if (colonIndex > 0) {
-      const label = trimmed.substring(0, colonIndex).trim();
-      const value = trimmed.substring(colonIndex + 1).trim();
-      if (label && value) {
-        rows.push({ label, value });
-      }
-    }
-  }
-  return rows;
-}
-
-function getParsedRows(data: IMEIResult) {
+function getParsedRows(data: IMEIResult): ProviderRow[] {
   const parsedProviderData = (
     data as unknown as { parsedProviderData?: unknown }
   ).parsedProviderData;
@@ -97,16 +91,32 @@ function getParsedRows(data: IMEIResult) {
     }));
 }
 
-function getAllProviderRows(data: IMEIResult) {
+function getHtmlRows(data: IMEIResult): ProviderRow[] {
   const providerData = data.providerData as { result?: string } | undefined;
-  const parsedRows = getParsedRows(data);
-  const htmlRows = parseProviderRows(providerData?.result).map((row) => ({
-    ...row,
-    rawValue: row.value,
-  }));
+  const cleanText = stripHtml(providerData?.result || "");
+
+  return cleanText
+    .split("\n")
+    .map((line): ProviderRow | null => {
+      const trimmed = line.trim();
+      if (!trimmed) return null;
+
+      const colonIndex = trimmed.indexOf(":");
+      if (colonIndex <= 0) return null;
+
+      return {
+        label: formatLabel(trimmed.slice(0, colonIndex)),
+        value: trimmed.slice(colonIndex + 1).trim(),
+        rawValue: trimmed.slice(colonIndex + 1).trim(),
+      };
+    })
+    .filter((row): row is ProviderRow => Boolean(row));
+}
+
+function getAllProviderRows(data: IMEIResult) {
   const seen = new Set<string>();
 
-  return [...parsedRows, ...htmlRows].filter((row) => {
+  return [...getParsedRows(data), ...getHtmlRows(data)].filter((row) => {
     const key = normalizeLabel(row.label);
     if (seen.has(key)) return false;
     seen.add(key);
@@ -114,131 +124,162 @@ function getAllProviderRows(data: IMEIResult) {
   });
 }
 
-function findProviderValue(
-  rows: { label: string; value: string }[],
-  searchTerms: string[],
-) {
-  for (const row of rows) {
-    for (const term of searchTerms) {
-      if (normalizeLabel(row.label).includes(normalizeLabel(term))) {
-        return row.value;
-      }
-    }
+function findValue(rows: ProviderRow[], labels: string[], fallback = "N/A") {
+  for (const label of labels) {
+    const row = rows.find((item) =>
+      normalizeLabel(item.label).includes(normalizeLabel(label)),
+    );
+    if (row?.value) return row.value;
   }
-  return null;
+  return fallback;
+}
+
+function getDeviceImage(rows: ProviderRow[]) {
+  const row = rows.find((item) => {
+    if (normalizeLabel(item.label) === "image") return true;
+    if (
+      item.rawValue &&
+      typeof item.rawValue === "object" &&
+      typeof (item.rawValue as { src?: unknown }).src === "string"
+    ) {
+      return true;
+    }
+    return /\.(png|jpe?g|webp|gif)(\?|$)/i.test(item.value);
+  });
+
+  if (!row) return "";
+
+  if (row.rawValue && typeof row.rawValue === "object") {
+    const raw = row.rawValue as { src?: string; html?: string };
+    if (raw.src) return raw.src;
+    const htmlMatch = raw.html?.match(/src=["']([^"']+)["']/i);
+    if (htmlMatch?.[1]) return htmlMatch[1];
+  }
+
+  const htmlMatch = row.value.match(/src=["']([^"']+)["']/i);
+  if (htmlMatch?.[1]) return htmlMatch[1];
+
+  return row.value;
+}
+
+function getRenderableImageSrc(src: string) {
+  if (!src || src.startsWith("data:") || src.startsWith("/")) return src;
+
+  try {
+    const url = new URL(src);
+    if (!["http:", "https:"].includes(url.protocol)) return src;
+    return `/api/image-proxy?url=${encodeURIComponent(src)}`;
+  } catch {
+    return src;
+  }
+}
+
+function riskText(score: number) {
+  if (score <= 25) return "LOW";
+  if (score <= 60) return "LOW - MEDIUM";
+  return "HIGH";
 }
 
 export const CertificatePDF = React.forwardRef<
   HTMLDivElement,
   CertificatePDFProps
 >(({ data, id, providerName, serviceId }, ref) => {
-  const providerRows = getAllProviderRows(data);
-  const imageRow = providerRows.find((row) => {
-    const raw = row.rawValue;
-    return (
-      raw &&
-      typeof raw === "object" &&
-      typeof (raw as { src?: unknown }).src === "string"
-    );
-  });
-  const imageSrc =
-    imageRow && typeof imageRow.rawValue === "object"
-      ? ((imageRow.rawValue as { src?: string }).src ?? "")
-      : "";
+  const rows = getAllProviderRows(data);
+  const deviceImage = getDeviceImage(rows);
+  const renderableDeviceImage = getRenderableImageSrc(deviceImage);
+  const imei = findValue(rows, ["IMEI Number", "IMEI"], data.imei);
+  const imei2 = findValue(rows, ["IMEI2", "IMEI 2"], "");
+  const deviceName = findValue(rows, ["Device", "Model Name"], data.deviceName);
+  const serialNumber = findValue(rows, ["Serial Number", "Serial"], "N/A");
+  const eid = findValue(rows, ["EID"], "N/A");
+  const warrantyType = findValue(rows, ["Warranty Type"], "N/A");
+  const warrantyExpires = findValue(
+    rows,
+    ["Warranty Expires", "Coverage End Date"],
+    "N/A",
+  );
+  const purchaseDate = findValue(
+    rows,
+    ["Estimated Purchase Date", "Purchase Date"],
+    "N/A",
+  );
+  const activationStatus = findValue(rows, ["Activation Status"], "N/A");
+  const registrationStatus = findValue(rows, ["Registration Status"], "N/A");
+  const carrierStatus = findValue(
+    rows,
+    ["Carrier Status", "Locked Carrier"],
+    "N/A",
+  );
+  const simLock = findValue(
+    rows,
+    ["SIM Lock Status", "SIM Lock", "Simlock"],
+    "N/A",
+  );
+  const blacklist = findValue(rows, ["Blacklist Status"], "N/A");
+  const replacedDevice = findValue(rows, ["Replaced Device"], "N/A");
+  const openRepair = findValue(rows, ["Open Repair"], "N/A");
+  const coverageBenefits = findValue(rows, ["Coverage Benefits"], "N/A");
+  const notice = findValue(rows, ["Notice"], "");
 
-  // Extract values from provider rows
-  const deviceName =
-    findProviderValue(providerRows, ["Device"]) ||
-    data.deviceName ||
-    "Unknown Device";
-  const imeiValue =
-    findProviderValue(providerRows, ["IMEI Number", "IMEI"]) || data.imei;
-  const serialNumber =
-    findProviderValue(providerRows, ["Serial Number", "Serial"]) || "";
-  const warrantyExpiry =
-    findProviderValue(providerRows, ["Warranty Expires", "Warranty Expiry"]) ||
-    "";
-  const purchaseDate =
-    findProviderValue(providerRows, [
-      "Estimated Purchase Date",
-      "Purchase Date",
-    ]) || "";
-  const coverageBenefits =
-    findProviderValue(providerRows, ["Coverage Benefits", "Benefits"]) || "";
-  const notice = findProviderValue(providerRows, ["Notice"]) || "";
-  const warrantyType =
-    findProviderValue(providerRows, ["Warranty Type"]) || "N/A";
-  const activationStatus =
-    findProviderValue(providerRows, ["Activation Status"]) || "N/A";
-  const registrationStatus =
-    findProviderValue(providerRows, ["Registration Status"]) || "N/A";
-  const openRepair = findProviderValue(providerRows, ["Open Repair"]) || "N/A";
-  const replacedDevice =
-    findProviderValue(providerRows, ["Replaced Device"]) || "N/A";
-
-  // Risk meter data
   const riskScore = data.riskMeter?.score ?? 0;
-  const riskLabel = data.riskMeter?.label ?? "Unknown Risk";
-  const aiMessage = data.aiInsight?.message ?? "No AI insight available.";
-
-  // Security checks
-  const checks = data.checks;
-  const checkItems = [
-    {
-      title: "Global Blacklist",
-      description: checks?.globalBlacklist?.description,
-      status: checks?.globalBlacklist?.status,
-    },
-    {
-      title: "Carrier Financing",
-      description: checks?.carrierFinancing?.description,
-      status: checks?.carrierFinancing?.status,
-    },
-    {
-      title: "Hardware Lock",
-      description: checks?.hardwareLock?.description,
-      status: checks?.hardwareLock?.status,
-    },
-    {
-      title: "Part Authenticity",
-      description: checks?.partAuthenticity?.description,
-      status: checks?.partAuthenticity?.status,
-    },
-  ];
-
-  // Conclusion based on risk score
-  const conclusion =
-    riskScore <= 25
-      ? "This device appears safe based on the available verification signals."
-      : riskScore <= 60
-        ? "This device appears generally safe, but it should be reviewed with basic caution."
-        : "This device should be handled carefully due to elevated verification risk signals.";
-
-  const warningNotes = [
-    "Always match the IMEI shown on the physical device with this certificate before completing a purchase.",
-    "Use this certificate together with a live device check and physical inspection for the safest decision.",
-  ];
-
+  const riskLabel = data.riskMeter?.label || riskText(riskScore);
   const reportDate = new Date().toLocaleDateString("en-GB", {
     day: "2-digit",
-    month: "long",
+    month: "short",
     year: "numeric",
   });
 
-  const colors = {
-    ink: "#1F2937",
-    softInk: "#4B5563",
-    pale: "#6B7280",
-    line: "#E5E7EB",
-    section: "#F3F4F6",
-    brand: "#84CC16",
-    brandDark: "#65A30D",
-    brandSoft: "#F7FEE7",
-    brandLine: "#D9F99D",
-    warning: "#D97706",
-    warningBg: "#FEF3C7",
-    warningSoft: "#FFFBEB",
-  };
+  const summaryItems = [
+    ["Activation Status", activationStatus],
+    [
+      "Warranty Status",
+      `${warrantyType}${warrantyExpires !== "N/A" ? ` (${warrantyExpires})` : ""}`,
+    ],
+    ["Estimated Purchase Date", purchaseDate],
+    ["Carrier Status", carrierStatus],
+    ["SIM Lock", simLock],
+    ["Registration Status", registrationStatus],
+    ["Blacklist Status", blacklist],
+    ["Replaced Device", replacedDevice],
+    ["Open Repair", openRepair],
+    ["Coverage Benefits", coverageBenefits],
+  ].filter(([, value]) => value && value !== "N/A");
+
+  const riskPoints = [
+    `${activationStatus !== "N/A" ? `Activation status: ${activationStatus}` : "Activation data reviewed"}`,
+    `${blacklist !== "N/A" ? `Blacklist status: ${blacklist}` : "Blacklist signal reviewed"}`,
+    `${simLock !== "N/A" ? `SIM lock status: ${simLock}` : "SIM lock signal reviewed"}`,
+    `${openRepair !== "N/A" ? `Open repair: ${openRepair}` : "Repair history signal reviewed"}`,
+  ];
+
+  const additionalRows = rows.filter(
+    (row) =>
+      ![
+        "image",
+        "device",
+        "imei number",
+        "imei",
+        "imei2",
+        "serial number",
+        "eid",
+        "warranty type",
+        "warranty expires",
+        "coverage end date",
+        "estimated purchase date",
+        "purchase date",
+        "activation status",
+        "registration status",
+        "carrier status",
+        "locked carrier",
+        "sim lock status",
+        "sim lock",
+        "blacklist status",
+        "replaced device",
+        "open repair",
+        "coverage benefits",
+        "notice",
+      ].includes(row.label.toLowerCase()),
+  );
 
   return (
     <div
@@ -247,596 +288,405 @@ export const CertificatePDF = React.forwardRef<
       style={{
         width: `${CERTIFICATE_PDF_WIDTH}px`,
         minHeight: `${CERTIFICATE_PDF_HEIGHT}px`,
-        backgroundColor: "white",
-        fontFamily: "'Inter', sans-serif",
-        padding: "40px 34px 50px",
+        background: "#ffffff",
+        color: colors.ink,
+        fontFamily: "Arial, Helvetica, sans-serif",
+        padding: "42px 48px",
         boxSizing: "border-box",
-        position: "relative",
         overflow: "visible",
       }}
     >
       <div
         style={{
-          borderRadius: "28px",
-          border: `1px solid ${colors.line}`,
-          backgroundColor: "#ffffff",
-          boxShadow: "0 20px 45px rgba(15, 23, 42, 0.08)",
-          padding: "30px 28px 35px",
-          minHeight: `${CERTIFICATE_PDF_HEIGHT - 90}px`,
-          display: "flex",
-          flexDirection: "column",
+          display: "grid",
+          gridTemplateColumns: "120px 1fr 120px",
+          alignItems: "start",
+          marginBottom: "24px",
         }}
       >
-        {/* Header */}
+        <div />
+        <div style={{ textAlign: "center" }}>
+          <div
+            style={{
+              display: "flex",
+              justifyContent: "center",
+              alignItems: "center",
+              gap: "8px",
+            }}
+          >
+            <span
+              style={{
+                fontSize: "30px",
+                fontWeight: 900,
+                color: colors.primary,
+                lineHeight: 1,
+              }}
+            >
+              imoscan
+            </span>
+            <BadgeCheck size={28} color="#3B9DF8" fill="#3B9DF8" />
+          </div>
+          <h1
+            style={{
+              margin: "14px 0 6px",
+              fontSize: "25px",
+              fontWeight: 900,
+              color: colors.ink,
+            }}
+          >
+            Device Verification Certificate
+          </h1>
+          <p style={{ margin: 0, fontSize: "13px", color: colors.muted }}>
+            Check before you buy
+          </p>
+        </div>
+        <div style={{ justifySelf: "end" }}>
+          <QRCode value={`https://imoscan.com/report/${imei}`} size={96} />
+        </div>
+      </div>
+
+      <Section title="Device Details">
         <div
           style={{
             display: "grid",
-            gridTemplateColumns: "1fr 132px",
-            gap: "18px",
-            marginBottom: "24px",
-          }}
-        >
-          <div style={{ textAlign: "center" }}>
-            <div
-              style={{
-                display: "flex",
-                alignItems: "center",
-                justifyContent: "center",
-                gap: "8px",
-              }}
-            >
-              <span
-                style={{
-                  fontSize: "34px",
-                  fontWeight: 900,
-                  color: colors.brand,
-                }}
-              >
-                imoscan
-              </span>
-              <div
-                style={{
-                  width: "34px",
-                  height: "34px",
-                  borderRadius: "999px",
-                  backgroundColor: colors.brand,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                }}
-              >
-                <BadgeCheck size={20} color="#ffffff" />
-              </div>
-            </div>
-            <h1
-              style={{ margin: "8px 0 4px", fontSize: "24px", fontWeight: 900 }}
-            >
-              Device Verification Certificate
-            </h1>
-            <p
-              style={{
-                margin: 0,
-                fontSize: "13px",
-                fontWeight: 600,
-                color: colors.pale,
-              }}
-            >
-              Check before you buy
-            </p>
-          </div>
-          <div style={{ justifySelf: "end" }}>
-            <div
-              style={{
-                border: `1px solid ${colors.line}`,
-                borderRadius: "12px",
-                padding: "6px",
-              }}
-            >
-              <QRCode
-                value={`https://imoscan.com/report/${imeiValue}`}
-                size={90}
-              />
-            </div>
-          </div>
-        </div>
-
-        {/* Device Details */}
-        <div
-          style={{
-            border: `1px solid ${colors.line}`,
-            borderRadius: "12px",
-            overflow: "hidden",
-            marginBottom: "18px",
+            gridTemplateColumns: "150px 1fr",
+            gap: "26px",
+            alignItems: "start",
           }}
         >
           <div
             style={{
-              backgroundColor: colors.section,
-              padding: "12px 18px",
-              fontSize: "14px",
-              fontWeight: 800,
-              borderBottom: `1px solid ${colors.line}`,
-            }}
-          >
-            Device Details
-          </div>
-          <div style={{ padding: "18px" }}>
-            <div style={{ display: "flex", gap: "16px", flexWrap: "wrap" }}>
-              {imageSrc && (
-                <div
-                  style={{
-                    width: "110px",
-                    height: "110px",
-                    border: `1px solid ${colors.line}`,
-                    borderRadius: "16px",
-                    display: "flex",
-                    alignItems: "center",
-                    justifyContent: "center",
-                    backgroundColor: "#ffffff",
-                  }}
-                >
-                  <img
-                    src={imageSrc}
-                    alt="Device"
-                    style={{
-                      maxWidth: "90px",
-                      maxHeight: "90px",
-                      objectFit: "contain",
-                    }}
-                  />
-                </div>
-              )}
-              <div style={{ flex: "1", minWidth: "250px" }}>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: colors.pale,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Device Name
-                  </div>
-                  <div style={{ fontSize: "16px", fontWeight: 700 }}>
-                    {deviceName}
-                  </div>
-                </div>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: colors.pale,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    IMEI Number
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "13px",
-                      fontWeight: 600,
-                      fontFamily: "monospace",
-                    }}
-                  >
-                    {imeiValue}
-                  </div>
-                </div>
-                {serialNumber && (
-                  <div style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        color: colors.pale,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Serial Number
-                    </div>
-                    <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                      {serialNumber}
-                    </div>
-                  </div>
-                )}
-              </div>
-              <div style={{ flex: "1", minWidth: "250px" }}>
-                {warrantyExpiry && (
-                  <div style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        color: colors.pale,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Warranty Expiry
-                    </div>
-                    <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                      {warrantyExpiry}
-                    </div>
-                  </div>
-                )}
-                {purchaseDate && (
-                  <div style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        color: colors.pale,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Purchase Date
-                    </div>
-                    <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                      {purchaseDate}
-                    </div>
-                  </div>
-                )}
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: colors.pale,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Warranty Type
-                  </div>
-                  <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                    {warrantyType}
-                  </div>
-                </div>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: colors.pale,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Activation / Registration
-                  </div>
-                  <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                    {activationStatus} / {registrationStatus}
-                  </div>
-                </div>
-                <div style={{ marginBottom: "12px" }}>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 800,
-                      color: colors.pale,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    Replaced / Open Repair
-                  </div>
-                  <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                    {replacedDevice} / {openRepair}
-                  </div>
-                </div>
-                {coverageBenefits && (
-                  <div style={{ marginBottom: "12px" }}>
-                    <div
-                      style={{
-                        fontSize: "11px",
-                        fontWeight: 800,
-                        color: colors.pale,
-                        textTransform: "uppercase",
-                      }}
-                    >
-                      Coverage Benefits
-                    </div>
-                    <div style={{ fontSize: "13px", fontWeight: 600 }}>
-                      {coverageBenefits}
-                    </div>
-                  </div>
-                )}
-              </div>
-            </div>
-          </div>
-        </div>
-
-        {/* AI Insight */}
-        <div
-          style={{
-            border: `1px solid ${colors.line}`,
-            borderRadius: "12px",
-            overflow: "hidden",
-            marginBottom: "18px",
-            backgroundColor: colors.brandSoft,
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: colors.brandSoft,
-              padding: "12px 18px",
-              fontSize: "14px",
-              fontWeight: 800,
-              color: colors.brandDark,
-              borderBottom: `1px solid ${colors.brandLine}`,
-            }}
-          >
-            AI Analysis
-          </div>
-          <div style={{ padding: "18px" }}>
-            <p
-              style={{
-                fontSize: "13px",
-                lineHeight: 1.5,
-                fontStyle: "italic",
-                margin: 0,
-              }}
-            >
-              &quot;{aiMessage}&quot;
-            </p>
-          </div>
-        </div>
-
-        {/* Risk Analysis */}
-        <div
-          style={{
-            border: `1px solid ${colors.line}`,
-            borderRadius: "12px",
-            overflow: "hidden",
-            marginBottom: "18px",
-          }}
-        >
-          <div
-            style={{
-              backgroundColor: colors.brandSoft,
-              padding: "12px 18px",
-              fontSize: "14px",
-              fontWeight: 800,
-              color: colors.brandDark,
-              borderBottom: `1px solid ${colors.brandLine}`,
-            }}
-          >
-            Risk Analysis
-          </div>
-          <div style={{ padding: "18px" }}>
-            <div
-              style={{
-                display: "flex",
-                gap: "12px",
-                alignItems: "center",
-                marginBottom: "16px",
-                flexWrap: "wrap",
-              }}
-            >
-              <span style={{ fontSize: "13px", fontWeight: 700 }}>
-                Risk Score:
-              </span>
-              <span
-                style={{
-                  backgroundColor: colors.brandSoft,
-                  padding: "4px 12px",
-                  borderRadius: "20px",
-                  fontSize: "12px",
-                  fontWeight: 700,
-                  color: colors.brandDark,
-                }}
-              >
-                {riskScore}/100 - {riskLabel}
-              </span>
-            </div>
-
-            <div
-              style={{
-                fontSize: "12px",
-                fontWeight: 700,
-                marginBottom: "10px",
-              }}
-            >
-              Security Checks:
-            </div>
-            {checkItems.map((item, idx) => {
-              const isPassed = item.status === "passed";
-              return (
-                <div
-                  key={idx}
-                  style={{
-                    display: "flex",
-                    gap: "8px",
-                    alignItems: "flex-start",
-                    marginBottom: "10px",
-                  }}
-                >
-                  {isPassed ? (
-                    <CheckCircle2
-                      size={14}
-                      color={colors.brand}
-                      style={{ marginTop: "2px" }}
-                    />
-                  ) : (
-                    <CircleAlert
-                      size={14}
-                      color={colors.warning}
-                      style={{ marginTop: "2px" }}
-                    />
-                  )}
-                  <div>
-                    <span style={{ fontSize: "11px", fontWeight: 600 }}>
-                      {item.title}:
-                    </span>
-                    <span
-                      style={{
-                        fontSize: "11px",
-                        color: colors.softInk,
-                        marginLeft: "4px",
-                      }}
-                    >
-                      {item.description}
-                    </span>
-                  </div>
-                </div>
-              );
-            })}
-
-            <div
-              style={{
-                marginTop: "14px",
-                paddingTop: "12px",
-                borderTop: `1px solid ${colors.line}`,
-                display: "flex",
-                gap: "8px",
-              }}
-            >
-              <Shield size={14} color={colors.brand} />
-              <span style={{ fontSize: "11px", fontWeight: 600 }}>
-                Conclusion: {conclusion}
-              </span>
-            </div>
-          </div>
-
-          <div
-            style={{
-              backgroundColor: colors.warningSoft,
-              padding: "12px 18px",
-              borderTop: `1px solid #FDE68A`,
-            }}
-          >
-            {notice && (
-              <div
-                style={{
-                  fontSize: "11px",
-                  color: "#92400E",
-                  marginBottom: "8px",
-                }}
-              >
-                ⚠️ {notice}
-              </div>
-            )}
-            {warningNotes.map((note, idx) => (
-              <div
-                key={idx}
-                style={{
-                  display: "flex",
-                  gap: "6px",
-                  marginBottom: idx === 0 ? "8px" : 0,
-                }}
-              >
-                <CircleAlert size={12} color={colors.warning} />
-                <span style={{ fontSize: "10px", color: "#92400E" }}>
-                  {note}
-                </span>
-              </div>
-            ))}
-          </div>
-        </div>
-
-        {/* Complete Provider Response */}
-        {providerRows.length > 0 && (
-          <div
-            style={{
+              width: "120px",
+              height: "120px",
               border: `1px solid ${colors.line}`,
-              borderRadius: "12px",
+              borderRadius: "8px",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              background: "#ffffff",
               overflow: "hidden",
-              marginBottom: "18px",
             }}
           >
-            <div
-              style={{
-                backgroundColor: colors.brandSoft,
-                padding: "12px 18px",
-                fontSize: "14px",
-                fontWeight: 800,
-                color: colors.brandDark,
-                borderBottom: `1px solid ${colors.brandLine}`,
-              }}
-            >
-              Complete IMEI Check Data
-            </div>
-            <div
-              style={{
-                padding: "14px 18px",
-                display: "grid",
-                gridTemplateColumns: "1fr 1fr",
-                gap: "10px",
-              }}
-            >
-              {providerRows.map((row, index) => (
-                <div
-                  key={`${row.label}-${index}`}
-                  style={{
-                    borderBottom: `1px solid ${colors.line}`,
-                    paddingBottom: "8px",
-                    minHeight: "42px",
-                  }}
-                >
-                  <div
-                    style={{
-                      fontSize: "9px",
-                      fontWeight: 800,
-                      color: colors.pale,
-                      textTransform: "uppercase",
-                    }}
-                  >
-                    {row.label}
-                  </div>
-                  <div
-                    style={{
-                      fontSize: "11px",
-                      fontWeight: 600,
-                      color: colors.ink,
-                      wordBreak: "break-word",
-                      lineHeight: 1.35,
-                    }}
-                  >
-                    {row.value}
-                  </div>
-                </div>
-              ))}
-            </div>
+            {renderableDeviceImage ? (
+              <img
+                src={renderableDeviceImage}
+                alt="Device"
+                crossOrigin="anonymous"
+                referrerPolicy="no-referrer"
+                style={{
+                  maxWidth: "104px",
+                  maxHeight: "104px",
+                  objectFit: "contain",
+                }}
+              />
+            ) : (
+              <Shield size={48} color={colors.primary} />
+            )}
           </div>
-        )}
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "150px 1fr",
+              rowGap: "13px",
+              columnGap: "18px",
+              fontSize: "12px",
+            }}
+          >
+            <Detail label="Device" value={deviceName} />
+            <Detail label="IMEI" value={imei} mono />
+            {imei2 && <Detail label="IMEI 2" value={imei2} mono />}
+            <Detail label="Serial Number" value={serialNumber} mono />
+            {eid !== "N/A" && <Detail label="EID" value={eid} mono />}
+          </div>
+        </div>
+      </Section>
 
-        {/* Footer */}
+      <Section title="Verification Summary">
         <div
           style={{
-            marginTop: "auto",
-            paddingTop: "20px",
-            display: "flex",
-            justifyContent: "space-between",
-            flexWrap: "wrap",
+            display: "grid",
+            gridTemplateColumns: "1fr 1fr",
+            columnGap: "30px",
+            rowGap: "16px",
+          }}
+        >
+          {summaryItems.map(([label, value]) => (
+            <SummaryItem
+              key={`${label}-${value}`}
+              label={label}
+              value={value}
+            />
+          ))}
+        </div>
+      </Section>
+
+      <div
+        style={{
+          border: `1px solid ${colors.yellowLine}`,
+          borderRadius: "4px",
+          overflow: "hidden",
+          marginBottom: "24px",
+        }}
+      >
+        <div
+          style={{
+            background: colors.yellow,
+            padding: "14px 20px",
+            fontSize: "13px",
+            fontWeight: 800,
+          }}
+        >
+          Risk Analysis (AI Powered)
+        </div>
+        <div style={{ padding: "22px 24px" }}>
+          <div style={{ display: "flex", alignItems: "center", gap: "12px" }}>
+            <CheckCircle2 size={18} color="#F97316" />
+            <span style={{ fontSize: "12px", fontWeight: 900 }}>
+              Overall Risk Level:
+            </span>
+            <span
+              style={{
+                background: colors.yellowLine,
+                borderRadius: "999px",
+                padding: "4px 14px",
+                fontSize: "10px",
+                fontWeight: 900,
+                color: "#92400E",
+              }}
+            >
+              {riskLabel.toUpperCase()} ({riskScore}/100)
+            </span>
+          </div>
+
+          <p
+            style={{
+              margin: "22px 0 12px",
+              fontSize: "12px",
+              color: colors.muted,
+              fontWeight: 700,
+            }}
+          >
+            Explanation:
+          </p>
+
+          <div style={{ display: "grid", gap: "10px" }}>
+            {riskPoints.map((point) => (
+              <RiskPoint key={point} text={point} />
+            ))}
+            {notice && notice !== "N/A" && <WarningPoint text={notice} />}
+            {replacedDevice !== "N/A" && (
+              <WarningPoint text={`Replaced device: ${replacedDevice}`} />
+            )}
+          </div>
+
+          <div
+            style={{
+              display: "flex",
+              gap: "10px",
+              alignItems: "flex-start",
+              marginTop: "18px",
+            }}
+          >
+            <Shield size={14} color={colors.blue} />
+            <strong style={{ fontSize: "12px", lineHeight: 1.45 }}>
+              Conclusion:{" "}
+              {data.aiInsight?.message ||
+                "Review all verification details before purchase."}
+            </strong>
+          </div>
+        </div>
+
+        <div
+          style={{
+            background: colors.yellowSoft,
+            borderTop: `1px solid ${colors.yellowLine}`,
+            padding: "18px 24px",
+            display: "grid",
             gap: "12px",
           }}
         >
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <Shield size={12} color={colors.brand} />
-            <span style={{ fontSize: "10px" }}>
-              Report ID: IMO-{String(imeiValue).slice(-8)}
-            </span>
-          </div>
-          <div style={{ display: "flex", gap: "6px", alignItems: "center" }}>
-            <Calendar size={12} color={colors.brand} />
-            <span style={{ fontSize: "10px" }}>Generated: {reportDate}</span>
-          </div>
+          <WarningPoint text="Always match IMEI / serials with the physical device before purchase." />
+          <WarningPoint text="Boxes that are sealed and status says ACTIVATED should be reviewed carefully." />
         </div>
+      </div>
 
-        {(providerName || serviceId) && (
+      {additionalRows.length > 0 && (
+        <Section title="Additional API Data">
           <div
             style={{
-              marginTop: "10px",
-              textAlign: "center",
-              fontSize: "9px",
-              color: colors.pale,
+              display: "grid",
+              gridTemplateColumns: "1fr 1fr",
+              gap: "12px 22px",
             }}
           >
-            {providerName && `Provider: ${providerName}`}
-            {providerName && serviceId && " | "}
-            {serviceId && `Service ID: ${serviceId}`}
+            {additionalRows.map((row, index) => (
+              <div key={`${row.label}-${index}`}>
+                <div
+                  style={{
+                    fontSize: "10px",
+                    fontWeight: 900,
+                    color: colors.muted,
+                    marginBottom: "4px",
+                  }}
+                >
+                  {row.label}
+                </div>
+                <div
+                  style={{
+                    fontSize: "11px",
+                    fontWeight: 700,
+                    lineHeight: 1.45,
+                    wordBreak: "break-word",
+                  }}
+                >
+                  {row.value}
+                </div>
+              </div>
+            ))}
           </div>
-        )}
+        </Section>
+      )}
+
+      <div
+        style={{
+          display: "flex",
+          justifyContent: "center",
+          gap: "34px",
+          alignItems: "center",
+          color: colors.muted,
+          fontSize: "11px",
+          marginTop: "18px",
+        }}
+      >
+        <span style={{ display: "flex", gap: "7px", alignItems: "center" }}>
+          <Shield size={12} color={colors.primary} />
+          Report ID: IMO-{String(imei).slice(-8)}
+        </span>
+        <span style={{ display: "flex", gap: "7px", alignItems: "center" }}>
+          <Calendar size={12} color={colors.blue} />
+          Generated On: {reportDate}
+        </span>
       </div>
+
+      {(providerName || serviceId) && (
+        <p
+          style={{
+            margin: "10px 0 0",
+            textAlign: "center",
+            color: colors.muted,
+            fontSize: "10px",
+          }}
+        >
+          {providerName && `Provider: ${providerName}`}
+          {providerName && serviceId && " | "}
+          {serviceId && `Service ID: ${serviceId}`}
+        </p>
+      )}
     </div>
   );
 });
+
+function Section({
+  title,
+  children,
+}: {
+  title: string;
+  children: React.ReactNode;
+}) {
+  return (
+    <div
+      style={{
+        border: `1px solid ${colors.line}`,
+        borderRadius: "4px",
+        overflow: "hidden",
+        marginBottom: "24px",
+      }}
+    >
+      <div
+        style={{
+          background: "#F1F5F9",
+          borderBottom: `1px solid ${colors.line}`,
+          padding: "14px 20px",
+          fontSize: "13px",
+          fontWeight: 800,
+        }}
+      >
+        {title}
+      </div>
+      <div style={{ padding: "22px 24px" }}>{children}</div>
+    </div>
+  );
+}
+
+function Detail({
+  label,
+  value,
+  mono,
+}: {
+  label: string;
+  value: string;
+  mono?: boolean;
+}) {
+  return (
+    <>
+      <div style={{ fontWeight: 900, color: colors.ink }}>{label}:</div>
+      <div
+        style={{
+          color: colors.ink,
+          fontFamily: mono ? "monospace" : "Arial, Helvetica, sans-serif",
+          wordBreak: "break-word",
+        }}
+      >
+        {value}
+      </div>
+    </>
+  );
+}
+
+function SummaryItem({ label, value }: { label: string; value: string }) {
+  return (
+    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+      <CheckCircle2
+        size={16}
+        color={colors.blue}
+        style={{ marginTop: "1px" }}
+      />
+      <div>
+        <div style={{ fontSize: "12px", fontWeight: 900 }}>{label}:</div>
+        <div style={{ fontSize: "11px", color: colors.ink, lineHeight: 1.4 }}>
+          {value}
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function RiskPoint({ text }: { text: string }) {
+  return (
+    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+      <CheckCircle2
+        size={13}
+        color={colors.blue}
+        style={{ marginTop: "1px" }}
+      />
+      <span style={{ fontSize: "11px", lineHeight: 1.45 }}>{text}</span>
+    </div>
+  );
+}
+
+function WarningPoint({ text }: { text: string }) {
+  return (
+    <div style={{ display: "flex", gap: "10px", alignItems: "flex-start" }}>
+      <TriangleAlert
+        size={13}
+        color={colors.warning}
+        style={{ marginTop: "1px" }}
+      />
+      <span style={{ fontSize: "11px", lineHeight: 1.45, color: "#92400E" }}>
+        {text}
+      </span>
+    </div>
+  );
+}
 
 CertificatePDF.displayName = "CertificatePDF";
