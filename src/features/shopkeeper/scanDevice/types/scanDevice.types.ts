@@ -179,6 +179,8 @@ export interface FavouriteProviderResults {
   locked_carrier?: string;
   financing_status?: string;
   purchase_country?: string;
+  icloud_status?: string;
+  mdm_lock?: string;
 }
 
 export interface FavouriteIMEIData {

@@ -16,7 +16,7 @@ import {
   Mail,
   AlertCircle,
 } from "lucide-react";
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { IMEIResult } from "../../scanDevice/types/scanDevice.types";
 import axiosInstance from "@/lib/instance/axios-instance";
 import { useSession } from "next-auth/react";
@@ -25,7 +25,7 @@ interface InvoiceModalProps {
   isOpen: boolean;
   onClose: () => void;
   onGenerate: (invoiceData: InvoiceFormData) => void;
-  scanResult?: IMEIResult;
+  scanResult?: IMEIResult | null;
   isGenerating: boolean;
   defaultPrice?: number;
 }
@@ -84,6 +84,24 @@ export const InvoiceModal = ({
   const [tradeInValue, setTradeInValue] = useState<number>(0);
   const [bankAccountNumber, setBankAccountNumber] = useState("");
 
+  // Reset form when modal opens with new scanResult
+  useEffect(() => {
+    if (isOpen && scanResult) {
+      setFormData({
+        customerName: "",
+        customerEmail: "",
+        customerAddress: "",
+        customerPhone: "",
+        price: scanResult?.marketValue?.amount || defaultPrice || 599,
+        paymentMethod: "cash",
+      });
+      setTradeInValue(0);
+      setBankAccountNumber("");
+      setFieldErrors([]);
+      setCustomerError(null);
+    }
+  }, [isOpen, scanResult, defaultPrice]);
+
   // Clear field error for a specific field
   const clearFieldError = (field: string) => {
     setFieldErrors((prev) => prev.filter((e) => e.field !== field));
@@ -124,10 +142,30 @@ export const InvoiceModal = ({
     if (formData.price <= 0) {
       errors.push({ field: "price", message: "Price must be greater than 0" });
     }
+
+    // Validate phone number format (basic)
+    const phoneRegex = /^[0-9+\-\s()]{8,20}$/;
+    if (
+      formData.customerPhone.trim() &&
+      !phoneRegex.test(formData.customerPhone.trim())
+    ) {
+      errors.push({
+        field: "customerPhone",
+        message: "Please enter a valid phone number",
+      });
+    }
+
     if (formData.paymentMethod === "bank" && !bankAccountNumber.trim()) {
       errors.push({
         field: "bankAccount",
         message: "Bank account number is required",
+      });
+    }
+
+    if (formData.paymentMethod === "tradein" && tradeInValue < 0) {
+      errors.push({
+        field: "tradeIn",
+        message: "Trade-in value cannot be negative",
       });
     }
 
@@ -202,20 +240,26 @@ export const InvoiceModal = ({
   ) => {
     setFormData({ ...formData, paymentMethod: method });
     setCustomerError(null);
+    // Reset trade-in value when switching away from trade-in
+    if (method !== "tradein") {
+      setTradeInValue(0);
+    }
   };
 
   const handleTradeInChange = (value: number) => {
-    setTradeInValue(value);
-    const remaining = formData.price - value;
+    const validValue = Math.max(0, value);
+    setTradeInValue(validValue);
+    const remaining = formData.price - validValue;
     setFormData({
       ...formData,
       tradeInDetails: {
-        tradeInValue: value,
+        tradeInValue: validValue,
         deviceName: deviceName,
         remainingAmount: Math.abs(remaining),
         isReceiving: remaining < 0,
       },
     });
+    clearFieldError("tradeIn");
   };
 
   const handleBankDetailsChange = (accountNumber: string) => {
@@ -240,6 +284,24 @@ export const InvoiceModal = ({
     setFormData({ ...formData, [field]: value });
     clearFieldError(field as string);
     setCustomerError(null);
+
+    // Update trade-in remaining amount if price changes and trade-in is active
+    if (
+      field === "price" &&
+      formData.paymentMethod === "tradein" &&
+      tradeInValue > 0
+    ) {
+      const remaining = (value as number) - tradeInValue;
+      setFormData((prev) => ({
+        ...prev,
+        tradeInDetails: {
+          tradeInValue: tradeInValue,
+          deviceName: deviceName,
+          remainingAmount: Math.abs(remaining),
+          isReceiving: remaining < 0,
+        },
+      }));
+    }
   };
 
   const handleSubmit = async () => {
@@ -314,7 +376,7 @@ export const InvoiceModal = ({
               </div>
               <button
                 onClick={onClose}
-                className="p-2 hover:bg-gray-100 rounded-full transition"
+                className="p-2 hover:bg-gray-100 rounded-full transition cursor-pointer"
               >
                 <X size={20} className="text-gray-500" />
               </button>
@@ -488,8 +550,9 @@ export const InvoiceModal = ({
                 </label>
                 <div className="grid grid-cols-3 gap-3">
                   <button
+                    type="button"
                     onClick={() => handlePaymentMethodChange("cash")}
-                    className={`py-2.5 rounded-xl border-2 flex items-center justify-center gap-2 transition ${
+                    className={`py-2.5 rounded-xl border-2 flex items-center justify-center gap-2 transition cursor-pointer ${
                       formData.paymentMethod === "cash"
                         ? "border-[#84CC16] bg-[#84CC16]/5 text-[#84CC16]"
                         : "border-gray-200 text-gray-500 hover:border-gray-300"
@@ -499,8 +562,9 @@ export const InvoiceModal = ({
                     <span className="text-sm font-semibold">Cash</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => handlePaymentMethodChange("bank")}
-                    className={`py-2.5 rounded-xl border-2 flex items-center justify-center gap-2 transition ${
+                    className={`py-2.5 rounded-xl border-2 flex items-center justify-center gap-2 transition cursor-pointer ${
                       formData.paymentMethod === "bank"
                         ? "border-[#84CC16] bg-[#84CC16]/5 text-[#84CC16]"
                         : "border-gray-200 text-gray-500 hover:border-gray-300"
@@ -510,8 +574,9 @@ export const InvoiceModal = ({
                     <span className="text-sm font-semibold">Bank</span>
                   </button>
                   <button
+                    type="button"
                     onClick={() => handlePaymentMethodChange("tradein")}
-                    className={`py-2.5 rounded-xl border-2 flex items-center justify-center gap-2 transition ${
+                    className={`py-2.5 rounded-xl border-2 flex items-center justify-center gap-2 transition cursor-pointer ${
                       formData.paymentMethod === "tradein"
                         ? "border-[#84CC16] bg-[#84CC16]/5 text-[#84CC16]"
                         : "border-gray-200 text-gray-500 hover:border-gray-300"
@@ -607,20 +672,22 @@ export const InvoiceModal = ({
             {/* Footer */}
             <div className="sticky bottom-0 bg-white border-t border-gray-100 px-6 py-4 flex gap-3">
               <button
+                type="button"
                 onClick={onClose}
                 className="flex-1 py-2.5 rounded-xl border border-gray-300 text-gray-700 font-semibold text-sm hover:bg-gray-50 transition cursor-pointer"
               >
                 Cancel
               </button>
               <button
+                type="button"
                 onClick={handleSubmit}
                 disabled={isGenerating || isCreatingCustomer}
-                className="flex-1 py-2.5 rounded-xl bg-[#84CC16] text-white font-semibold text-sm hover:bg-[#76b813] transition flex items-center justify-center gap-2 disabled:opacity-50 cursor-pointer"
+                className="flex-1 py-2.5 rounded-xl bg-[#84CC16] text-white font-semibold text-sm hover:bg-[#76b813] transition flex items-center justify-center gap-2 disabled:opacity-50 disabled:cursor-not-allowed cursor-pointer"
               >
                 {isCreatingCustomer || isGenerating ? (
-                  <Loader2 size={16} className="animate-spin " />
+                  <Loader2 size={16} className="animate-spin" />
                 ) : (
-                  <DollarSign size={16} className="" />
+                  <DollarSign size={16} />
                 )}
                 {isCreatingCustomer
                   ? "Creating Customer..."
