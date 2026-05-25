@@ -34,7 +34,7 @@ import {
 } from "@/components/ui/select";
 
 // --- Ultra-Modern PDF Styles (Premium Layout) ---
-const pdfStyles = StyleSheet.create({
+export const pdfStyles = StyleSheet.create({
   page: {
     padding: 45,
     backgroundColor: "#ffffff",
@@ -275,6 +275,7 @@ export const InvoicePDF = ({
   dueAmount,
   paymentType,
   card,
+  InvoiceName,
 }: any) => (
   <Document>
     <Page size="A4" style={pdfStyles.page}>
@@ -296,7 +297,9 @@ export const InvoicePDF = ({
           </Text>
         )}
         <View style={pdfStyles.invoiceMeta}>
-          <Text style={pdfStyles.invoiceTitle}>INVOICE</Text>
+          <Text style={pdfStyles.invoiceTitle}>
+            {InvoiceName ? InvoiceName : "INVOICE"}
+          </Text>
           <Text style={pdfStyles.dateText}>
             Date:{" "}
             {new Date().toLocaleDateString("en-US", {
