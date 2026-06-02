@@ -1768,9 +1768,6 @@ export default function RepairRequestDetails({ id }: { id: string }) {
     try {
       const baseURL =
         process.env.NEXT_PUBLIC_API_URL || "http://187.77.187.56:4897";
-
-      console.log("Token:", token);
-
       const response = await axios.post(
         `${baseURL}/repair-requests/technician-feedback/${id}`,
         {}, // request body

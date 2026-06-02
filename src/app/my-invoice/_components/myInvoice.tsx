@@ -13,48 +13,55 @@ import {
   X,
 } from "lucide-react";
 import { useState } from "react";
-import {
-  useRepairRequestDetails,
-  useUpdateRepairQuoteStatus,
-} from "@/features/customer/repairRequest/hooks/useRepairRequest";
-import { Button } from "@/components/ui/button";
+import { useRepairRequestDetails } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 
 const timelineSteps = [
   {
-    id: "request_submitted",
-    label: "Request Submitted",
-    description: "Your request was received and logged",
-    statuses: ["request_submitted", "submitted"],
+    id: "order_booked",
+    label: "Order Booked",
+    description: "Your order has been successfully created",
+    statuses: ["inProgress"],
   },
   {
-    id: "in_review",
-    label: "Under Review",
-    description: "Technician is diagnosing the device",
-    statuses: ["in_review"],
+    id: "order_assigned",
+    label: "Order Assigned",
+    description: "A technician has been assigned",
+    statuses: ["order-assigned"],
+  },
+  {
+    id: "diagnosing",
+    label: "Diagnosing Started",
+    description: "Technician is diagnosing the issue",
+    statuses: ["diagnosing"],
   },
   {
     id: "quote_sent",
     label: "Quote Sent",
-    description: "Quote will appear once review is complete",
-    statuses: ["quote_sent", "quote_rejected", "rejected"],
+    description: "A quote has been sent for the repair",
+    statuses: ["quote_sent"],
   },
   {
-    id: "repair_in_progress",
-    label: "Repair in Progress",
-    description: "Hardware components will be repaired",
-    statuses: ["repair_in_progress", "quote_accepted", "approved"],
+    id: "repairing",
+    label: "Repairing Started",
+    description: "Device is being repaired",
+    statuses: ["start-work"],
+  },
+  {
+    id: "waiting_parts",
+    label: "Waiting for Parts",
+    description: "Repair is paused until parts arrive",
+    statuses: ["waiting-for-parts"],
   },
   {
     id: "completed",
-    label: "Completed",
-    description: "Repair will be finalized and closed",
+    label: "Repair Complete",
+    description: "Repair has been successfully completed",
     statuses: ["completed"],
   },
 ];
 
 export default function RepairInvoice({ id }: { id: string }) {
   const { data: detailsData, isLoading } = useRepairRequestDetails(id);
-  const updateQuote = useUpdateRepairQuoteStatus();
   const [lightbox, setLightbox] = useState<{
     urls: string[];
     index: number;
