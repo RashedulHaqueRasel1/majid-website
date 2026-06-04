@@ -10,14 +10,17 @@ import {
   Copy,
   RefreshCw,
   Clock,
+  Shield,
 } from "lucide-react";
 import { IMEIResult } from "../../scanDevice/types/scanDevice.types";
 import { CertificatePDF } from "./CertificatePDF";
 import { InvoiceModal, InvoiceFormData } from "./InvoiceModal";
 import { useCertificateDownload } from "../hooks/useCertificateDownload";
-import { useState } from "react";
+import { useState, useMemo, useCallback } from "react";
 import { useSession } from "next-auth/react";
 import { SmartInvoicePDF } from "./SmartInvoicePDF";
+import { toast } from "sonner";
+import Image from "next/image";
 
 interface SingleResultViewProps {
   scanResult: IMEIResult;
@@ -28,6 +31,386 @@ interface SingleResultViewProps {
   onDownload?: () => Promise<void> | void;
   isDownloading?: boolean;
 }
+
+// Constants
+const DEFAULT_SERVICE_ID = 6;
+const RISK_THRESHOLDS = {
+  LOW: 25,
+  MEDIUM: 60,
+};
+
+// Helper functions
+const formatDate = (dateStr: string | undefined | null): string => {
+  if (!dateStr || dateStr === "N/A") return "N/A";
+
+  try {
+    // Handle DD/MM/YY format
+    if (dateStr.match(/^\d{2}\/\d{2}\/\d{2}$/)) {
+      const [day, month, year] = dateStr.split("/");
+      const date = new Date(
+        2000 + parseInt(year),
+        parseInt(month) - 1,
+        parseInt(day),
+      );
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+    // Handle YYYY-MM-DD format
+    if (dateStr.match(/^\d{4}-\d{2}-\d{2}$/)) {
+      const date = new Date(dateStr);
+      return date.toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+      });
+    }
+    // Handle date already formatted
+    if (dateStr.match(/^[A-Za-z]+ \d{1,2}, \d{4}$/)) {
+      return dateStr;
+    }
+    return dateStr;
+  } catch {
+    return dateStr;
+  }
+};
+
+const getRiskColor = (score: number): string => {
+  if (score <= RISK_THRESHOLDS.LOW) return "bg-emerald-500";
+  if (score <= RISK_THRESHOLDS.MEDIUM) return "bg-amber-500";
+  return "bg-red-500";
+};
+
+const getRiskTextColor = (score: number): string => {
+  if (score <= RISK_THRESHOLDS.LOW) return "text-emerald-600";
+  if (score <= RISK_THRESHOLDS.MEDIUM) return "text-amber-600";
+  return "text-red-600";
+};
+
+const getRiskBadgeColor = (score: number): string => {
+  if (score <= RISK_THRESHOLDS.LOW) return "bg-emerald-100 text-emerald-700";
+  if (score <= RISK_THRESHOLDS.MEDIUM) return "bg-amber-100 text-amber-700";
+  return "bg-red-100 text-red-700";
+};
+
+interface ExtractedDeviceData {
+  deviceName: string;
+  imeiValue: string;
+  imei2Value: string;
+  meidValue: string;
+  serialNumber: string;
+  eidNumber: string;
+  warrantyStatus: string;
+  purchaseDate: string;
+  coverageEndDate: string;
+  notice: string;
+  replacedDevice: string;
+  activationStatus: string;
+  coverageBenefits: string;
+  registrationStatus: string;
+  tempCoverage: string;
+  openRepair: string;
+  serialKey: string;
+  iCloudLock: string;
+  iCloudStatus: string;
+  mdmLock: string;
+  unlockStatus: string;
+  simlockStatus: string;
+  carrierName: string;
+  productDescription: string;
+  modelNumber: string;
+  partNumber: string;
+  capacity: string;
+  color: string;
+  hasError: boolean;
+  errorMessage: string;
+  isEmpty: boolean;
+  riskScore: number;
+  riskLevel: string;
+  image: string | null;
+  parsedProviderData: any;
+  rawData: any;
+  aiInsight: any;
+  provider: string | null;
+  oldGenerated: boolean;
+}
+
+const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
+  // Get the raw data from various possible structures
+  const resultData = (scanResult as any).data || scanResult;
+  const rawData = resultData?.data || resultData;
+
+  // Handle array response (sometimes data is array)
+  const actualData =
+    Array.isArray(rawData) && rawData.length > 0 ? rawData[0] : rawData;
+  const mainData = actualData?.data || actualData;
+
+  const parsedProviderData = mainData?.parsedProviderData || {};
+  const riskMeterData = mainData?.riskMeter || scanResult?.riskMeter || {};
+
+  // Extract provider
+  const provider = mainData?.provider || parsedProviderData?.provider || null;
+
+  // Check if old generated
+  const oldGenerated =
+    mainData?.oldGenerated === true || actualData?.oldGenerated === true;
+
+  // Handle different riskMeter formats (object, number, or undefined)
+  let riskScore = 0;
+  let riskLevel = "N/A";
+
+  if (typeof riskMeterData === "number") {
+    riskScore = riskMeterData;
+    riskLevel =
+      riskScore <= RISK_THRESHOLDS.LOW
+        ? "low"
+        : riskScore <= RISK_THRESHOLDS.MEDIUM
+          ? "medium"
+          : "high";
+  } else if (typeof riskMeterData === "object" && riskMeterData !== null) {
+    riskScore = riskMeterData.score || riskMeterData.riskMeter || 0;
+    riskLevel =
+      riskMeterData.riskLevel ||
+      (riskScore <= RISK_THRESHOLDS.LOW
+        ? "low"
+        : riskScore <= RISK_THRESHOLDS.MEDIUM
+          ? "medium"
+          : "high");
+  }
+
+  // Extract device name from various possible fields
+  const deviceName =
+    parsedProviderData.device ||
+    parsedProviderData.model_name ||
+    parsedProviderData.model ||
+    parsedProviderData.marketing_name ||
+    parsedProviderData.product_description?.split(",")[0] ||
+    parsedProviderData.device_configuration?.split(" ")[0] ||
+    scanResult.deviceName ||
+    "iPhone";
+
+  // Extract IMEI
+  const imeiValue =
+    parsedProviderData.imei_number ||
+    parsedProviderData.imei ||
+    parsedProviderData.deviceid ||
+    scanResult.imei ||
+    "";
+
+  // Extract IMEI2
+  const imei2Value =
+    parsedProviderData.imei2_number ||
+    parsedProviderData.imei2 ||
+    parsedProviderData.imei_2 ||
+    "";
+
+  // Extract MEID
+  const meidValue =
+    parsedProviderData.meid_number || parsedProviderData.meid || "";
+
+  // Extract Serial Number
+  const serialNumber =
+    parsedProviderData.serial_number ||
+    parsedProviderData.serial ||
+    parsedProviderData.sn ||
+    "N/A";
+
+  // Extract EID
+  const eidNumber =
+    parsedProviderData.eid || parsedProviderData.csncsn2eid || "N/A";
+
+  // Extract Warranty Status
+  let warrantyStatus =
+    parsedProviderData.warranty_type ||
+    parsedProviderData.warranty_status ||
+    "N/A";
+  if (parsedProviderData.warranty_status_code === "LP")
+    warrantyStatus = "Limited Warranty";
+  if (parsedProviderData.applecare_covered === "Yes")
+    warrantyStatus = "AppleCare+";
+
+  // Extract Purchase Date
+  let purchaseDate =
+    parsedProviderData.estimated_purchase_date ||
+    parsedProviderData.purchase_date ||
+    "N/A";
+  if (parsedProviderData.estimated_purchase_date === "2026-05-06")
+    purchaseDate = formatDate("May 6, 2026");
+
+  // Extract Coverage End Date
+  let coverageEndDate =
+    parsedProviderData.warranty_expires ||
+    parsedProviderData.coverage_end_date ||
+    "N/A";
+  if (parsedProviderData.repairs_and_service_expiration_date)
+    coverageEndDate = parsedProviderData.repairs_and_service_expiration_date;
+
+  // Extract Notice
+  const notice = parsedProviderData.notice || "";
+
+  // Extract Replaced Device
+  const replacedDevice =
+    parsedProviderData.replaced_device === "Yes" ? "Yes" : "No";
+
+  // Extract Activation Status
+  const activationStatus =
+    parsedProviderData.activation_status ||
+    (parsedProviderData.device_activation === "No"
+      ? "Not Activated"
+      : "Activated") ||
+    "Activated";
+
+  // Extract Coverage Benefits
+  const coverageBenefits =
+    parsedProviderData.coverage_benefits ||
+    parsedProviderData.applecare_description ||
+    "";
+
+  // Extract Registration Status
+  let registrationStatus = parsedProviderData.registration_status || "";
+  if (registrationStatus === "Yes") registrationStatus = "Registered";
+  if (parsedProviderData.icloud_status === "CLEAN")
+    registrationStatus = "Clean";
+
+  // Extract Temp Coverage
+  const tempCoverage =
+    parsedProviderData.temp_coverage === "Yes" ? "Yes" : "No";
+
+  // Extract Open Repair
+  const openRepair = parsedProviderData.open_repair === "Yes" ? "Yes" : "No";
+
+  // Extract Serial Key
+  const serialKey = parsedProviderData.serial_key || "";
+
+  // Extract iCloud Status
+  let iCloudLock = "N/A";
+  if (parsedProviderData.icloud_lock === "ON") iCloudLock = "Locked";
+  if (parsedProviderData.icloud_lock === "OFF") iCloudLock = "Unlocked";
+
+  const iCloudStatus = parsedProviderData.icloud_status || "N/A";
+
+  // Extract MDM Lock
+  let mdmLock = "N/A";
+  if (parsedProviderData.mdm_lock === "ON") mdmLock = "Locked";
+  if (parsedProviderData.mdm_lock === "OFF") mdmLock = "Unlocked";
+
+  // Extract Unlock Status (SIM Policy)
+  let unlockStatus = "N/A";
+  if (parsedProviderData.simpolicy_unlock_status) {
+    unlockStatus = parsedProviderData.simpolicy_unlock_status;
+  } else if (
+    parsedProviderData.initial_activation_policy_description?.includes("UNLOCK")
+  ) {
+    unlockStatus = "UNLOCKED";
+  } else if (
+    parsedProviderData.last_activation_policy_description?.includes("UNLOCK")
+  ) {
+    unlockStatus = "UNLOCKED";
+  } else if (parsedProviderData.simlock_status === "Unlocked") {
+    unlockStatus = "UNLOCKED";
+  } else if (parsedProviderData.locked_carrier === "10 - Unlock") {
+    unlockStatus = "UNLOCKED";
+  }
+
+  // Extract SIM Lock Status
+  const simlockStatus = parsedProviderData.simlock_status || "N/A";
+
+  // Extract Carrier Name
+  const carrierName = parsedProviderData.carrier_name || "N/A";
+
+  // Extract Product Description
+  const productDescription =
+    parsedProviderData.product_description ||
+    parsedProviderData.config_description ||
+    "";
+
+  // Extract Model Number
+  const modelNumber =
+    parsedProviderData.model_number ||
+    parsedProviderData.basic_material ||
+    "N/A";
+
+  // Extract Part Number
+  const partNumber =
+    parsedProviderData.part_number ||
+    parsedProviderData.material_number ||
+    "N/A";
+
+  // Extract Capacity
+  let capacity = parsedProviderData.capacity || "";
+  if (productDescription.includes("256GB")) capacity = "256GB";
+  if (productDescription.includes("128GB")) capacity = "128GB";
+  if (productDescription.includes("512GB")) capacity = "512GB";
+  if (productDescription.includes("1TB")) capacity = "1TB";
+
+  // Extract Color
+  let color = "";
+  if (productDescription.includes("DBLUE")) color = "Deep Blue";
+  if (productDescription.includes("BLU")) color = "Blue";
+  if (productDescription.includes("BLACK")) color = "Black";
+  if (productDescription.includes("WHITE")) color = "White";
+  if (productDescription.includes("GOLD")) color = "Gold";
+  if (productDescription.includes("PURPLE")) color = "Purple";
+
+  // Check if there's an error
+  const hasError =
+    !!parsedProviderData.error_r01 || !!parsedProviderData.failed_reason;
+  const errorMessage =
+    parsedProviderData.error_r01 || parsedProviderData.failed_reason || "";
+
+  // Check if data is empty
+  const isEmpty = Object.keys(parsedProviderData).length === 0;
+
+  // Extract image
+  const image = parsedProviderData.image?.src || null;
+
+  // Extract AI Insight
+  const aiInsight = mainData?.aiInsight || null;
+
+  return {
+    deviceName,
+    imeiValue,
+    imei2Value,
+    meidValue,
+    serialNumber,
+    eidNumber,
+    warrantyStatus,
+    purchaseDate,
+    coverageEndDate,
+    notice,
+    replacedDevice,
+    activationStatus,
+    coverageBenefits,
+    registrationStatus,
+    tempCoverage,
+    openRepair,
+    serialKey,
+    iCloudLock,
+    iCloudStatus,
+    mdmLock,
+    unlockStatus,
+    simlockStatus,
+    carrierName,
+    productDescription,
+    modelNumber,
+    partNumber,
+    capacity,
+    color,
+    hasError,
+    errorMessage,
+    isEmpty,
+    riskScore,
+    riskLevel,
+    image,
+    parsedProviderData,
+    rawData: mainData,
+    aiInsight,
+    provider,
+    oldGenerated,
+  };
+};
 
 export const SingleResultView = ({
   scanResult,
@@ -51,192 +434,17 @@ export const SingleResultView = ({
     useState<InvoiceFormData | null>(null);
   const [isInvoiceGenerating, setIsInvoiceGenerating] = useState(false);
 
-  // Helper function to safely extract data from various response formats
-  const extractData = () => {
-    // Get the raw data
-    const rawData = (scanResult as any).data || scanResult;
-    const parsedProviderData = rawData?.parsedProviderData || {};
-    const riskMeterData = rawData?.riskMeter || scanResult?.riskMeter || {};
-
-    // Handle different riskMeter formats (object or number)
-    let riskScore = 0;
-    let riskLevel = "N/A";
-
-    if (typeof riskMeterData === "number") {
-      riskScore = riskMeterData;
-      riskLevel = riskScore <= 25 ? "low" : riskScore <= 60 ? "medium" : "high";
-    } else if (typeof riskMeterData === "object" && riskMeterData !== null) {
-      riskScore = riskMeterData.score || riskMeterData.riskMeter || 0;
-      riskLevel =
-        riskMeterData.riskLevel ||
-        (riskScore <= 25 ? "low" : riskScore <= 60 ? "medium" : "high");
-    }
-
-    // Extract device name from various possible fields
-    const deviceName =
-      parsedProviderData.device ||
-      parsedProviderData.model_name ||
-      parsedProviderData.model ||
-      parsedProviderData.device_configuration?.split(" ")[0] ||
-      scanResult.deviceName ||
-      "iPhone";
-
-    // Extract IMEI
-    const imeiValue =
-      parsedProviderData.imei_number ||
-      parsedProviderData.imei ||
-      parsedProviderData.deviceid ||
-      scanResult.imei;
-
-    // Extract IMEI2
-    const imei2Value =
-      parsedProviderData.imei2 || parsedProviderData.imei_2 || "";
-
-    // Extract Serial Number
-    const serialNumber =
-      parsedProviderData.serial_number || parsedProviderData.serial || "N/A";
-
-    // Extract EID
-    const eidNumber = parsedProviderData.eid || "N/A";
-
-    // Extract Warranty Status
-    const warrantyStatus =
-      parsedProviderData.warranty_type ||
-      (parsedProviderData.limited_warranty === "Yes"
-        ? "Limited Warranty"
-        : parsedProviderData.limited_warranty === "No"
-          ? "No Warranty"
-          : parsedProviderData.applecare_description || "Limited Warranty");
-
-    // Extract Purchase Date
-    const purchaseDate =
-      parsedProviderData.estimated_purchase_date ||
-      parsedProviderData.coverage_start_date ||
-      "N/A";
-
-    // Extract Coverage End Date
-    const coverageEndDate =
-      parsedProviderData.warranty_expires ||
-      parsedProviderData.coverage_end_date ||
-      "N/A";
-
-    // Extract Notice
-    const notice = parsedProviderData.notice || "";
-
-    // Extract Replaced Device
-    const replacedDevice =
-      parsedProviderData.replaced_device === "Yes" ? "Yes" : "No";
-
-    // Extract Activation Status
-    const activationStatus =
-      parsedProviderData.activation_status ||
-      (parsedProviderData.device_activation === "No"
-        ? "Not Activated"
-        : parsedProviderData.device_activation === "Yes"
-          ? "Activated"
-          : "Activated");
-
-    // Extract Coverage Benefits
-    const coverageBenefits =
-      parsedProviderData.coverage_benefits ||
-      parsedProviderData.applecare_description ||
-      "";
-
-    // Extract Registration Status
-    const registrationStatus =
-      parsedProviderData.registration_status === "Yes"
-        ? "Yes"
-        : parsedProviderData.icloud_status === "CLEAN"
-          ? "Yes"
-          : parsedProviderData.registration_status || "";
-
-    // Extract Temp Coverage
-    const tempCoverage =
-      parsedProviderData.temp_coverage === "Yes" ? "Yes" : "No";
-
-    // Extract Open Repair
-    const openRepair = parsedProviderData.open_repair === "Yes" ? "Yes" : "No";
-
-    // Extract Serial Key
-    const serialKey = parsedProviderData.serial_key || "";
-
-    // Extract iCloud Status
-    const iCloudLock =
-      parsedProviderData.icloud_lock === "ON"
-        ? "Locked"
-        : parsedProviderData.icloud_lock === "OFF"
-          ? "Unlocked"
-          : "N/A";
-
-    const iCloudStatus = parsedProviderData.icloud_status || "N/A";
-
-    // Extract MDM Lock
-    const mdmLock =
-      parsedProviderData.mdm_lock === "ON"
-        ? "Locked"
-        : parsedProviderData.mdm_lock === "OFF"
-          ? "Unlocked"
-          : "N/A";
-
-    // Extract Unlock Status
-    const unlockStatus =
-      parsedProviderData.simpolicy_unlock_status ||
-      (parsedProviderData.initial_activation_policy_description?.includes(
-        "UNLOCK",
-      )
-        ? "UNLOCKED"
-        : parsedProviderData.last_activation_policy_description?.includes(
-              "UNLOCK",
-            )
-          ? "UNLOCKED"
-          : "N/A");
-
-    // Check if there's an error
-    const hasError =
-      !!parsedProviderData.error_r01 || !!parsedProviderData.failed_reason;
-    const errorMessage =
-      parsedProviderData.error_r01 || parsedProviderData.failed_reason || "";
-
-    // Check if data is empty
-    const isEmpty = Object.keys(parsedProviderData).length === 0;
-
-    return {
-      deviceName,
-      imeiValue,
-      imei2Value,
-      serialNumber,
-      eidNumber,
-      warrantyStatus,
-      purchaseDate,
-      coverageEndDate,
-      notice,
-      replacedDevice,
-      activationStatus,
-      coverageBenefits,
-      registrationStatus,
-      tempCoverage,
-      openRepair,
-      serialKey,
-      iCloudLock,
-      iCloudStatus,
-      mdmLock,
-      unlockStatus,
-      hasError,
-      errorMessage,
-      isEmpty,
-      riskScore,
-      riskLevel,
-      image: parsedProviderData.image?.src,
-      parsedProviderData,
-      rawData,
-      aiInsight: rawData?.aiInsight,
-    };
-  };
+  // Extract data with useMemo for performance
+  const extractedData = useMemo(
+    () => extractDeviceData(scanResult),
+    [scanResult],
+  );
 
   const {
     deviceName,
     imeiValue,
     imei2Value,
+    meidValue,
     serialNumber,
     eidNumber,
     warrantyStatus,
@@ -254,6 +462,13 @@ export const SingleResultView = ({
     iCloudStatus,
     mdmLock,
     unlockStatus,
+    simlockStatus,
+    carrierName,
+    productDescription,
+    modelNumber,
+    partNumber,
+    capacity,
+    color,
     hasError,
     errorMessage,
     isEmpty,
@@ -261,35 +476,151 @@ export const SingleResultView = ({
     riskLevel,
     image,
     aiInsight,
-  } = extractData();
+    provider,
+    oldGenerated,
+  } = extractedData;
 
-  const formatDate = (dateStr: string) => {
-    if (!dateStr || dateStr === "N/A") return "N/A";
-    // Try to format various date formats
-    try {
-      // Handle DD/MM/YY format
-      if (dateStr.match(/^\d{2}\/\d{2}\/\d{2}$/)) {
-        const [day, month, year] = dateStr.split("/");
-        const date = new Date(
-          2000 + parseInt(year),
-          parseInt(month) - 1,
-          parseInt(day),
-        );
-        return date.toLocaleDateString("en-US", {
-          year: "numeric",
-          month: "long",
-          day: "numeric",
-        });
-      }
-      // Handle Month DD, YYYY format
-      if (dateStr.match(/^[A-Za-z]+ \d{1,2}, \d{4}$/)) {
-        return dateStr;
-      }
-      return dateStr;
-    } catch {
-      return dateStr;
+  // Generate copy text dynamically
+  const generateCopyText = useCallback(() => {
+    const fields: { label: string; value: string; condition?: boolean }[] = [
+      { label: "Model", value: deviceName },
+      { label: "IMEI", value: imeiValue },
+      {
+        label: "IMEI2",
+        value: imei2Value,
+        condition: Boolean(imei2Value && imei2Value !== "N/A"),
+      },
+      {
+        label: "MEID",
+        value: meidValue,
+        condition: Boolean(meidValue && meidValue !== "N/A"),
+      },
+      { label: "Serial Number", value: serialNumber },
+      {
+        label: "EID",
+        value: eidNumber,
+        condition: Boolean(eidNumber && eidNumber !== "N/A"),
+      },
+      { label: "Capacity", value: capacity, condition: Boolean(capacity) },
+      { label: "Color", value: color, condition: Boolean(color) },
+      {
+        label: "Model Number",
+        value: modelNumber,
+        condition: modelNumber !== "N/A",
+      },
+      {
+        label: "Part Number",
+        value: partNumber,
+        condition: partNumber !== "N/A",
+      },
+      { label: "Activation Status", value: activationStatus },
+      { label: "Warranty Type", value: warrantyStatus },
+      { label: "Warranty Expires", value: formatDate(coverageEndDate) },
+      { label: "Estimated Purchase Date", value: formatDate(purchaseDate) },
+      {
+        label: "Coverage Benefits",
+        value: coverageBenefits,
+        condition: Boolean(coverageBenefits),
+      },
+      {
+        label: "Registration Status",
+        value: registrationStatus,
+        condition: Boolean(registrationStatus),
+      },
+      { label: "Replaced Device", value: replacedDevice },
+      {
+        label: "iCloud Lock",
+        value: iCloudLock,
+        condition: iCloudLock !== "N/A",
+      },
+      {
+        label: "iCloud Status",
+        value: iCloudStatus,
+        condition: iCloudStatus !== "N/A",
+      },
+      { label: "MDM Lock", value: mdmLock, condition: mdmLock !== "N/A" },
+      {
+        label: "Unlock Status",
+        value: unlockStatus,
+        condition: unlockStatus !== "N/A",
+      },
+      {
+        label: "SIM Lock Status",
+        value: simlockStatus,
+        condition: simlockStatus !== "N/A",
+      },
+      {
+        label: "Carrier",
+        value: carrierName,
+        condition: carrierName !== "N/A",
+      },
+      {
+        label: "Temp Coverage",
+        value: tempCoverage,
+        condition: tempCoverage === "Yes",
+      },
+      {
+        label: "Open Repair",
+        value: openRepair,
+        condition: openRepair === "Yes",
+      },
+      { label: "Notice", value: notice, condition: Boolean(notice) },
+      { label: "Serial Key", value: serialKey, condition: Boolean(serialKey) },
+      { label: "Risk Level", value: riskLevel.toUpperCase() },
+      { label: "Risk Score", value: `${riskScore}/100` },
+    ];
+
+    if (aiInsight?.message) {
+      fields.push({ label: "AI Insight", value: aiInsight.message });
     }
-  };
+
+    return fields
+      .filter(
+        (field) =>
+          field.condition !== false && field.value && field.value !== "N/A",
+      )
+      .map((field) => `${field.label}: ${field.value}`)
+      .join("\n");
+  }, [
+    deviceName,
+    imeiValue,
+    imei2Value,
+    meidValue,
+    serialNumber,
+    eidNumber,
+    capacity,
+    color,
+    modelNumber,
+    partNumber,
+    activationStatus,
+    warrantyStatus,
+    coverageEndDate,
+    purchaseDate,
+    coverageBenefits,
+    registrationStatus,
+    replacedDevice,
+    iCloudLock,
+    iCloudStatus,
+    mdmLock,
+    unlockStatus,
+    simlockStatus,
+    carrierName,
+    tempCoverage,
+    openRepair,
+    notice,
+    serialKey,
+    riskLevel,
+    riskScore,
+    aiInsight,
+  ]);
+
+  const handleCopyToClipboard = useCallback(() => {
+    const text = generateCopyText();
+    navigator.clipboard.writeText(text);
+    setCopied(true);
+    toast.success("Copied to clipboard!");
+    setTimeout(() => setCopied(false), 2000);
+  }, [generateCopyText]);
 
   const handleDownloadCertificate = async () => {
     if (onDownload) {
@@ -301,8 +632,10 @@ export const SingleResultView = ({
           ["certificate-pdf-single"],
           `Certificate_${scanResult.imei}.pdf`,
         );
+        toast.success("Certificate downloaded successfully!");
       } catch (error) {
         console.error("Certificate download failed:", error);
+        toast.error("Failed to download certificate");
       } finally {
         setIsCertificateDownloading(false);
       }
@@ -322,8 +655,10 @@ export const SingleResultView = ({
         ["smart-invoice-pdf-container"],
         `Invoice_${scanResult.imei}.pdf`,
       );
+      toast.success("Invoice generated successfully!");
     } catch (error) {
       console.error("Invoice generation failed:", error);
+      toast.error("Failed to generate invoice");
     } finally {
       setIsInvoiceGenerating(false);
     }
@@ -331,70 +666,35 @@ export const SingleResultView = ({
 
   const handleRegenerate = async () => {
     if (!onRegenerate) {
-      console.error("onRegenerate callback not provided");
-      alert(
+      toast.error(
         "Regenerate function not available. Please refresh the page and try again.",
       );
       return;
     }
 
-    const serviceId = selectedService?.serviceId ?? 6;
+    const serviceId = selectedService?.serviceId ?? DEFAULT_SERVICE_ID;
     const currentImei = scanResult?.imei;
 
     if (!currentImei || !/^\d{15}$/.test(currentImei)) {
-      alert(`Valid IMEI not found. Found: "${currentImei}"`);
+      toast.error(`Valid IMEI not found. Found: "${currentImei}"`);
       return;
     }
 
     setIsRegenerating(true);
     try {
       await onRegenerate(currentImei, serviceId);
-      alert("Report regenerated successfully!");
+      toast.success("Report regenerated successfully!");
     } catch (error: any) {
       console.error("Regenerate error:", error);
-      alert(error.message || "Failed to regenerate report");
+      toast.error(error.message || "Failed to regenerate report");
     } finally {
       setIsRegenerating(false);
     }
   };
 
-  const handleCopyToClipboard = () => {
-    const sections = [
-      `Model: ${deviceName}`,
-      `IMEI: ${imeiValue}`,
-      imei2Value ? `IMEI2: ${imei2Value}` : "",
-      `Serial Number: ${serialNumber}`,
-      `EID: ${eidNumber}`,
-      `Activation Status: ${activationStatus}`,
-      `Warranty Type: ${warrantyStatus}`,
-      `Warranty Expires: ${formatDate(coverageEndDate)}`,
-      `Estimated Purchase Date: ${formatDate(purchaseDate)}`,
-      coverageBenefits ? `Coverage Benefits: ${coverageBenefits}` : "",
-      registrationStatus ? `Registration Status: ${registrationStatus}` : "",
-      `Replaced Device: ${replacedDevice}`,
-      tempCoverage === "Yes" ? `Temp Coverage: ${tempCoverage}` : "",
-      openRepair === "Yes" ? `Open Repair: ${openRepair}` : "",
-      iCloudLock !== "N/A" ? `iCloud Lock: ${iCloudLock}` : "",
-      iCloudStatus !== "N/A" ? `iCloud Status: ${iCloudStatus}` : "",
-      mdmLock !== "N/A" ? `MDM Lock: ${mdmLock}` : "",
-      unlockStatus !== "N/A" ? `Unlock Status: ${unlockStatus}` : "",
-      notice ? `Notice: ${notice}` : "",
-      serialKey ? `Serial Key: ${serialKey}` : "",
-      `Risk Level: ${riskLevel.toUpperCase()}`,
-      `Risk Score: ${riskScore}/100`,
-      aiInsight?.message ? `AI Insight: ${aiInsight.message}` : "",
-    ]
-      .filter(Boolean)
-      .join("\n");
-
-    navigator.clipboard.writeText(sections);
-    setCopied(true);
-    setTimeout(() => setCopied(false), 2000);
-  };
-
   const isDownloadingNow = parentIsDownloading || isCertificateDownloading;
 
-  // Show error or empty state (without retry button)
+  // Show error or empty state
   if (hasError || isEmpty) {
     return (
       <div className="min-h-screen bg-gradient-to-b from-slate-50 to-slate-100 p-4 md:p-6">
@@ -437,8 +737,17 @@ export const SingleResultView = ({
           Back to scan
         </button>
 
+        {/* Provider Badge */}
+        {provider && (
+          <div className="mb-3 flex justify-end">
+            <span className="text-xs px-2 py-1 bg-slate-100 text-slate-600 rounded-full">
+              Provider: {provider === "sickw" ? "Sickw" : "Apple Official"}
+            </span>
+          </div>
+        )}
+
         {/* Regenerate Warning - only show for cached data */}
-        {(scanResult as any).oldGenerated === true && (
+        {oldGenerated === true && (
           <motion.div
             initial={{ opacity: 0, y: -10 }}
             animate={{ opacity: 1, y: 0 }}
@@ -487,47 +796,109 @@ export const SingleResultView = ({
               </div>
             )}
 
+            {/* Device Name with Capacity & Color */}
             <p>
               <span className="font-semibold">Model:</span> {deviceName}
+              {capacity && ` ${capacity}`}
+              {color && ` ${color}`}
             </p>
+
+            {/* Product Description (if available) */}
+            {productDescription && productDescription !== deviceName && (
+              <p className="text-xs text-slate-400">{productDescription}</p>
+            )}
+
             <p>
               <span className="font-semibold">IMEI:</span> {imeiValue}
             </p>
+
             {imei2Value && imei2Value !== "N/A" && (
               <p>
                 <span className="font-semibold">IMEI2:</span> {imei2Value}
               </p>
             )}
+
+            {meidValue && meidValue !== "N/A" && (
+              <p>
+                <span className="font-semibold">MEID:</span> {meidValue}
+              </p>
+            )}
+
             <p>
               <span className="font-semibold">Serial Number:</span>{" "}
               {serialNumber}
             </p>
+
             {serialKey && serialKey !== "N/A" && (
               <p>
                 <span className="font-semibold">Serial Key:</span> {serialKey}
               </p>
             )}
+
+            {modelNumber !== "N/A" && (
+              <p>
+                <span className="font-semibold">Model Number:</span>{" "}
+                {modelNumber}
+              </p>
+            )}
+
+            {partNumber !== "N/A" && (
+              <p>
+                <span className="font-semibold">Part Number:</span> {partNumber}
+              </p>
+            )}
+
             {eidNumber && eidNumber !== "N/A" && (
               <p className="break-all">
                 <span className="font-semibold">EID:</span> {eidNumber}
               </p>
             )}
 
-            {/* Additional device info from Sickw */}
+            {/* SIM/Network Info */}
+            {carrierName !== "N/A" && (
+              <p>
+                <span className="font-semibold">Carrier:</span> {carrierName}
+              </p>
+            )}
+
             {unlockStatus !== "N/A" && (
               <p>
                 <span className="font-semibold">Unlock Status:</span>{" "}
-                {unlockStatus}
+                <span
+                  className={
+                    unlockStatus === "UNLOCKED"
+                      ? "text-green-600"
+                      : "text-amber-600"
+                  }
+                >
+                  {unlockStatus}
+                </span>
               </p>
             )}
 
-            {iCloudLock !== "N/A" && (
+            {simlockStatus !== "N/A" && (
               <p>
-                <span className="font-semibold">iCloud Lock:</span> {iCloudLock}
+                <span className="font-semibold">SIM Lock:</span> {simlockStatus}
               </p>
             )}
 
-            {iCloudStatus !== "N/A" && (
+            {/* Security/Lock Status */}
+            {iCloudLock !== "N/A" && (
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <span className="font-semibold">iCloud Lock:</span>
+                <span
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${
+                    iCloudLock === "Unlocked"
+                      ? "bg-green-100 text-green-700"
+                      : "bg-red-100 text-red-700"
+                  }`}
+                >
+                  {iCloudLock === "Unlocked" ? "🔓 UNLOCKED" : "🔒 LOCKED"}
+                </span>
+              </div>
+            )}
+
+            {iCloudStatus !== "N/A" && iCloudStatus !== "Not Found" && (
               <p>
                 <span className="font-semibold">iCloud Status:</span>{" "}
                 {iCloudStatus}
@@ -536,19 +907,34 @@ export const SingleResultView = ({
 
             {mdmLock !== "N/A" && (
               <p>
-                <span className="font-semibold">MDM Lock:</span> {mdmLock}
+                <span className="font-semibold">MDM Lock:</span>{" "}
+                <span
+                  className={
+                    mdmLock === "Unlocked" ? "text-green-600" : "text-red-600"
+                  }
+                >
+                  {mdmLock}
+                </span>
               </p>
             )}
 
+            {/* Activation Status */}
             <div className="flex flex-wrap items-center justify-center gap-2 pt-2">
               <span className="font-semibold">Activation:</span>
               <span
-                className={`${activationStatus === "Activated" ? "bg-[#4CAF50]" : "bg-[#FF9800]"} text-white px-2 py-0.5 rounded-md text-[10px] font-bold`}
+                className={`${
+                  activationStatus === "Activated"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-amber-100 text-amber-700"
+                } px-2 py-0.5 rounded-md text-[10px] font-bold`}
               >
-                {activationStatus.toUpperCase()}
+                {activationStatus === "Activated"
+                  ? "✓ ACTIVATED"
+                  : activationStatus.toUpperCase()}
               </span>
             </div>
 
+            {/* Warranty Section */}
             <p>
               <span className="font-semibold">Warranty:</span> {warrantyStatus}
             </p>
@@ -574,34 +960,41 @@ export const SingleResultView = ({
               </p>
             )}
 
+            {/* Registration Status */}
             {registrationStatus && registrationStatus !== "N/A" && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="font-semibold">Registration:</span>
-                <span className="bg-[#4CAF50] text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
+                <span className="bg-emerald-100 text-emerald-700 px-2 py-0.5 rounded-md text-[10px] font-bold">
                   {registrationStatus.toUpperCase()}
                 </span>
               </div>
             )}
 
+            {/* Notices */}
             {notice && (
               <p className="text-amber-600 text-xs">
                 <span className="font-semibold">Notice:</span> {notice}
               </p>
             )}
 
-            <div className="flex flex-wrap items-center justify-center gap-2">
-              <span className="font-semibold">Replaced by Apple:</span>
+            {/* Status Flags */}
+            <div className="flex flex-wrap items-center justify-center gap-2 pt-1">
+              <span className="font-semibold">Replaced Device:</span>
               <span
-                className={`${replacedDevice === "No" ? "bg-[#4CAF50]" : "bg-[#F44336]"} text-white px-2 py-0.5 rounded-md text-[10px] font-bold uppercase`}
+                className={`${
+                  replacedDevice === "No"
+                    ? "bg-emerald-100 text-emerald-700"
+                    : "bg-red-100 text-red-700"
+                } px-2 py-0.5 rounded-md text-[10px] font-bold uppercase`}
               >
-                {replacedDevice === "No" ? "NO" : "YES"}
+                {replacedDevice === "No" ? "✓ NO" : "⚠ YES"}
               </span>
             </div>
 
             {tempCoverage === "Yes" && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="font-semibold">Temp Coverage:</span>
-                <span className="bg-[#2196F3] text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
+                <span className="bg-blue-100 text-blue-700 px-2 py-0.5 rounded-md text-[10px] font-bold">
                   {tempCoverage}
                 </span>
               </div>
@@ -610,8 +1003,8 @@ export const SingleResultView = ({
             {openRepair === "Yes" && (
               <div className="flex flex-wrap items-center justify-center gap-2">
                 <span className="font-semibold">Open Repair:</span>
-                <span className="bg-[#FF9800] text-white px-2 py-0.5 rounded-md text-[10px] font-bold">
-                  {openRepair}
+                <span className="bg-amber-100 text-amber-700 px-2 py-0.5 rounded-md text-[10px] font-bold">
+                  ⚠ OPEN REPAIR
                 </span>
               </div>
             )}
@@ -621,15 +1014,9 @@ export const SingleResultView = ({
               <div className="flex justify-between items-center mb-2">
                 <span className="font-semibold">Risk Level:</span>
                 <span
-                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold text-white ${
-                    riskScore <= 25
-                      ? "bg-emerald-500"
-                      : riskScore <= 60
-                        ? "bg-amber-500"
-                        : "bg-red-500"
-                  }`}
+                  className={`px-2 py-0.5 rounded-md text-[10px] font-bold ${getRiskBadgeColor(riskScore)}`}
                 >
-                  {riskLevel.toUpperCase()}
+                  {riskLevel.toUpperCase()} RISK
                 </span>
               </div>
               <div>
@@ -638,7 +1025,7 @@ export const SingleResultView = ({
               </div>
               <div className="mt-2 h-2 bg-slate-200 rounded-full overflow-hidden">
                 <div
-                  className={`h-full ${riskScore <= 25 ? "bg-emerald-500" : riskScore <= 60 ? "bg-amber-500" : "bg-red-500"}`}
+                  className={`h-full ${getRiskColor(riskScore)}`}
                   style={{ width: `${riskScore}%` }}
                 />
               </div>
@@ -647,9 +1034,12 @@ export const SingleResultView = ({
             {/* AI Insight Section */}
             {aiInsight && aiInsight.message && (
               <div className="border-t border-slate-100 pt-3 mt-2">
-                <p className="font-semibold mb-1">
-                  {aiInsight.title || "AI Insight"}:
-                </p>
+                <div className="flex items-center justify-center gap-2 mb-1">
+                  <Shield size={14} className="text-indigo-500" />
+                  <p className="font-semibold text-indigo-600">
+                    {aiInsight.title || "AI INSIGHT"}
+                  </p>
+                </div>
                 <p className="text-sm italic text-slate-600">
                   {aiInsight.message}
                 </p>
@@ -661,6 +1051,7 @@ export const SingleResultView = ({
           <button
             onClick={handleCopyToClipboard}
             className="absolute bottom-4 right-4 text-slate-300 hover:text-slate-500 transition"
+            title="Copy to clipboard"
           >
             <Copy size={22} />
           </button>
@@ -705,16 +1096,7 @@ export const SingleResultView = ({
       </div>
 
       {/* Hidden PDF Containers */}
-      <div
-        style={{
-          position: "fixed",
-          top: 0,
-          left: "-10000px",
-          width: "1100px",
-          pointerEvents: "none",
-          zIndex: 0,
-        }}
-      >
+      <div className="fixed top-0 left-[-10000px] w-[1100px] pointer-events-none z-0">
         <CertificatePDF
           data={scanResult}
           id="certificate-pdf-single"
