@@ -583,15 +583,18 @@ export default function Settings() {
           className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-muted shadow-inner group cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Image
-            src={
-              imagePreview ||
-              "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop"
-            }
-            alt="Profile"
-            fill
-            className="object-cover"
-          />
+          {imagePreview ? (
+            <Image
+              src={imagePreview}
+              alt="Profile"
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <User className="w-10 h-10 text-muted-foreground" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Camera className="text-white w-6 h-6" />
           </div>

@@ -157,7 +157,10 @@ export default function Banner() {
   ];
 
   return (
-    <section className="relative flex min-h-[720px] overflow-hidden lg:h-[1060px] lg:min-h-0">
+    <section
+      id="banner"
+      className="relative flex min-h-[720px] overflow-hidden lg:h-[1060px] lg:min-h-0"
+    >
       {/* Background */}
       <div className="absolute inset-0 z-0 bg-background">
         <div className="absolute left-1/2 top-[42%] h-[240px] w-[90%] md:w-[1280px] md:h-[520px] lg:h-[658px] lg:w-[1520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,rgba(189,230,59,0.9)_0%,rgba(124,203,180,0.72)_48%,rgba(49,138,251,0.9)_100%)] blur-[60px] md:blur-[82px]" />

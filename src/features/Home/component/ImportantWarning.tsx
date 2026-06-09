@@ -9,6 +9,7 @@ import {
   Lock,
   CheckCircle2,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function ImportantWarning() {
   return (
@@ -60,9 +61,11 @@ export default function ImportantWarning() {
             </div>
 
             {/* CTA Button */}
-            <button className="bg-[#84CC16] hover:bg-[#6fa512] text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-lime-500/20 transition-all cursor-pointer">
-              Check Your Device Now
-            </button>
+            <Link href={`#banner`}>
+              <button className="bg-[#84CC16] hover:bg-[#6fa512] text-white px-8 py-4 rounded-2xl font-bold shadow-lg shadow-lime-500/20 transition-all cursor-pointer">
+                Check Your Device Now
+              </button>
+            </Link>
           </div>
 
           {/* Right Side: Risk Report Card */}

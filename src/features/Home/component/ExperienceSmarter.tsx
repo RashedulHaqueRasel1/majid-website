@@ -14,6 +14,7 @@ import {
   Globe,
   Unlock,
 } from "lucide-react";
+import Link from "next/link";
 
 export default function ExperienceSmarter() {
   return (
@@ -71,14 +72,16 @@ export default function ExperienceSmarter() {
             </div>
 
             {/* CTA Button */}
-            <motion.button
-              initial={{ opacity: 0, scale: 0.9 }}
-              whileInView={{ opacity: 1, scale: 1 }}
-              viewport={{ once: true }}
-              className="bg-[#84CC16] hover:bg-[#6fa512] text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-lime-500/20 transition-all transform hover:scale-105 active:scale-95"
-            >
-              Get Started
-            </motion.button>
+            <Link href={`#banner`}>
+              <motion.button
+                initial={{ opacity: 0, scale: 0.9 }}
+                whileInView={{ opacity: 1, scale: 1 }}
+                viewport={{ once: true }}
+                className="bg-[#84CC16] hover:bg-[#6fa512] text-white px-10 py-4 rounded-2xl font-bold shadow-xl shadow-lime-500/20 transition-all transform hover:scale-105 active:scale-95"
+              >
+                Get Started
+              </motion.button>
+            </Link>
           </div>
 
           {/* Right Side: Dashboard Mockup */}
