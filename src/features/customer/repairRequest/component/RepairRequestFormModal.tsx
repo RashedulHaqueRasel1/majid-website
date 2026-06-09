@@ -8,9 +8,12 @@ import {
   DialogHeader,
   DialogTitle,
 } from "@/components/ui/dialog";
-import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
-import { Loader2 } from "lucide-react";
-import { FormEvent, useEffect, useState } from "react";
+import {
+  useMyProfile,
+  useRepairProblem,
+} from "@/features/shopkeeper/settings/hooks/useSettings";
+import { Check, ChevronDown, Loader2, Search } from "lucide-react";
+import { FormEvent, useEffect, useMemo, useState } from "react";
 import { useCreateRepairRequest } from "../hooks/useRepairRequest";
 import { Shopkeeper } from "../types/repair-request.types";
 
@@ -21,7 +24,6 @@ interface RepairRequestFormModalProps {
 }
 
 export function RepairRequestFormModal({
-  shopkeeper,
   isOpen,
   onClose,
 }: RepairRequestFormModalProps) {
@@ -30,13 +32,16 @@ export function RepairRequestFormModal({
   const [email, setEmail] = useState("");
   const [isEmailEdited, setIsEmailEdited] = useState(false);
   const [deviceModel, setDeviceModel] = useState("");
+  const [problemSearch, setProblemSearch] = useState("");
+  const [isProblemSelectOpen, setIsProblemSelectOpen] = useState(false);
   const [imeiNumber, setImeiNumber] = useState("");
   const [problemDescription, setProblemDescription] = useState("");
-
   const { data: profileData } = useMyProfile();
+  const user = profileData?.data;
+
+  const { data: repairProblemData } = useRepairProblem(user?._id || "");
   const createRepairRequest = useCreateRepairRequest();
 
-  const user = profileData?.data;
   const profileFullName = [user?.firstName, user?.lastName]
     .filter(Boolean)
     .join(" ")
@@ -65,6 +70,34 @@ export function RepairRequestFormModal({
     email,
   ]);
 
+  const problemSuggestions = useMemo(() => {
+    const descriptions = repairProblemData?.data || [];
+
+    return Array.from(
+      new Set(
+        descriptions
+          .map((problem) => problem.description?.trim())
+          .filter((description): description is string => Boolean(description)),
+      ),
+    );
+  }, [repairProblemData?.data]);
+
+  const filteredProblemSuggestions = useMemo(() => {
+    const searchValue = problemSearch.trim().toLowerCase();
+
+    if (!searchValue) return problemSuggestions;
+
+    return problemSuggestions.filter((description) =>
+      description.toLowerCase().includes(searchValue),
+    );
+  }, [problemSearch, problemSuggestions]);
+
+  const handleProblemSelect = (description: string) => {
+    setProblemSearch(description);
+    setProblemDescription(description);
+    setIsProblemSelectOpen(false);
+  };
+
   const handleSubmit = (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
 
@@ -81,6 +114,7 @@ export function RepairRequestFormModal({
           setDeviceModel("");
           setImeiNumber("");
           setProblemDescription("");
+          setProblemSearch("");
           onClose();
         },
       },
@@ -160,6 +194,64 @@ export function RepairRequestFormModal({
                 className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
                 placeholder="Enter IMEI"
               />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <label className="text-sm font-bold text-foreground uppercase tracking-wider">
+              Select Problem
+            </label>
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+              <input
+                value={problemSearch}
+                onChange={(e) => {
+                  setProblemSearch(e.target.value);
+                  setIsProblemSelectOpen(true);
+                }}
+                onFocus={() => setIsProblemSelectOpen(true)}
+                onBlur={() => {
+                  setTimeout(() => setIsProblemSelectOpen(false), 120);
+                }}
+                className="w-full h-12 rounded-xl border border-border bg-background pl-11 pr-11 text-foreground font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
+                placeholder="Search or select a previous problem"
+              />
+              <ChevronDown
+                className={`absolute right-4 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground transition-transform ${
+                  isProblemSelectOpen ? "rotate-180" : ""
+                }`}
+              />
+
+              {isProblemSelectOpen && (
+                <div className="absolute z-50 mt-2 max-h-64 w-full overflow-y-auto rounded-xl border border-border bg-card p-1 shadow-xl">
+                  {filteredProblemSuggestions.length > 0 ? (
+                    filteredProblemSuggestions.map((description) => {
+                      const isSelected = description === problemDescription;
+
+                      return (
+                        <button
+                          key={description}
+                          type="button"
+                          onMouseDown={(e) => e.preventDefault()}
+                          onClick={() => handleProblemSelect(description)}
+                          className="flex w-full items-start gap-3 rounded-lg px-3 py-2.5 text-left text-sm font-medium text-foreground transition-colors hover:bg-primary/10 focus:bg-primary/10 focus:outline-none"
+                        >
+                          <Check
+                            className={`mt-0.5 h-4 w-4 shrink-0 text-primary ${
+                              isSelected ? "opacity-100" : "opacity-0"
+                            }`}
+                          />
+                          <span className="line-clamp-2">{description}</span>
+                        </button>
+                      );
+                    })
+                  ) : (
+                    <div className="px-3 py-3 text-sm font-medium text-muted-foreground">
+                      No matching problem found
+                    </div>
+                  )}
+                </div>
+              )}
             </div>
           </div>
 

@@ -10,6 +10,18 @@ import {
   FavouriteIMEIResponse,
 } from "../types/scanDevice.types";
 
+export interface ExtractImeiFromImageResponse {
+  success: boolean;
+  message: string;
+  statusCode: number;
+  data: {
+    rawText: string;
+    imeiNumbers: string[];
+    confidence: string;
+    processingTime: number;
+  };
+}
+
 export const checkIMEIApi = async (
   imei: string | string[],
   serviceId: number = 6,
@@ -60,6 +72,21 @@ export const checkImeiBatchApi = async (
       "Content-Type": "multipart/form-data",
     },
   });
+  return response.data;
+};
+
+export const extractImeiFromImageApi = async (
+  image: File,
+): Promise<ExtractImeiFromImageResponse> => {
+  const formData = new FormData();
+  formData.append("image", image);
+
+  const response = await axiosInstance.post("/ocr/extract-imei", formData, {
+    headers: {
+      "Content-Type": "multipart/form-data",
+    },
+  });
+
   return response.data;
 };
 

@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useEffect, useRef, useState } from "react";
+import React, { useEffect, useRef, useState, useCallback } from "react";
 import {
   Mail,
   Phone,
@@ -12,11 +12,19 @@ import {
   Loader2,
   Store,
   MessageCircle,
+  QrCode,
+  Download,
+  ScanLine,
+  X,
+  Copy,
+  Check,
+  User,
 } from "lucide-react";
-import { motion } from "framer-motion";
+import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
+import QRCode from "react-qr-code";
 import {
   useMyProfile,
   useUpdateProfile,
@@ -29,6 +37,282 @@ import {
   PasswordValues,
 } from "../types";
 
+function generateShopkeeperId(id: string, name: string): string {
+  const prefix = "IMS";
+
+  const words = name.trim().split(/\s+/);
+
+  const namePart =
+    words.length > 1
+      ? `${words[0][0]}${words[words.length - 1][0]}`.toUpperCase()
+      : words[0].slice(0, 3).toUpperCase();
+
+  const idSuffix = id.slice(-5).toUpperCase();
+
+  return `${prefix}-${namePart}-${idSuffix}`;
+}
+
+interface ScannedProfile {
+  shopkeeperId: string;
+  name: string;
+  email: string;
+  phone: string;
+  shopName: string;
+  shopAddress: string;
+  whatsappNumber: string;
+}
+
+// ── QR Scanner Modal ─────────────────────────────────────────
+function QRScannerModal({ onClose }: { onClose: () => void }) {
+  const videoRef = useRef<HTMLVideoElement>(null);
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const streamRef = useRef<MediaStream | null>(null);
+  const rafRef = useRef<number>(0);
+  const [scanned, setScanned] = useState<ScannedProfile | null>(null);
+  const [error, setError] = useState<string>("");
+  const [scanning, setScanning] = useState(true);
+
+  const stopCamera = useCallback(() => {
+    cancelAnimationFrame(rafRef.current);
+    if (streamRef.current) {
+      streamRef.current.getTracks().forEach((t) => t.stop());
+      streamRef.current = null;
+    }
+  }, []);
+
+  useEffect(() => {
+    let active = true;
+    (async () => {
+      try {
+        const stream = await navigator.mediaDevices.getUserMedia({
+          video: { facingMode: "environment" },
+        });
+        if (!active) {
+          stream.getTracks().forEach((t) => t.stop());
+          return;
+        }
+        streamRef.current = stream;
+        if (videoRef.current) {
+          videoRef.current.srcObject = stream;
+          await videoRef.current.play();
+          tick();
+        }
+      } catch {
+        setError("Camera access denied. Please allow camera permissions.");
+        setScanning(false);
+      }
+    })();
+
+    function tick() {
+      if (!videoRef.current || !canvasRef.current) return;
+      const video = videoRef.current;
+      const canvas = canvasRef.current;
+      if (video.readyState === video.HAVE_ENOUGH_DATA) {
+        canvas.width = video.videoWidth;
+        canvas.height = video.videoHeight;
+        const ctx = canvas.getContext("2d");
+        if (ctx) {
+          ctx.drawImage(video, 0, 0, canvas.width, canvas.height);
+          // Use BarcodeDetector if available
+          if ("BarcodeDetector" in window) {
+            // @ts-expect-error BarcodeDetector is not in TS lib yet
+            const detector = new window.BarcodeDetector({
+              formats: ["qr_code"],
+            });
+            detector
+              .detect(canvas)
+              .then((codes: Array<{ rawValue: string }>) => {
+                if (codes.length > 0) {
+                  try {
+                    const parsed: ScannedProfile = JSON.parse(
+                      codes[0].rawValue,
+                    );
+                    setScanned(parsed);
+                    setScanning(false);
+                    stopCamera();
+                    return;
+                  } catch {
+                    /* not our format, keep scanning */
+                  }
+                }
+                rafRef.current = requestAnimationFrame(tick);
+              })
+              .catch(() => {
+                rafRef.current = requestAnimationFrame(tick);
+              });
+          } else {
+            // Fallback: keep ticking, show manual message
+            rafRef.current = requestAnimationFrame(tick);
+          }
+        }
+      } else {
+        rafRef.current = requestAnimationFrame(tick);
+      }
+    }
+
+    return () => {
+      active = false;
+      stopCamera();
+    };
+  }, [stopCamera]);
+
+  return (
+    <div className="fixed inset-0 z-[9999] flex items-center justify-center p-4">
+      {/* Backdrop */}
+      <motion.div
+        initial={{ opacity: 0 }}
+        animate={{ opacity: 1 }}
+        exit={{ opacity: 0 }}
+        onClick={onClose}
+        className="absolute inset-0 bg-slate-900/70 backdrop-blur-md"
+      />
+
+      <motion.div
+        initial={{ opacity: 0, scale: 0.92, y: 20 }}
+        animate={{ opacity: 1, scale: 1, y: 0 }}
+        exit={{ opacity: 0, scale: 0.92, y: 20 }}
+        className="relative w-full max-w-md bg-white dark:bg-slate-900 rounded-[32px] p-6 shadow-2xl border border-slate-100 dark:border-slate-800 z-10 overflow-hidden"
+      >
+        {/* Close */}
+        <button
+          onClick={onClose}
+          className="absolute top-5 right-5 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-xl transition cursor-pointer"
+        >
+          <X className="w-5 h-5 text-slate-500" />
+        </button>
+
+        <div className="flex items-center gap-3 mb-6">
+          <div className="p-2.5 bg-violet-50 dark:bg-violet-950/20 rounded-2xl">
+            <ScanLine className="w-5 h-5 text-violet-600" />
+          </div>
+          <div>
+            <h3 className="font-black text-slate-800 dark:text-white text-base">
+              Scan Shopkeeper ID
+            </h3>
+            <p className="text-xs text-slate-400 font-medium">
+              Point camera at a Shopkeeper QR card
+            </p>
+          </div>
+        </div>
+
+        {!scanned ? (
+          <div className="space-y-4">
+            {/* Camera viewfinder */}
+            <div className="relative w-full aspect-square rounded-3xl overflow-hidden bg-slate-950 flex items-center justify-center">
+              <video
+                ref={videoRef}
+                className="w-full h-full object-cover"
+                muted
+                playsInline
+              />
+              <canvas ref={canvasRef} className="hidden" />
+
+              {/* Scanning overlay corners */}
+              {scanning && (
+                <div className="absolute inset-0 pointer-events-none">
+                  <div className="absolute inset-8 border-2 border-transparent">
+                    <div className="absolute top-0 left-0 w-8 h-8 border-t-4 border-l-4 border-violet-500 rounded-tl-xl" />
+                    <div className="absolute top-0 right-0 w-8 h-8 border-t-4 border-r-4 border-violet-500 rounded-tr-xl" />
+                    <div className="absolute bottom-0 left-0 w-8 h-8 border-b-4 border-l-4 border-violet-500 rounded-bl-xl" />
+                    <div className="absolute bottom-0 right-0 w-8 h-8 border-b-4 border-r-4 border-violet-500 rounded-br-xl" />
+                  </div>
+                  {/* Animated scan line */}
+                  <motion.div
+                    className="absolute left-10 right-10 h-0.5 bg-violet-500/70 rounded-full shadow-[0_0_8px_2px_rgba(124,58,237,0.5)]"
+                    animate={{ top: ["20%", "80%", "20%"] }}
+                    transition={{
+                      duration: 2.5,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                    }}
+                  />
+                </div>
+              )}
+
+              {error && (
+                <div className="absolute inset-0 flex flex-col items-center justify-center bg-slate-950/80 p-6 text-center">
+                  <X className="w-10 h-10 text-red-400 mb-3" />
+                  <p className="text-white font-semibold text-sm">{error}</p>
+                </div>
+              )}
+            </div>
+
+            <p className="text-center text-xs text-slate-400 font-medium">
+              {scanning
+                ? "Scanning… hold the QR code steady"
+                : error || "Ready"}
+            </p>
+          </div>
+        ) : (
+          /* Scanned result card — human-readable */
+          <div className="space-y-4">
+            {/* Header strip */}
+            <div className="bg-[#84CC16] rounded-2xl px-5 py-4 flex items-center gap-3">
+              <div className="w-11 h-11 rounded-xl bg-white/20 flex items-center justify-center text-white font-black text-xl">
+                {scanned.name.charAt(0).toUpperCase()}
+              </div>
+              <div>
+                <p className="font-black text-white text-base leading-tight">
+                  {scanned.name}
+                </p>
+                <p className="text-[11px] font-bold text-white/70 tracking-widest uppercase font-mono">
+                  {scanned.shopkeeperId}
+                </p>
+              </div>
+            </div>
+
+            {/* Info rows */}
+            <div className="bg-slate-50 dark:bg-slate-800/50 rounded-2xl divide-y divide-slate-100 dark:divide-slate-700/50 overflow-hidden border border-slate-100 dark:border-slate-700/50">
+              {[
+                { icon: Mail, title: "Email", value: scanned.email },
+                { icon: Phone, title: "Phone", value: scanned.phone },
+                { icon: Store, title: "Shop Name", value: scanned.shopName },
+                {
+                  icon: MapPin,
+                  title: "Shop Address",
+                  value: scanned.shopAddress,
+                },
+                {
+                  icon: MessageCircle,
+                  title: "WhatsApp",
+                  value: scanned.whatsappNumber,
+                },
+              ]
+                .filter((r) => r.value)
+                .map(({ icon: Icon, title, value }) => (
+                  <div key={title} className="flex items-start gap-3 px-4 py-3">
+                    <div className="p-1.5 bg-[#84CC16]/10 rounded-lg flex-shrink-0 mt-0.5">
+                      <Icon className="w-3.5 h-3.5 text-[#84CC16]" />
+                    </div>
+                    <div className="min-w-0">
+                      <p className="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-0.5">
+                        {title}
+                      </p>
+                      <p className="text-sm font-semibold text-slate-800 dark:text-slate-100 break-words">
+                        {value}
+                      </p>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            <button
+              onClick={() => {
+                setScanned(null);
+                setScanning(true);
+                setError("");
+              }}
+              className="w-full py-3 border-2 border-[#84CC16]/40 text-[#84CC16] font-black text-sm rounded-2xl hover:bg-[#84CC16]/5 transition cursor-pointer"
+            >
+              Scan Another
+            </button>
+          </div>
+        )}
+      </motion.div>
+    </div>
+  );
+}
+
 export default function Settings() {
   const { data: profileData, isLoading } = useMyProfile();
   const updateProfileMutation = useUpdateProfile();
@@ -38,10 +322,13 @@ export default function Settings() {
   const [showCurrentPass, setShowCurrentPass] = useState(false);
   const [showNewPass, setShowNewPass] = useState(false);
   const [showConfirmPass, setShowConfirmPass] = useState(false);
+  const [showScanner, setShowScanner] = useState(false);
+  const [copied, setCopied] = useState(false);
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const qrRef = useRef<HTMLDivElement>(null);
 
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
@@ -133,8 +420,159 @@ export default function Settings() {
 
   const user = profileData?.data;
 
+  const fullName = user
+    ? `${user.firstName ?? ""} ${user.lastName ?? ""}`.trim()
+    : "";
+  const shopkeeperId = user?._id
+    ? generateShopkeeperId(user._id, fullName || "SK")
+    : "SKP-???-????";
+
+  const qrPayload = JSON.stringify({
+    shopkeeperId,
+    name: fullName,
+    email: user?.email ?? "",
+    phone: user?.phone ?? "",
+    shopName: user?.shopName ?? "",
+    shopAddress: user?.shopAddress ?? "",
+    whatsappNumber: user?.whatsappNumber ?? "",
+  });
+
+  const handleCopyId = () => {
+    navigator.clipboard.writeText(shopkeeperId).then(() => {
+      setCopied(true);
+      setTimeout(() => setCopied(false), 2000);
+    });
+  };
+
+  const handleDownloadQR = () => {
+    const svg = qrRef.current?.querySelector("svg");
+    if (!svg) return;
+    const svgData = new XMLSerializer().serializeToString(svg);
+    const blob = new Blob([svgData], { type: "image/svg+xml" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${shopkeeperId}.svg`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
   return (
-    <div className="p-4 md:p-10 bg-background  mx-auto space-y-8 font-poppins">
+    <div className="p-4 md:p-10 bg-background mx-auto space-y-8 font-poppins">
+      {/* ── Shopkeeper ID Card ─────────────────────────────── */}
+      <motion.div
+        initial={{ opacity: 0, y: 20 }}
+        animate={{ opacity: 1, y: 0 }}
+        className="relative overflow-hidden bg-gradient-to-br from-[#84CC16] via-[#6aab0a] to-[#4d8a06] rounded-[32px] p-8 shadow-xl shadow-lime-500/25"
+      >
+        {/* decorative circles */}
+        <div className="absolute -top-12 -right-12 w-48 h-48 rounded-full bg-white/5 pointer-events-none" />
+        <div className="absolute -bottom-8 -left-8 w-32 h-32 rounded-full bg-white/5 pointer-events-none" />
+
+        <div className="relative z-10 flex flex-col lg:flex-row items-start lg:items-center gap-8">
+          {/* Left: text info */}
+          <div className="flex-1 space-y-5">
+            <div className="flex items-center gap-2">
+              <QrCode className="w-5 h-5 text-lime-100" />
+              <span className="text-lime-100 font-semibold text-sm uppercase tracking-widest">
+                Shopkeeper ID Card
+              </span>
+            </div>
+
+            {/* Name */}
+            <div>
+              <p className="text-white/60 text-xs font-semibold uppercase tracking-widest mb-1">
+                Name
+              </p>
+              <h2 className="text-2xl font-black text-white tracking-tight">
+                {fullName || "—"}
+              </h2>
+            </div>
+
+            {/* Unique ID with copy */}
+            <div className="bg-black/15 backdrop-blur-sm rounded-2xl px-5 py-3.5 flex items-center justify-between gap-4 border border-white/15">
+              <div>
+                <p className="text-lime-100 text-[10px] font-semibold uppercase tracking-widest mb-0.5">
+                  Shopkeeper ID
+                </p>
+                <p className="text-white font-black text-lg tracking-wider font-mono">
+                  {shopkeeperId}
+                </p>
+              </div>
+              <button
+                onClick={handleCopyId}
+                className="p-2 hover:bg-white/10 rounded-xl transition cursor-pointer flex-shrink-0"
+                title="Copy ID"
+              >
+                {copied ? (
+                  <Check className="w-5 h-5 text-white" />
+                ) : (
+                  <Copy className="w-5 h-5 text-lime-100" />
+                )}
+              </button>
+            </div>
+
+            {/* Info rows */}
+            <div className="space-y-2">
+              {[
+                { icon: Mail, label: "Email", value: user?.email },
+                { icon: Phone, label: "Phone", value: user?.phone },
+                { icon: Store, label: "Shop Name", value: user?.shopName },
+                { icon: MapPin, label: "Address", value: user?.shopAddress },
+              ]
+                .filter((r) => r.value)
+                .map(({ icon: Icon, label, value }) => (
+                  <div key={label} className="flex items-center gap-2.5">
+                    <Icon className="w-3.5 h-3.5 text-lime-100 flex-shrink-0" />
+                    <div className="min-w-0">
+                      <span className="text-white/55 text-[10px] font-semibold uppercase tracking-widest">
+                        {label}:{" "}
+                      </span>
+                      <span className="text-white text-xs font-bold break-words">
+                        {value}
+                      </span>
+                    </div>
+                  </div>
+                ))}
+            </div>
+
+            {/* Action buttons */}
+            <div className="flex flex-wrap gap-3 pt-1">
+              {/* <button
+                onClick={() => setShowScanner(true)}
+                className="flex items-center gap-2 px-5 py-2.5 bg-white text-[#4d8a06] font-black text-sm rounded-2xl hover:bg-lime-50 transition shadow-lg cursor-pointer"
+              >
+                <ScanLine className="w-4 h-4" /> Scan ID Card
+              </button> */}
+              <button
+                onClick={handleDownloadQR}
+                className="flex items-center gap-2 px-5 py-2.5 bg-black/15 border border-white/20 text-white font-black text-sm rounded-2xl hover:bg-black/25 transition cursor-pointer"
+              >
+                <Download className="w-4 h-4" /> Download QR
+              </button>
+            </div>
+          </div>
+
+          {/* Right: QR Code */}
+          <div
+            ref={qrRef}
+            className="flex-shrink-0 bg-white p-4 rounded-3xl shadow-xl"
+          >
+            <QRCode value={qrPayload} size={170} fgColor="#4d8a06" level="M" />
+            <p className="text-center text-[#4d8a06] font-black text-[10px] mt-2 tracking-widest uppercase">
+              {shopkeeperId}
+            </p>
+          </div>
+        </div>
+      </motion.div>
+
+      {/* QR Scanner Modal */}
+      <AnimatePresence>
+        {showScanner && (
+          <QRScannerModal onClose={() => setShowScanner(false)} />
+        )}
+      </AnimatePresence>
+
       {/* Profile Header */}
       <motion.div
         initial={{ opacity: 0, y: 20 }}
@@ -145,15 +583,18 @@ export default function Settings() {
           className="relative w-24 h-24 rounded-full overflow-hidden border-4 border-muted shadow-inner group cursor-pointer"
           onClick={() => fileInputRef.current?.click()}
         >
-          <Image
-            src={
-              imagePreview ||
-              "https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?q=80&w=200&auto=format&fit=crop"
-            }
-            alt="Profile"
-            fill
-            className="object-cover"
-          />
+          {imagePreview ? (
+            <Image
+              src={imagePreview}
+              alt="Profile"
+              fill
+              className="object-cover"
+            />
+          ) : (
+            <div className="w-full h-full bg-muted flex items-center justify-center">
+              <User className="w-10 h-10 text-muted-foreground" />
+            </div>
+          )}
           <div className="absolute inset-0 bg-black/40 flex items-center justify-center opacity-0 group-hover:opacity-100 transition-opacity">
             <Camera className="text-white w-6 h-6" />
           </div>

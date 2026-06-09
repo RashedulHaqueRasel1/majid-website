@@ -55,3 +55,18 @@ export interface ProfileResponse {
   statusCode: number;
   data: UserProfile;
 }
+
+export interface RepairProblemDescription {
+  _id: string;
+  deviceModel: string;
+  description: string;
+  status: string;
+  createdAt: string;
+}
+
+export interface RepairProblemDescriptionsResponse {
+  success: boolean;
+  message: string;
+  statusCode: number;
+  data: RepairProblemDescription[];
+}

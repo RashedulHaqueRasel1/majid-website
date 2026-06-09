@@ -85,12 +85,37 @@ export default function AddFunds() {
 
   const { mutate: createPayment, isPending } = useCreatePaymentSession();
 
+  const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    const maxAmount = selectedPlan?.price;
+
+    if (!value) {
+      setAmount("");
+      return;
+    }
+
+    const numAmount = parseFloat(value);
+
+    if (maxAmount && numAmount > maxAmount) {
+      setAmount(maxAmount.toString());
+      return;
+    }
+
+    setAmount(value);
+  };
+
   const handleTopUp = () => {
     const numAmount = parseFloat(amount);
     const minAmount = selectedPlan?.price || 2;
+    const maxAmount = selectedPlan?.price || 2;
 
     if (isNaN(numAmount) || numAmount < minAmount) {
       toast.error(`Please enter a valid amount (minimum $${minAmount})`);
+      return;
+    }
+
+    if (numAmount > maxAmount) {
+      toast.error(`Amount cannot be greater than $${maxAmount}`);
       return;
     }
 
@@ -254,8 +279,9 @@ export default function AddFunds() {
                 type="number"
                 placeholder={`e.g. ${selectedPlan?.price || 15}`}
                 value={amount}
-                onChange={(e) => setAmount(e.target.value)}
+                onChange={handleAmountChange}
                 min={selectedPlan?.price || 2}
+                max={selectedPlan?.price || 2}
                 step="0.01"
               />
             </div>

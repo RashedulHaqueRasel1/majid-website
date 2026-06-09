@@ -4,8 +4,9 @@ import { motion } from "framer-motion";
 import { useSearchParams, useRouter } from "next/navigation";
 import { useEffect, useState } from "react";
 import { ScannerModal } from "@/components/shared/website/ScannerModal";
-import { BulkImeiUploadModal } from "@/components/shared/website/BulkImeiUploadModal";
 import { GuestLoginModal } from "@/components/shared/website/GuestLoginModal";
+import { toast } from "sonner";
+import { extractImeiFromImageApi } from "../api/scanDevice.api";
 import { useServices } from "../hooks/useServices";
 import { useScanDevice } from "../hooks/useScanDevice";
 import { useCertificateDownload } from "../hooks/useCertificateDownload";
@@ -55,7 +56,7 @@ export default function ScanDevice() {
   const { isDownloading, downloadCertificatePdf } = useCertificateDownload();
 
   const [isScannerOpen, setIsScannerOpen] = useState(false);
-  const [isBulkModalOpen, setIsBulkModalOpen] = useState(false);
+  const [isUploadingImage, setIsUploadingImage] = useState(false);
 
   const imeiCount = imei
     .split(/[,\n]/)
@@ -90,6 +91,39 @@ export default function ScanDevice() {
     batchResult,
     handleScan,
   ]);
+
+  const handleImageUpload = async (file: File) => {
+    if (!file.type.startsWith("image/")) {
+      toast.error("Please upload an image file");
+      return;
+    }
+
+    try {
+      setIsUploadingImage(true);
+      const result = await extractImeiFromImageApi(file);
+      const imeiNumbers = (result.data?.imeiNumbers ?? [])
+        .map((value) => value.replace(/\D/g, ""))
+        .filter((value) => value.length >= 14 && value.length <= 16);
+      const uniqueImeis = Array.from(new Set(imeiNumbers));
+
+      if (uniqueImeis.length === 0) {
+        toast.error("No IMEI found in this image");
+        return;
+      }
+
+      setImei(uniqueImeis.join("\n"));
+      toast.success(
+        uniqueImeis.length === 1
+          ? "IMEI extracted from image"
+          : `${uniqueImeis.length} IMEIs extracted from image`,
+      );
+    } catch (uploadError) {
+      console.error("❌ Image OCR upload failed:", uploadError);
+      toast.error("Failed to extract IMEI from image");
+    } finally {
+      setIsUploadingImage(false);
+    }
+  };
 
   // Favourite result view
   if (favouriteResult) {
@@ -216,8 +250,9 @@ export default function ScanDevice() {
                 console.log("🔍 Button clicked, IMEI value:", imei);
                 handleScan(imei, selectedService?.serviceId || 6);
               }}
-              onBulkClick={() => setIsBulkModalOpen(true)}
+              onImageUpload={handleImageUpload}
               isScanning={isScanning}
+              isUploadingImage={isUploadingImage}
               isDisabled={isScanning || !imei || !selectedService}
               imeiCount={imeiCount}
             />
@@ -240,19 +275,6 @@ export default function ScanDevice() {
         onClose={() => setIsScannerOpen(false)}
         onScan={(scannedImei) => {
           setImei(scannedImei);
-          if (selectedService) {
-            handleScan(scannedImei, selectedService.serviceId || 6);
-          }
-        }}
-      />
-
-      <BulkImeiUploadModal
-        isOpen={isBulkModalOpen}
-        onClose={() => setIsBulkModalOpen(false)}
-        serviceId={selectedService?.serviceId || 6}
-        onBatchComplete={(result) => {
-          clearResults();
-          setBatchResult(result);
         }}
       />
 

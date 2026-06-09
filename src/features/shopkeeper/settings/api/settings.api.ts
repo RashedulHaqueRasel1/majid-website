@@ -1,5 +1,5 @@
 import { api } from "@/lib/api";
-import { ProfileResponse } from "../types";
+import { ProfileResponse, RepairProblemDescriptionsResponse } from "../types";
 
 export const getMyProfile = async (): Promise<ProfileResponse> => {
   const response = await api.get("/user/my-profile");
@@ -15,5 +15,14 @@ export const updateProfile = async (
 
 export const changePassword = async (data: Record<string, unknown>) => {
   const response = await api.post("/auth/change-password", data);
+  return response.data;
+};
+
+export const getMyRepairProblem = async (
+  userId: string,
+): Promise<RepairProblemDescriptionsResponse> => {
+  const response = await api.get(
+    `/repair-requests/user/${userId}/descriptions`,
+  );
   return response.data;
 };

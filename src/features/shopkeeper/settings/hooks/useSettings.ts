@@ -8,9 +8,10 @@ import {
   getMyProfile,
   updateProfile,
   changePassword,
+  getMyRepairProblem,
 } from "../api/settings.api";
 import { toast } from "sonner";
-import { ProfileResponse } from "../types";
+import { ProfileResponse, RepairProblemDescriptionsResponse } from "../types";
 
 export function useMyProfile(
   options?: Partial<UseQueryOptions<ProfileResponse>>,
@@ -45,5 +46,13 @@ export function useChangePassword() {
     onError: (error: { response?: { data?: { message?: string } } }) => {
       toast.error(error.response?.data?.message || "Failed to change password");
     },
+  });
+}
+
+export function useRepairProblem(userId: string) {
+  return useQuery<RepairProblemDescriptionsResponse>({
+    queryKey: ["my-repair-problem", userId],
+    queryFn: () => getMyRepairProblem(userId),
+    enabled: Boolean(userId),
   });
 }
