@@ -40,7 +40,7 @@ export default function ShopkeeperLayout({
   }
 
   return (
-    <div className="flex min-h-screen bg-[#F8FAFC]">
+    <div className="flex min-h-screen bg-surface text-foreground">
       {/* Desktop Sidebar — authenticated only */}
       {isAuthenticated && (
         <div className="hidden lg:block">
@@ -51,7 +51,10 @@ export default function ShopkeeperLayout({
       {/* Mobile Sidebar — authenticated only */}
       {isAuthenticated && (
         <Sheet open={openSidebar} onOpenChange={setOpenSidebar}>
-          <SheetContent side="left" className="p-0 w-[300px] border-r-0">
+          <SheetContent
+            side="left"
+            className="w-[min(300px,calc(100vw-2rem))] border-r-0 p-0"
+          >
             <Sidebar />
           </SheetContent>
         </Sheet>
@@ -60,7 +63,7 @@ export default function ShopkeeperLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header setOpenSidebar={setOpenSidebar} />
-        <main className="flex-1 overflow-y-auto dark:bg-background">
+        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-background">
           {children}
         </main>
       </div>

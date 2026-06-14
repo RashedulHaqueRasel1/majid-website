@@ -39,32 +39,34 @@ interface SubscriptionPlan {
 const getPlanDesign = (index: number) => {
   const designs = [
     {
-      bgColor: "bg-[#E0F2FE]", // Light blue
-      badgeColor: "text-blue-600 bg-white",
+      bgColor: "bg-[#E0F2FE] dark:bg-blue-950/30", // Light blue
+      badgeColor: "text-blue-600 bg-white dark:bg-blue-950 dark:text-blue-200",
       btnColor:
         "bg-white text-[#3B82F6] border-[#3B82F6] hover:bg-[#3B82F6] hover:text-white hover:border-[#3B82F6]",
       icon: <Shield size={20} className="text-[#3B82F6]" />,
       largeIcon: <Shield size={120} className="text-[#3B82F6]" />,
     },
     {
-      bgColor: "bg-[#ECFCCB]", // Light green
-      badgeColor: "text-green-600 bg-white",
+      bgColor: "bg-[#ECFCCB] dark:bg-lime-950/25", // Light green
+      badgeColor: "text-green-600 bg-white dark:bg-lime-950 dark:text-lime-200",
       btnColor:
         "bg-white text-[#84CC16] border-[#84CC16] hover:bg-[#84CC16] hover:text-white hover:border-[#84CC16]",
       icon: <Zap size={20} className="text-[#84CC16]" />,
       largeIcon: <Zap size={120} className="text-[#84CC16]" />,
     },
     {
-      bgColor: "bg-[#FEF08A]/30", // Light yellow for Diamond
-      badgeColor: "text-yellow-600 bg-white",
+      bgColor: "bg-[#FEF08A]/30 dark:bg-yellow-950/25", // Light yellow for Diamond
+      badgeColor:
+        "text-yellow-600 bg-white dark:bg-yellow-950 dark:text-yellow-200",
       btnColor:
         "bg-white text-[#EAB308] border-[#EAB308] hover:bg-[#EAB308] hover:text-white hover:border-[#EAB308]",
       icon: <Diamond size={20} className="text-[#EAB308]" />,
       largeIcon: <Diamond size={120} className="text-[#EAB308]" />,
     },
     {
-      bgColor: "bg-[#F3E8FF]", // Light purple
-      badgeColor: "text-purple-600 bg-white",
+      bgColor: "bg-[#F3E8FF] dark:bg-purple-950/25", // Light purple
+      badgeColor:
+        "text-purple-600 bg-white dark:bg-purple-950 dark:text-purple-200",
       btnColor:
         "bg-white text-[#A855F7] border-[#A855F7] hover:bg-[#A855F7] hover:text-white hover:border-[#A855F7]",
       icon: <Brain size={20} className="text-[#A855F7]" />,
@@ -137,13 +139,13 @@ export default function AddFunds() {
   };
 
   return (
-    <div className="p-4 md:p-10 bg-background h-screen  mx-auto space-y-12 font-poppins">
+    <div className="dashboard-page">
       {/* Header Section */}
-      <div className="space-y-2">
+      <div className="mx-auto max-w-[1600px] space-y-2">
         <h1 className="text-3xl font-black text-foreground tracking-tight">
           Pricing Plan
         </h1>
-        <p className="text-[#64748B] font-medium">
+        <p className="font-medium text-muted-foreground">
           Track your payment status and invoices.
         </p>
       </div>
@@ -153,7 +155,7 @@ export default function AddFunds() {
           <Loader2 className="w-8 h-8 animate-spin text-[#84CC16]" />
         </div>
       ) : (
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+        <div className="mx-auto grid max-w-[1600px] grid-cols-1 gap-5 sm:grid-cols-2 xl:grid-cols-4">
           {plans.map((plan: SubscriptionPlan, i: number) => {
             const design = getPlanDesign(i);
 
@@ -177,15 +179,15 @@ export default function AddFunds() {
                   </div>
 
                   <div className="space-y-1">
-                    <h2 className="text-[14px] font-black text-[#0F172A] uppercase tracking-wider">
+                    <h2 className="text-[14px] font-black uppercase tracking-wider text-slate-950 dark:text-white">
                       {plan.name}
                     </h2>
                     <div className="flex items-baseline gap-1">
-                      <span className="text-3xl font-black text-[#0F172A]">
+                      <span className="text-3xl font-black text-slate-950 dark:text-white">
                         {plan.priceLabel}
                       </span>
                     </div>
-                    <p className="text-xs text-[#64748B] font-medium h-8">
+                    <p className="h-8 text-xs font-medium text-slate-600 dark:text-slate-300">
                       {plan.description}
                     </p>
                   </div>
@@ -207,7 +209,7 @@ export default function AddFunds() {
                             />
                           </div>
                           <span
-                            className={`text-[13px] font-bold ${feature.included ? "text-[#475569]" : "text-gray-400 line-through"}`}
+                            className={`text-[13px] font-bold ${feature.included ? "text-slate-700 dark:text-slate-200" : "text-gray-400 line-through"}`}
                           >
                             {feature.name}
                           </span>
@@ -217,14 +219,14 @@ export default function AddFunds() {
                   </div>
 
                   {plan.discount !== undefined && plan.discount > 0 && (
-                    <div className="bg-white rounded-2xl p-4 flex items-center justify-between shadow-sm border border-gray-100/50">
+                    <div className="flex items-center justify-between rounded-2xl border border-border bg-card p-4 shadow-sm">
                       <div className="flex items-center gap-3">
                         <Diamond size={18} className="text-[#3B82F6]" />
-                        <span className="text-sm font-black text-[#0F172A]">
+                        <span className="text-sm font-black text-foreground">
                           Discount
                         </span>
                       </div>
-                      <span className="text-sm font-black text-[#0F172A]">
+                      <span className="text-sm font-black text-foreground">
                         {plan.discount}% Off
                       </span>
                     </div>

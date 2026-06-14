@@ -9,12 +9,10 @@ import {
   CreditCard,
   Package,
   Mail,
-  Tag,
   ChevronDown,
   HelpCircle,
   Phone,
   Wrench,
-  Bell,
   FileText,
   SearchCheckIcon,
 } from "lucide-react";
@@ -122,7 +120,7 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="w-[300px] bg-card h-screen border-r border-border flex flex-col sticky top-0 font-poppins shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside className="sticky top-0 flex h-dvh w-[min(300px,100vw)] max-w-full flex-col border-r border-border bg-sidebar font-poppins text-sidebar-foreground shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
         {/* Logo Section */}
         <div className="p-8 pb-10 flex items-center justify-center">
           <Link href="/" className="flex items-center gap-1.5 group">
@@ -151,7 +149,7 @@ export default function Sidebar() {
                   className={`flex items-center gap-3 px-6 py-4.5 font-black rounded-2xl transition-all mb-4 group ${
                     isActive
                       ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/25"
-                      : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                      : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                   }`}
                 >
                   <div
@@ -180,7 +178,7 @@ export default function Sidebar() {
                     className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
                       isActive
                         ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
-                        : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-4 relative z-10">
@@ -211,7 +209,7 @@ export default function Sidebar() {
                     className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
                       isActive
                         ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
-                        : "text-muted-foreground hover:bg-surface hover:text-foreground"
+                        : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
                     <div className="flex items-center gap-4 relative z-10">
@@ -251,7 +249,7 @@ export default function Sidebar() {
                             href={sub.href}
                             className={`px-12 py-3 text-[14px] font-bold transition-all mx-2 rounded-xl ${
                               pathname === sub.href
-                                ? "bg-white text-[#84CC16] shadow-sm"
+                                ? "bg-card text-[#84CC16] shadow-sm"
                                 : "text-muted-foreground hover:text-foreground hover:translate-x-1"
                             }`}
                           >
@@ -271,7 +269,7 @@ export default function Sidebar() {
         <div className="mx-4 mb-3">
           <button
             onClick={() => setOpenSupport(!openSupport)}
-            className="w-full p-5 bg-surface rounded-[24px] border border-border flex items-center justify-between transition-all"
+            className="flex w-full items-center justify-between rounded-[24px] border border-border bg-surface p-4 transition-all sm:p-5"
           >
             <div className="flex items-center gap-2">
               <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">

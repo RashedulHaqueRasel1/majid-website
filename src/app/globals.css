@@ -19,7 +19,7 @@
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
   --color-surface-muted: var(--surface-muted);
-  
+
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
 
@@ -66,7 +66,7 @@
   --radius: 0.625rem;
   --background: #ffffff;
   --foreground: #0f172a;
-  
+
   --primary: #84cc16;
   --primary-foreground: #ffffff;
   --brand-lime: #84cc16;
@@ -76,26 +76,26 @@
   --surface: #f8fafc;
   --surface-foreground: #0f172a;
   --surface-muted: #f1f5f9;
-  
+
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
-  
+
   --muted: #f1f5f9;
   --muted-foreground: #64748b;
-  
+
   --accent: #befb6d;
   --accent-foreground: #0f172a;
-  
+
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  
+
   --border: #e2e8f0;
   --input: #e2e8f0;
   --ring: #84cc16;
-  
+
   --card: #ffffff;
   --card-foreground: #0f172a;
-  
+
   --popover: #ffffff;
   --popover-foreground: #0f172a;
   --chart-1: #84cc16;
@@ -116,7 +116,7 @@
 .dark {
   --background: #0f172a;
   --foreground: #f8fafc;
-  
+
   --primary: #84cc16;
   --primary-foreground: #ffffff;
   --brand-lime: #84cc16;
@@ -126,26 +126,26 @@
   --surface: #111827;
   --surface-foreground: #f8fafc;
   --surface-muted: #1e293b;
-  
+
   --secondary: #1e293b;
   --secondary-foreground: #f8fafc;
-  
+
   --muted: #1e293b;
   --muted-foreground: #94a3b8;
-  
+
   --accent: #befb6d;
   --accent-foreground: #0f172a;
-  
+
   --destructive: #ef4444;
   --destructive-foreground: #ffffff;
-  
+
   --border: #1e293b;
   --input: #1e293b;
   --ring: #84cc16;
-  
+
   --card: #1e293b;
   --card-foreground: #f8fafc;
-  
+
   --popover: #1e293b;
   --popover-foreground: #f8fafc;
   --chart-1: #84cc16;
@@ -173,6 +173,17 @@
     font-family: var(--font-poppins), sans-serif !important;
     overflow-x: hidden;
   }
+
+  button,
+  input,
+  textarea,
+  select {
+    font: inherit;
+  }
+
+  table {
+    border-color: var(--border);
+  }
 }
 
 @layer utilities {
@@ -183,7 +194,30 @@
   }
 
   @keyframes scan {
-    0%, 100% { top: 0%; }
-    50% { top: 100%; }
+    0%,
+    100% {
+      top: 0%;
+    }
+    50% {
+      top: 100%;
+    }
+  }
+
+  .dashboard-page {
+    @apply min-h-screen bg-background px-4 py-6 sm:px-5 md:px-8 md:py-8 lg:px-10;
+    font-family: var(--font-poppins), sans-serif;
+  }
+
+  .dashboard-container {
+    @apply mx-auto w-full max-w-[1600px] space-y-6 md:space-y-8;
+  }
+
+  .responsive-table {
+    @apply w-full min-w-[760px] border-collapse text-left;
+  }
+
+  .mobile-scroll {
+    @apply max-w-full overflow-x-auto;
+    -webkit-overflow-scrolling: touch;
   }
 }

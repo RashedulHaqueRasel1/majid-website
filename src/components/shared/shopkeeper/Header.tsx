@@ -16,7 +16,7 @@ export default function Header({ setOpenSidebar }: Props) {
   const isAuthenticated = status === "authenticated";
 
   return (
-    <header className="h-20 bg-background/80 backdrop-blur-md border-b border-border px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
+    <header className="sticky top-0 z-30 flex h-16 shrink-0 items-center justify-between border-b border-border bg-background/90 px-3 backdrop-blur-md sm:h-20 sm:px-4 lg:px-8">
       {/* Left */}
       <div className="flex items-center gap-3">
         {/* Mobile Hamburger */}
@@ -35,13 +35,13 @@ export default function Header({ setOpenSidebar }: Props) {
       </div>
 
       {/* Right */}
-      <div className="flex items-center gap-4">
+      <div className="flex min-w-0 items-center gap-2 sm:gap-4">
         <ModeToggle />
         {isAuthenticated ? (
           <NotificationDropdown role="shopkeeper" />
         ) : (
           <Link href="/auth/login">
-            <Button className="bg-[#84CC16] hover:bg-[#84CC16]/95 text-white font-extrabold px-6 py-2.5 rounded-full text-sm shadow-md transition-all cursor-pointer">
+            <Button className="cursor-pointer rounded-full bg-[#84CC16] px-4 py-2 text-xs font-extrabold text-white shadow-md transition-all hover:bg-[#84CC16]/95 sm:px-6 sm:py-2.5 sm:text-sm">
               Login / Sign Up
             </Button>
           </Link>

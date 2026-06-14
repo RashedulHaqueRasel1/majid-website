@@ -306,185 +306,187 @@ export default function DashboardOverview() {
   };
 
   return (
-    <div className="p-4 md:p-8 max-w-[1600px] mx-auto space-y-8 font-poppins bg-[#F8FAFC] dark:bg-slate-950 min-h-screen text-slate-800 dark:text-slate-100 transition-colors duration-300">
-      {/* Page Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
-            Dashboard Overview
-          </h1>
-          <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
-            Real-time business performance analytics and AI-powered insights.
-          </p>
+    <div className="dashboard-page text-slate-800 transition-colors duration-300 dark:text-slate-100">
+      <div className="dashboard-container">
+        {/* Page Header */}
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-black tracking-tight text-slate-900 dark:text-white">
+              Dashboard Overview
+            </h1>
+            <p className="text-slate-500 dark:text-slate-400 font-medium mt-1">
+              Real-time business performance analytics and AI-powered insights.
+            </p>
+          </div>
         </div>
-      </div>
 
-      {/* Main Responsive Grid */}
-      <div className="gap-8 ">
-        <div className=" grid grid-cols-1 lg:grid-cols-2 gap-8">
-          <CashManagementScore />
-          <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 dark:text-amber-400 flex-shrink-0">
-                  <BadgeDollarSign className="w-5 h-5" />
-                </div>
-              </div>
-
-              <div className="mt-4">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Starting Day Cash
-                </span>
-
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-2xl font-extrabold text-slate-800 dark:text-white">
-                    {cashInDrawer}
-                  </span>
-
-                  <div className="text-right flex flex-col items-end">
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full">
-                      ↑ 2%
-                    </span>
-
-                    <span className="text-[9px] text-slate-400 font-medium mt-0.5">
-                      vs last month
-                    </span>
+        {/* Main Responsive Grid */}
+        <div className="gap-8 ">
+          <div className=" grid grid-cols-1 lg:grid-cols-2 gap-8">
+            <CashManagementScore />
+            <div className="grid grid-cols-1 sm:grid-cols-1 gap-4">
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 dark:text-amber-400 flex-shrink-0">
+                    <BadgeDollarSign className="w-5 h-5" />
                   </div>
                 </div>
 
-                <form
-                  onSubmit={handleStartingCashSubmit}
-                  className="mt-4 flex flex-col sm:flex-row gap-2"
-                >
-                  <input
-                    type="number"
-                    min="0"
-                    step="1"
-                    value={startingCash}
-                    onChange={(event) => setStartingCash(event.target.value)}
-                    placeholder="Enter starting cash"
-                    className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-950/40"
-                  />
+                <div className="mt-4">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Starting Day Cash
+                  </span>
 
-                  <button
-                    type="submit"
-                    className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-amber-600"
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-extrabold text-slate-800 dark:text-white">
+                      {cashInDrawer}
+                    </span>
+
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full">
+                        ↑ 2%
+                      </span>
+
+                      <span className="text-[9px] text-slate-400 font-medium mt-0.5">
+                        vs last month
+                      </span>
+                    </div>
+                  </div>
+
+                  <form
+                    onSubmit={handleStartingCashSubmit}
+                    className="mt-4 flex flex-col sm:flex-row gap-2"
                   >
-                    Submit
-                  </button>
-                </form>
-              </div>
-            </div>
+                    <input
+                      type="number"
+                      min="0"
+                      step="1"
+                      value={startingCash}
+                      onChange={(event) => setStartingCash(event.target.value)}
+                      placeholder="Enter starting cash"
+                      className="min-w-0 flex-1 rounded-xl border border-slate-200 dark:border-slate-700 bg-slate-50 dark:bg-slate-800 px-3 py-2 text-sm font-semibold text-slate-800 dark:text-white outline-none focus:border-amber-400 focus:ring-2 focus:ring-amber-100 dark:focus:ring-amber-950/40"
+                    />
 
-            <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between">
-              <div className="flex items-center justify-between">
-                <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 dark:text-amber-400 flex-shrink-0">
-                  <Banknote className="w-5 h-5" />
+                    <button
+                      type="submit"
+                      className="rounded-xl bg-amber-500 px-4 py-2 text-sm font-bold text-white transition-colors hover:bg-amber-600"
+                    >
+                      Submit
+                    </button>
+                  </form>
                 </div>
               </div>
 
-              <div className="mt-4">
-                <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                  Banked
-                </span>
+              <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between">
+                <div className="flex items-center justify-between">
+                  <div className="p-2.5 rounded-2xl bg-amber-50 dark:bg-amber-950/20 text-amber-500 dark:text-amber-400 flex-shrink-0">
+                    <Banknote className="w-5 h-5" />
+                  </div>
+                </div>
 
-                <div className="flex items-baseline justify-between mt-1">
-                  <span className="text-2xl font-extrabold text-slate-800 dark:text-white">
-                    $8,250
+                <div className="mt-4">
+                  <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                    Banked
                   </span>
 
-                  <div className="text-right flex flex-col items-end">
-                    <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full">
-                      ↑ 2%
+                  <div className="flex items-baseline justify-between mt-1">
+                    <span className="text-2xl font-extrabold text-slate-800 dark:text-white">
+                      $8,250
                     </span>
 
-                    <span className="text-[9px] text-slate-400 font-medium mt-0.5">
-                      vs last month
-                    </span>
+                    <div className="text-right flex flex-col items-end">
+                      <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full">
+                        ↑ 2%
+                      </span>
+
+                      <span className="text-[9px] text-slate-400 font-medium mt-0.5">
+                        vs last month
+                      </span>
+                    </div>
                   </div>
                 </div>
               </div>
             </div>
           </div>
-        </div>
 
-        <div className="grid mt-10 grid-cols-1 lg:grid-cols-2 gap-8">
-          <BusinessHealthScore />
-          <ScoreBreakdown />
-          <AIInsightSummary />
-          <SalesByCategory />
-        </div>
+          <div className="grid mt-10 grid-cols-1 lg:grid-cols-2 gap-8">
+            <BusinessHealthScore />
+            <ScoreBreakdown />
+            <AIInsightSummary />
+            <SalesByCategory />
+          </div>
 
-        {/* Right Column (lg:col-span-7) */}
-        <div className="lg:col-span-7 space-y-6">
-          {/* Timeframe selector + Stats Grid */}
-          <div>
-            <div className="flex justify-end mb-6">
-              <div className="flex items-center gap-1 bg-slate-100/90 dark:bg-slate-900 p-1 rounded-2xl w-max shadow-sm border border-slate-200/50 dark:border-slate-800">
-                {(["daily", "weekly", "monthly", "yearly"] as Period[]).map(
-                  (p) => (
-                    <button
-                      key={p}
-                      onClick={() => setPeriod(p)}
-                      className={`px-4.5 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
-                        period === p
-                          ? "bg-violet-600 text-white shadow-md shadow-violet-600/15"
-                          : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
-                      }`}
-                    >
-                      {p === "daily"
-                        ? "Daily"
-                        : p === "weekly"
-                          ? "Weekly"
-                          : p === "monthly"
-                            ? "Monthly"
-                            : "Yearly"}
-                    </button>
-                  ),
-                )}
+          {/* Right Column (lg:col-span-7) */}
+          <div className="lg:col-span-7 space-y-6">
+            {/* Timeframe selector + Stats Grid */}
+            <div>
+              <div className="flex justify-end mb-6">
+                <div className="mobile-scroll flex w-full items-center gap-1 rounded-2xl border border-slate-200/50 bg-slate-100/90 p-1 shadow-sm dark:border-slate-800 dark:bg-slate-900 sm:w-max">
+                  {(["daily", "weekly", "monthly", "yearly"] as Period[]).map(
+                    (p) => (
+                      <button
+                        key={p}
+                        onClick={() => setPeriod(p)}
+                        className={`px-4.5 py-1.5 rounded-xl text-xs font-semibold uppercase tracking-wider transition-all duration-200 cursor-pointer ${
+                          period === p
+                            ? "bg-violet-600 text-white shadow-md shadow-violet-600/15"
+                            : "text-slate-500 hover:text-slate-800 dark:text-slate-400 dark:hover:text-white"
+                        }`}
+                      >
+                        {p === "daily"
+                          ? "Daily"
+                          : p === "weekly"
+                            ? "Weekly"
+                            : p === "monthly"
+                              ? "Monthly"
+                              : "Yearly"}
+                      </button>
+                    ),
+                  )}
+                </div>
               </div>
-            </div>
 
-            {/* Stats Cards */}
-            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-              {statsByPeriod[period].map((stat) => (
-                <div
-                  key={stat.label}
-                  className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between"
-                >
-                  <div className="flex items-center justify-between">
-                    <div
-                      className={`p-2.5 rounded-2xl ${stat.color} flex-shrink-0`}
-                    >
-                      <stat.icon className="w-5 h-5" />
+              {/* Stats Cards */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {statsByPeriod[period].map((stat) => (
+                  <div
+                    key={stat.label}
+                    className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between"
+                  >
+                    <div className="flex items-center justify-between">
+                      <div
+                        className={`p-2.5 rounded-2xl ${stat.color} flex-shrink-0`}
+                      >
+                        <stat.icon className="w-5 h-5" />
+                      </div>
                     </div>
-                  </div>
-                  <div className="mt-4">
-                    <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
-                      {stat.label}
-                    </span>
-                    <div className="flex items-baseline justify-between mt-1">
-                      <span className="text-2xl font-extrabold text-slate-800 dark:text-white">
-                        {stat.value}
+                    <div className="mt-4">
+                      <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
+                        {stat.label}
                       </span>
-                      <div className="text-right flex flex-col items-end">
-                        <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full">
-                          {stat.trend}
+                      <div className="flex items-baseline justify-between mt-1">
+                        <span className="text-2xl font-extrabold text-slate-800 dark:text-white">
+                          {stat.value}
                         </span>
-                        <span className="text-[9px] text-slate-400 font-medium mt-0.5">
-                          vs last month
-                        </span>
+                        <div className="text-right flex flex-col items-end">
+                          <span className="text-xs font-bold text-emerald-600 bg-emerald-50 dark:bg-emerald-950/20 px-2 py-0.5 rounded-full">
+                            {stat.trend}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-medium mt-0.5">
+                            vs last month
+                          </span>
+                        </div>
                       </div>
                     </div>
                   </div>
-                </div>
-              ))}
+                ))}
+              </div>
             </div>
-          </div>
 
-          <SalesTrend period={period} />
-          <TopSellingProducts />
-          <AIInsightsCarousel />
+            <SalesTrend period={period} />
+            <TopSellingProducts />
+            <AIInsightsCarousel />
+          </div>
         </div>
       </div>
     </div>

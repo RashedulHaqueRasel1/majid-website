@@ -123,9 +123,9 @@ export default function RepairRequestsTable() {
   ];
 
   return (
-    <div className="px-4 py-8 md:px-8 lg:px-10 font-poppins min-h-screen bg-background">
-      <div className="mx-auto space-y-8">
-        <div className="flex justify-between items-center">
+    <div className="dashboard-page">
+      <div className="dashboard-container">
+        <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
           <h1 className="text-3xl font-black text-foreground tracking-tight">
             Repair Requests
           </h1>
@@ -169,8 +169,8 @@ export default function RepairRequestsTable() {
 
         {/* Table Section */}
         <div className="rounded-[32px] border border-border bg-card overflow-hidden shadow-sm">
-          <div className="overflow-x-auto">
-            <table className="w-full text-left text-sm">
+          <div className="mobile-scroll">
+            <table className="responsive-table text-sm">
               <thead className="border-b border-border bg-surface text-xs font-black uppercase tracking-wider text-muted-foreground">
                 <tr>
                   <th className="px-8 py-6">Customer Name</th>
