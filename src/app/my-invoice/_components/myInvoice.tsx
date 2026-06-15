@@ -163,7 +163,6 @@ export default function RepairInvoice({ id }: { id: string }) {
                 {format(new Date(request.createdAt), "MMM dd, yyyy")}
               </p>
             </div>
-
             <div>
               <p className="text-xs font-bold text-muted-foreground uppercase tracking-wider mb-1">
                 Shopkeeper
