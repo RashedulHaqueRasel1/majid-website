@@ -1,49 +1,61 @@
-export interface DashboardStats {
-  totalInvoices: number;
-  paidAmount: number;
-  pendingPayments: number;
-  pastDueBalance: number;
+export type DashboardFilter = "daily" | "monthly" | "yearly";
+
+export interface BusinessHealthScore {
+  overall: number;
+  rating: "Excellent" | "Good" | "Fair" | "Needs Improvement" | "Critical";
+  benchmark: number;
+  message: string;
 }
 
-export interface ChartData {
-  name: string;
-  revenue: number;
-  expenses: number;
-}
-
-export interface CustomerSummary {
-  id: string;
-  customer: string;
-  outstandingBalance: number;
-  lastPayment: number;
+export interface DashboardMetric {
+  score: number;
   status: string;
 }
 
-export interface UpcomingDueDate {
-  id: string;
-  customer: string;
-  amount: number;
-  dueDate: string;
-}
-
-export interface RecentInventory {
-  _id: string;
-  itemName: string;
-  imeiNumber: string;
-  purchasePrice: number;
-  expectedPrice: number;
-  image?: {
-    public_id: string;
-    url: string;
+export interface DashboardStatsResponse {
+  totalSales: number;
+  totalProfit: number;
+  totalOrders: number;
+  avgOrderValue: number;
+  salesGrowth: number;
+  profitGrowth: number;
+  ordersGrowth: number;
+  avgOrderGrowth: number;
+  businessHealthScore: BusinessHealthScore;
+  metrics: {
+    salesGrowth: DashboardMetric;
+    profitMargin: DashboardMetric;
+    stockManagement: DashboardMetric;
+    customerSatisfaction: DashboardMetric;
+    outstandingPayments: DashboardMetric;
   };
-  currentState: string;
-  createdAt: string;
+  insights: string[];
 }
 
-export interface DashboardOverviewResponse {
-  stats: DashboardStats;
-  chartData: ChartData[];
-  customerSummary: CustomerSummary[];
-  upcomingDueDates: UpcomingDueDate[];
-  recentInventory: RecentInventory[];
+export interface CashManagementResponse {
+  _id?: string;
+  shopkeeperId:
+    | string
+    | {
+        _id: string;
+        firstName?: string;
+        lastName?: string;
+        email?: string;
+        phone?: string;
+      };
+  startingDayCash: number;
+  banked: number;
+  cashInDrawer: number;
+  cashManagementScore: number;
+  aiInsight?: string;
+  date?: string;
+  createdAt?: string;
+  updatedAt?: string;
+}
+
+export interface CashManagementInput {
+  shopkeeperId: string;
+  startingDayCash: number;
+  banked?: number;
+  cashInDrawer?: number;
 }

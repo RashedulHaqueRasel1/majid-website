@@ -1,38 +1,63 @@
 "use client";
 
-import { useEffect, useState } from "react";
-import { getShopkeeperDashboardOverview } from "../api/dashboard.api";
-import { DashboardOverviewResponse } from "../types/dashboard.types";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
+import {
+  getCashManagementByShopkeeper,
+  getShopkeeperDashboardStats,
+  saveCashManagement,
+} from "../api/dashboard.api";
+import type {
+  CashManagementInput,
+  DashboardFilter,
+} from "../types/dashboard.types";
 
-export function useDashboardOverview() {
-  const [loading, setLoading] = useState(true);
-  const [error, setError] = useState<string | null>(null);
-  const [data, setData] = useState<DashboardOverviewResponse | null>(null);
+export const DASHBOARD_OVERVIEW_KEYS = {
+  stats: (shopkeeperId: string, filter: DashboardFilter) =>
+    ["dashboard-overview", "stats", shopkeeperId, filter] as const,
+  cashManagement: (shopkeeperId: string) =>
+    ["dashboard-overview", "cash-management", shopkeeperId] as const,
+};
 
-  const fetchOverview = async () => {
-    setLoading(true);
-    setError(null);
-    try {
-      const result = await getShopkeeperDashboardOverview();
-      setData(result);
-    } catch (err: unknown) {
-      const error = err as {
-        response?: { data?: { message?: string } };
-        message?: string;
-      };
-      const message =
-        error.response?.data?.message ||
-        error.message ||
-        "Failed to fetch dashboard overview";
-      setError(message);
-    } finally {
-      setLoading(false);
-    }
+export function useDashboardOverview(
+  shopkeeperId: string | undefined,
+  filter: DashboardFilter,
+) {
+  const queryClient = useQueryClient();
+
+  const statsQuery = useQuery({
+    queryKey: DASHBOARD_OVERVIEW_KEYS.stats(shopkeeperId || "", filter),
+    queryFn: () => getShopkeeperDashboardStats(shopkeeperId || "", filter),
+    enabled: Boolean(shopkeeperId),
+  });
+
+  const cashManagementQuery = useQuery({
+    queryKey: DASHBOARD_OVERVIEW_KEYS.cashManagement(shopkeeperId || ""),
+    queryFn: () => getCashManagementByShopkeeper(shopkeeperId || ""),
+    enabled: Boolean(shopkeeperId),
+  });
+
+  const cashManagementMutation = useMutation({
+    mutationFn: (payload: CashManagementInput) => saveCashManagement(payload),
+    onSuccess: async (_data, variables) => {
+      await queryClient.invalidateQueries({
+        queryKey: DASHBOARD_OVERVIEW_KEYS.cashManagement(
+          variables.shopkeeperId,
+        ),
+      });
+    },
+  });
+
+  return {
+    stats: statsQuery.data,
+    cashManagement: cashManagementQuery.data,
+    isLoading: statsQuery.isLoading || cashManagementQuery.isLoading,
+    isFetching: statsQuery.isFetching || cashManagementQuery.isFetching,
+    error: statsQuery.error || cashManagementQuery.error,
+    refetch: () => {
+      statsQuery.refetch();
+      cashManagementQuery.refetch();
+    },
+    saveCashManagement: cashManagementMutation.mutateAsync,
+    isSavingCashManagement: cashManagementMutation.isPending,
   };
-
-  useEffect(() => {
-    fetchOverview();
-  }, []);
-
-  return { data, loading, error, refetch: fetchOverview };
 }
