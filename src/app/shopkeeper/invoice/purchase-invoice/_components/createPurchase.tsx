@@ -33,11 +33,24 @@ import { BrowserMultiFormatReader } from "@zxing/library";
 import { createWorker } from "tesseract.js";
 
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
-import { useCreateInvoice } from "@/features/shopkeeper/inventory/hooks/useInventory";
+import {
+  useCreateInvoice,
+  useCreateInventory,
+  useCategories,
+} from "@/features/shopkeeper/inventory/hooks/useInventory";
 
 interface OcrResponse {
   success: boolean;
@@ -315,9 +328,13 @@ const PurchaseReceiptPDF = ({ customer, items, shopkeeper, total }: any) => (
 
 export default function CreatePurchaseReceipt() {
   const { data: profileData } = useMyProfile();
+  const { data: categoriesData } = useCategories();
   const session = useSession();
   const shopkeeperId = session?.data?.user?.id;
-  const { mutate: createInvoice, isPending } = useCreateInvoice();
+  const { mutateAsync: createInvoice, isPending: isCreatingInvoice } =
+    useCreateInvoice();
+  const { mutateAsync: createInventory, isPending: isCreatingInventory } =
+    useCreateInventory();
 
   const fileInputRefs = useRef<{ [key: number]: HTMLInputElement | null }>({});
   const videoRefs = useRef<{ [key: number]: HTMLVideoElement | null }>({});
@@ -365,6 +382,8 @@ export default function CreatePurchaseReceipt() {
   const [activeCameraStream, setActiveCameraStream] = useState<{
     [key: number]: boolean;
   }>({});
+  const [addToInventory, setAddToInventory] = useState(false);
+  const [selectedCategoryId, setSelectedCategoryId] = useState("");
 
   useEffect(() => {
     codeReaderRef.current = new BrowserMultiFormatReader();
@@ -715,6 +734,7 @@ export default function CreatePurchaseReceipt() {
       acc + Number(item.expectedPrice || 0) * Number(item.quantity || 1),
     0,
   );
+  const isSubmitting = isCreatingInvoice || isCreatingInventory;
 
   const handleCreateReceipt = async () => {
     if (!isFormValid) {
@@ -723,6 +743,12 @@ export default function CreatePurchaseReceipt() {
       );
       return;
     }
+
+    if (addToInventory && !selectedCategoryId) {
+      toast.error("Please select a category name");
+      return;
+    }
+
     const doc = (
       <PurchaseReceiptPDF
         customer={customer}
@@ -738,17 +764,52 @@ export default function CreatePurchaseReceipt() {
       { type: "application/pdf" },
     );
 
-    createInvoice(
-      {
+    try {
+      if (addToInventory) {
+        await Promise.all(
+          items.map((item) =>
+            createInventory({
+              itemName: item.name,
+              color: item.color || undefined,
+              storage: item.storage || undefined,
+              imeiNumber: item.serials?.join(", ") || undefined,
+              quantity: Number(item.quantity || 1),
+              purchasePrice: Number(item.expectedPrice || 0),
+              expectedPrice: Number(item.expectedPrice || 0),
+              productDetails: item.serials?.length
+                ? `Serials: ${item.serials.join(", ")}`
+                : undefined,
+              categoryId: selectedCategoryId,
+              type: "inventory",
+              status: "inventory",
+              currentState:
+                item.condition?.toLowerCase() === "good condition"
+                  ? "good condition"
+                  : "new",
+              userId: shopkeeperId || "",
+            }),
+          ),
+        );
+      }
+
+      await createInvoice({
         shopkeeperId: shopkeeperId || "",
         type: "Purchase Invoice",
         invoice: file,
-      },
-      {
-        onSuccess: () => toast.success("Purchase receipt created successfully"),
-        onError: () => toast.error("Failed to create purchase receipt"),
-      },
-    );
+      });
+
+      toast.success(
+        addToInventory
+          ? "Purchase receipt created and items added to inventory"
+          : "Purchase receipt created successfully",
+      );
+    } catch (error) {
+      toast.error(
+        addToInventory
+          ? "Failed to create purchase receipt or add items to inventory"
+          : "Failed to create purchase receipt",
+      );
+    }
   };
 
   return (
@@ -962,10 +1023,56 @@ export default function CreatePurchaseReceipt() {
                       Configure specifications and accumulate tracking logs
                     </p>
                   </div>
-                  <Button onClick={addItem} className="rounded-2xl">
-                    <Plus size={16} className="mr-2" /> Add Item
-                  </Button>
+                  <div className="flex items-center gap-4">
+                    <div className="flex items-center gap-2 rounded-2xl border bg-background px-4 py-2">
+                      <Checkbox
+                        id="add-to-inventory"
+                        checked={addToInventory}
+                        onCheckedChange={(checked) =>
+                          setAddToInventory(checked === true)
+                        }
+                      />
+                      <Label
+                        htmlFor="add-to-inventory"
+                        className="cursor-pointer font-semibold"
+                      >
+                        Add to inventory
+                      </Label>
+                    </div>
+                    <Button onClick={addItem} className="rounded-2xl">
+                      <Plus size={16} className="mr-2" /> Add Item
+                    </Button>
+                  </div>
                 </div>
+
+                {addToInventory && (
+                  <div className="space-y-2">
+                    <Label
+                      htmlFor="inventory-category"
+                      className="ml-1 text-sm font-bold text-muted-foreground"
+                    >
+                      Category Name
+                    </Label>
+                    <Select
+                      value={selectedCategoryId}
+                      onValueChange={setSelectedCategoryId}
+                    >
+                      <SelectTrigger
+                        id="inventory-category"
+                        className="h-12 w-full rounded-2xl border-primary bg-background font-bold"
+                      >
+                        <SelectValue placeholder="Select category" />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {categoriesData?.data?.map((category) => (
+                          <SelectItem key={category._id} value={category._id}>
+                            {category.name}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )}
 
                 <div className="space-y-5">
                   {items.map((item, itemIndex) => {
@@ -1303,12 +1410,12 @@ export default function CreatePurchaseReceipt() {
                 </div>
 
                 <Button
-                  disabled={!isFormValid || isPending || ocrLoading}
+                  disabled={!isFormValid || isSubmitting || ocrLoading}
                   onClick={handleCreateReceipt}
                   className="w-full h-14 rounded-2xl text-sm font-black uppercase tracking-wider"
                 >
                   Create Purchase Receipt
-                  {isPending && <Loader2 className="ml-2 animate-spin" />}
+                  {isSubmitting && <Loader2 className="ml-2 animate-spin" />}
                 </Button>
               </CardContent>
             </Card>
