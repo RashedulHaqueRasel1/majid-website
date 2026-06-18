@@ -24,6 +24,8 @@ export interface Shopkeeper {
 export interface RepairRequestPayload {
   firstName: string;
   email: string;
+  phoneNumber: string;
+  price: number;
   deviceModel: string;
   IMEINumber?: string;
   description: string;
@@ -91,6 +93,8 @@ export interface RepairRequest {
       };
   firstName: string;
   email: string;
+  phoneNumber?: string;
+  price?: number;
   deviceModel: string;
   IMEINumber?: string;
   description: string;

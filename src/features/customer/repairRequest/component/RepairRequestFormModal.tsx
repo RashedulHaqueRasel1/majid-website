@@ -30,7 +30,10 @@ export function RepairRequestFormModal({
   const [fullName, setFullName] = useState("");
   const [isFullNameEdited, setIsFullNameEdited] = useState(false);
   const [email, setEmail] = useState("");
+  const [phone, setPhone] = useState("");
+  const [isPhoneEdited, setIsPhoneEdited] = useState(false);
   const [isEmailEdited, setIsEmailEdited] = useState(false);
+  const [price, setPrice] = useState("");
   const [deviceModel, setDeviceModel] = useState("");
   const [problemSearch, setProblemSearch] = useState("");
   const [isProblemSelectOpen, setIsProblemSelectOpen] = useState(false);
@@ -57,6 +60,9 @@ export function RepairRequestFormModal({
       if (!isEmailEdited && email !== (user.email || "")) {
         setEmail(user.email || "");
       }
+      if (!isPhoneEdited && phone !== (user.phone || "")) {
+        setPhone(user.phone || "");
+      }
     }, 0);
 
     return () => clearTimeout(timer);
@@ -66,8 +72,10 @@ export function RepairRequestFormModal({
     profileFullName,
     isFullNameEdited,
     isEmailEdited,
+    isPhoneEdited,
     fullName,
     email,
+    phone,
   ]);
 
   const problemSuggestions = useMemo(() => {
@@ -105,6 +113,8 @@ export function RepairRequestFormModal({
       {
         firstName: fullName,
         email: email,
+        phoneNumber: phone,
+        price: Number(price),
         deviceModel,
         IMEINumber: imeiNumber,
         description: problemDescription,
@@ -113,6 +123,7 @@ export function RepairRequestFormModal({
         onSuccess: () => {
           setDeviceModel("");
           setImeiNumber("");
+          setPrice("");
           setProblemDescription("");
           setProblemSearch("");
           onClose();
@@ -173,6 +184,23 @@ export function RepairRequestFormModal({
 
             <div className="space-y-2">
               <label className="text-sm font-bold text-foreground uppercase tracking-wider">
+                Phone Number
+              </label>
+              <input
+                value={phone}
+                onChange={(e) => {
+                  setPhone(e.target.value);
+                  setIsPhoneEdited(true);
+                }}
+                required
+                type="tel"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
+                placeholder="your phone number"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-foreground uppercase tracking-wider">
                 Device Model
               </label>
               <input
@@ -181,6 +209,22 @@ export function RepairRequestFormModal({
                 required
                 className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
                 placeholder="e.g. iPhone 15 Pro"
+              />
+            </div>
+
+            <div className="space-y-2">
+              <label className="text-sm font-bold text-foreground uppercase tracking-wider">
+                Price
+              </label>
+              <input
+                value={price}
+                onChange={(e) => setPrice(e.target.value)}
+                required
+                type="number"
+                min="0"
+                step="0.01"
+                className="w-full h-12 px-4 rounded-xl border border-border bg-background text-foreground font-medium outline-none transition-all focus:border-primary focus:ring-4 focus:ring-primary/10"
+                placeholder="e.g. 150.00"
               />
             </div>
 

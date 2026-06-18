@@ -17,6 +17,7 @@ import {
   CheckCircle2,
   Clock3,
   MessageSquare,
+  Phone,
 } from "lucide-react";
 import { useState } from "react";
 import {
@@ -42,6 +43,7 @@ import {
 } from "@/components/ui/alert-dialog";
 import axios from "axios";
 import { useSession } from "next-auth/react";
+import CheckoutModal from "./CheckoutModal";
 
 const timelineSteps = [
   {
@@ -100,6 +102,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   const [noteDays, setNoteDays] = useState("");
   const [noteImages, setNoteImages] = useState<File[]>([]);
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
+  const [isCheckoutOpen, setIsCheckoutOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
   const token = session.data?.accessToken;
 
@@ -756,7 +759,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                       </p>
                     </div>
                   </div>
-                  {/* <div className="flex items-center gap-4">
+                  <div className="flex items-center gap-4">
                     <div className="w-11 h-11 bg-surface rounded-xl flex items-center justify-center text-muted-foreground">
                       <Phone size={18} />
                     </div>
@@ -765,12 +768,10 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                         Phone
                       </p>
                       <p className="text-sm font-black text-foreground leading-none">
-                        {typeof request.userId === "object"
-                          ? request.userId.phone
-                          : "+92 300 1234567"}
+                        {request.phoneNumber || "N/A"}
                       </p>
                     </div>
-                  </div> */}
+                  </div>
                   <div className="flex items-center gap-4">
                     <div className="w-11 h-11 bg-surface rounded-xl flex items-center justify-center text-muted-foreground">
                       <Mail size={18} />
@@ -1001,124 +1002,6 @@ export default function RepairRequestDetails({ id }: { id: string }) {
 
             {/* Right Column */}
             <div className="space-y-6">
-              {/* Device Proof Images Card */}
-
-              {/* Shopkeeper Notes Card */}
-              <div className="bg-card border border-border rounded-[32px] p-8 shadow-sm space-y-6">
-                <h3 className="text-xl font-black text-foreground">
-                  Shopkeeper Notes
-                </h3>
-                <div className="grid grid-cols-2 gap-4">
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">
-                      Estimated Cost
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <DollarSign size={14} />
-                      </div>
-                      <input
-                        type="number"
-                        value={noteCost}
-                        onChange={(e) => setNoteCost(e.target.value)}
-                        placeholder="150"
-                        min={0}
-                        className="w-full h-12 pl-10 pr-4 bg-surface border border-border rounded-2xl font-bold text-sm outline-none focus:border-primary transition-colors"
-                      />
-                    </div>
-                  </div>
-                  <div className="space-y-2">
-                    <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">
-                      Estimated Time (days)
-                    </label>
-                    <div className="relative">
-                      <div className="absolute left-4 top-1/2 -translate-y-1/2 text-muted-foreground">
-                        <Clock size={14} />
-                      </div>
-                      <input
-                        type="number"
-                        value={noteDays}
-                        onChange={(e) => setNoteDays(e.target.value)}
-                        placeholder="3"
-                        min={0}
-                        className="w-full h-12 pl-10 pr-4 bg-surface border border-border rounded-2xl font-bold text-sm outline-none focus:border-primary transition-colors"
-                      />
-                    </div>
-                  </div>
-                </div>
-                <div className="space-y-2">
-                  <textarea
-                    value={noteMessage}
-                    onChange={(e) => setNoteMessage(e.target.value)}
-                    placeholder="Add internal notes about this repair..."
-                    className="w-full h-32 p-5 bg-surface border border-border rounded-[24px] font-bold text-sm outline-none focus:border-primary transition-colors resize-none"
-                  />
-                </div>
-
-                {/* Image Upload for Shopkeeper */}
-                <div className="space-y-3">
-                  <label className="text-[10px] font-black text-muted-foreground uppercase tracking-widest ml-1">
-                    Attach Proof (Images)
-                  </label>
-                  <div className="flex flex-wrap gap-2 mb-2">
-                    {noteImages.map((file, idx) => (
-                      <div
-                        key={idx}
-                        className="relative w-16 h-16 rounded-xl overflow-hidden border border-border"
-                      >
-                        <Image
-                          src={URL.createObjectURL(file)}
-                          alt="preview"
-                          fill
-                          className="object-cover"
-                        />
-                        <button
-                          onClick={() =>
-                            setNoteImages((prev) =>
-                              prev.filter((_, i) => i !== idx),
-                            )
-                          }
-                          className="absolute top-1 right-1 bg-black/60 text-white rounded-full p-0.5"
-                        >
-                          <X size={12} />
-                        </button>
-                      </div>
-                    ))}
-                    {noteImages.length < 4 && (
-                      <label className="w-16 h-16 rounded-xl border border-dashed border-border bg-surface flex items-center justify-center cursor-pointer hover:border-primary hover:bg-primary/5 transition-all">
-                        <Paperclip
-                          size={18}
-                          className="text-muted-foreground"
-                        />
-                        <input
-                          type="file"
-                          multiple
-                          accept="image/*"
-                          className="sr-only"
-                          onChange={(e) => {
-                            const files = Array.from(e.target.files || []);
-                            setNoteImages((prev) =>
-                              [...prev, ...files].slice(0, 4),
-                            );
-                          }}
-                        />
-                      </label>
-                    )}
-                  </div>
-                </div>
-                <Button
-                  onClick={handleAddNote}
-                  disabled={addNote.isPending || !noteMessage.trim()}
-                  className="w-full h-14 bg-[#84CC16] hover:bg-[#71AF12] text-white rounded-full font-black text-sm uppercase tracking-widest shadow-xl shadow-lime-500/20 transition-all active:scale-95 disabled:opacity-50"
-                >
-                  {addNote.isPending ? (
-                    <Loader2 className="h-5 w-5 animate-spin" />
-                  ) : (
-                    "Confirm"
-                  )}
-                </Button>
-              </div>
-
               {/* Approval Required */}
 
               <div className="rounded-3xl border border-yellow-200 bg-yellow-50/50 p-6 shadow-sm dark:bg-yellow-900/10 dark:border-yellow-900/50">
@@ -1191,6 +1074,21 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                   >
                     Completed
                   </Button>
+
+                  {isCompletedStatus && (
+                    <Button
+                      className="flex-1 rounded-full font-bold h-11 cursor-pointer !bg-[#2216cc] text-primary-foreground shadow-lg shadow-primary/20"
+                      onClick={() => setIsCheckoutOpen(true)}
+                      // disabled={updateResentQuote.isPending}
+                    >
+                      Checkout
+                    </Button>
+                  )}
+
+                  <CheckoutModal
+                    open={isCheckoutOpen}
+                    onOpenChange={setIsCheckoutOpen}
+                  />
 
                   {isConfirmOpen && (
                     <AlertDialog

@@ -5,7 +5,6 @@ import {
   ChevronLeft,
   Info,
   TrendingUp,
-  DollarSign,
   Package,
   Star,
   FileText,
@@ -330,7 +329,6 @@ export default function DashboardOverview() {
                   <BadgeDollarSign className="w-5 h-5" />
                 </div>
               </div>
-
               <div className="mt-4">
                 <span className="text-[11px] font-semibold text-slate-400 uppercase tracking-wider">
                   Starting Day Cash

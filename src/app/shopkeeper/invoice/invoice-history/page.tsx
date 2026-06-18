@@ -1363,7 +1363,7 @@ const InvoiceHistoryPage = () => {
                     Invoice ID
                   </th>
                   <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-muted-foreground">
-                    Merchant / Shop
+                    Customer
                   </th>
                   <th className="px-6 py-4 text-xs font-black uppercase tracking-wider text-muted-foreground">
                     Classification
@@ -1411,7 +1411,8 @@ const InvoiceHistoryPage = () => {
                           <div className="flex flex-col gap-0.5">
                             <span className="font-black text-foreground flex items-center gap-1.5 text-sm">
                               <Store className="w-3.5 h-3.5 text-sky-500" />
-                              {shopkeeper?.shopName || "Unknown Merchant"}
+                              {shopkeeper?.firstName}{" "}
+                              {shopkeeper?.lastName || "Unknown Merchant"}
                             </span>
                             <span className="text-xs text-muted-foreground font-medium flex items-center gap-1.5">
                               <Phone className="w-3.5 h-3.5" />
