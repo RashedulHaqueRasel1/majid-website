@@ -2,7 +2,7 @@
 
 import { motion } from "framer-motion";
 import { useSearchParams, useRouter } from "next/navigation";
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { ScannerModal } from "@/components/shared/website/ScannerModal";
 import { GuestLoginModal } from "@/components/shared/website/GuestLoginModal";
 import { toast } from "sonner";
@@ -26,6 +26,9 @@ export default function ScanDevice() {
   const searchParams = useSearchParams();
   const queryImei = searchParams.get("imei");
   const queryServiceId = searchParams.get("serviceId");
+  const queryDeviceName = searchParams.get("deviceName");
+  const fromSearchHistory = searchParams.get("from") === "search-history";
+  const hasTriggeredHistoryScan = useRef(false);
 
   const {
     serviceCategories,
@@ -33,7 +36,7 @@ export default function ScanDevice() {
     setSelectedService,
     isDropdownOpen,
     setIsDropdownOpen,
-  } = useServices(queryServiceId);
+  } = useServices(queryServiceId, queryDeviceName);
 
   const {
     imei,
@@ -72,15 +75,24 @@ export default function ScanDevice() {
   });
 
   useEffect(() => {
+    if (queryImei) {
+      setImei(queryImei);
+    }
+  }, [queryImei, setImei]);
+
+  useEffect(() => {
     if (
       queryImei &&
       selectedService &&
+      !hasTriggeredHistoryScan.current &&
       !isScanning &&
       !scanResult &&
       !favouriteResult &&
       !batchResult
     ) {
+      hasTriggeredHistoryScan.current = true;
       handleScan(queryImei, selectedService.serviceId || 6);
+      router.replace("/shopkeeper/scan-device");
     }
   }, [
     queryImei,
@@ -90,6 +102,7 @@ export default function ScanDevice() {
     favouriteResult,
     batchResult,
     handleScan,
+    router,
   ]);
 
   const handleImageUpload = async (file: File) => {
@@ -229,6 +242,19 @@ export default function ScanDevice() {
           className="w-full bg-card rounded-[40px] p-6 md:p-12 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.05)] border border-border"
         >
           <div className="space-y-8">
+            {fromSearchHistory && queryImei && (
+              <div className="rounded-3xl border border-primary/20 bg-primary/5 px-5 py-4 text-sm text-foreground">
+                <p className="font-black text-primary">Rescan from history</p>
+                <p className="mt-1 font-medium text-muted-foreground">
+                  {queryDeviceName || "Selected device"} with IMEI{" "}
+                  <span className="font-black text-foreground">
+                    {queryImei}
+                  </span>{" "}
+                  is ready to scan again.
+                </p>
+              </div>
+            )}
+
             <ServiceSelector
               serviceCategories={serviceCategories}
               selectedService={selectedService}

@@ -7,7 +7,55 @@ import {
   ServiceCategory,
 } from "../../scanDevice/types/scanDevice.types";
 
-export const useServices = (queryServiceId: string | null) => {
+const getBestMatchedService = (
+  allServices: IMEIService[],
+  deviceName: string | null,
+) => {
+  if (!deviceName) return null;
+
+  const normalizedDeviceName = deviceName.toLowerCase();
+  const keywordGroups = [
+    {
+      matchers: ["samsung", "galaxy", "sm-"],
+      keywords: ["samsung", "galaxy", "android"],
+    },
+    {
+      matchers: ["iphone", "ipad", "apple", "ios"],
+      keywords: ["iphone", "ipad", "apple", "ios"],
+    },
+    {
+      matchers: ["pixel", "google"],
+      keywords: ["pixel", "google"],
+    },
+  ];
+
+  const matchedGroup = keywordGroups.find((group) =>
+    group.matchers.some((matcher) => normalizedDeviceName.includes(matcher)),
+  );
+
+  if (!matchedGroup) return null;
+
+  const scoredServices = allServices
+    .map((service) => {
+      const haystack =
+        `${service.name} ${service.category} ${service.normalizedName}`.toLowerCase();
+      const score = matchedGroup.keywords.reduce(
+        (total, keyword) => total + (haystack.includes(keyword) ? 1 : 0),
+        0,
+      );
+
+      return { service, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((a, b) => b.score - a.score);
+
+  return scoredServices[0]?.service || null;
+};
+
+export const useServices = (
+  queryServiceId: string | null,
+  queryDeviceName?: string | null,
+) => {
   const { status } = useSession();
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
     [],
@@ -48,13 +96,21 @@ export const useServices = (queryServiceId: string | null) => {
               setSelectedService(found);
             } else {
               // Try to select first available service if requested is not found
-              const firstSvc = allServices[0] || null;
-              setSelectedService(firstSvc);
+              setSelectedService(
+                (current) => current || allServices[0] || null,
+              );
             }
+          } else if (queryDeviceName) {
+            const matchedService = getBestMatchedService(
+              allServices,
+              queryDeviceName,
+            );
+            setSelectedService(
+              (current) => matchedService || current || allServices[0] || null,
+            );
           } else {
             // Select first available service by default if not logged in or no query param
-            const firstSvc = allServices[0] || null;
-            setSelectedService(firstSvc);
+            setSelectedService((current) => current || allServices[0] || null);
           }
         }
       } catch (err) {
@@ -64,7 +120,7 @@ export const useServices = (queryServiceId: string | null) => {
       }
     };
     fetchServices();
-  }, [queryServiceId, status]);
+  }, [queryDeviceName, queryServiceId, status]);
 
   return {
     serviceCategories,
