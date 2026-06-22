@@ -21,6 +21,7 @@ import {
   X,
 } from "lucide-react";
 import { motion } from "framer-motion";
+import { useRouter } from "next/navigation";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { SearchHistoryRecord } from "../types/search-history.types";
 
@@ -139,6 +140,7 @@ const buildPageItems = (currentPage: number, totalPages: number) => {
 };
 
 export default function SearchHistory() {
+  const router = useRouter();
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(10);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -225,6 +227,18 @@ export default function SearchHistory() {
 
   const errorMessage =
     error instanceof Error ? error.message : "Failed to load search history.";
+
+  const handleRowClick = React.useCallback(
+    (record: SearchHistoryRecord) => {
+      const params = new URLSearchParams({
+        imei: record.imei,
+        deviceName: record.deviceName || "Unknown Device",
+        from: "search-history",
+      });
+      router.push(`/shopkeeper/scan-device?${params.toString()}`);
+    },
+    [router],
+  );
 
   return (
     <div className="min-h-screen bg-background px-4 py-8 font-poppins md:px-8 lg:px-10">
@@ -380,6 +394,7 @@ export default function SearchHistory() {
                       key={record._id}
                       record={record}
                       index={index}
+                      onClick={() => handleRowClick(record)}
                     />
                   ))
                 )}
@@ -471,9 +486,11 @@ export default function SearchHistory() {
 function SearchHistoryRow({
   record,
   index,
+  onClick,
 }: {
   record: SearchHistoryRecord;
   index: number;
+  onClick: () => void;
 }) {
   const riskStyle = getRiskStyle(record.riskMeter?.riskLevel);
   const RiskIcon = riskStyle.icon;
@@ -484,7 +501,16 @@ function SearchHistoryRow({
       initial={{ opacity: 0, y: 8 }}
       animate={{ opacity: 1, y: 0 }}
       transition={{ delay: Math.min(index * 0.025, 0.2) }}
-      className="group transition-colors hover:bg-surface/70"
+      onClick={onClick}
+      onKeyDown={(event) => {
+        if (event.key === "Enter" || event.key === " ") {
+          event.preventDefault();
+          onClick();
+        }
+      }}
+      tabIndex={0}
+      role="button"
+      className="group cursor-pointer transition-colors hover:bg-surface/70 focus:outline-none focus-visible:bg-surface/70"
     >
       <td className="px-7 py-5">
         <div className="flex items-center gap-3">

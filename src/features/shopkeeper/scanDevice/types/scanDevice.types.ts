@@ -153,18 +153,21 @@ export interface FavouriteProviderResults {
   description?: string;
   model?: string;
   imei?: string;
+  imei1?: string;
   imei2?: string;
+  full_name?: string;
   meid?: string;
   serial_number?: string;
   warranty_status?: string;
+  warranty_until?: string;
   purchase_date?: string;
+  production_date?: string;
   replaced_device?: string;
   simlock?: string;
   icloud_lock?: string;
   manufacturer?: string;
   marketing_name?: string;
   operating_system?: string;
-  blacklist_status?: string;
   device_configuration?: string;
   model_name?: string;
   material_number?: string;
@@ -181,6 +184,19 @@ export interface FavouriteProviderResults {
   purchase_country?: string;
   icloud_status?: string;
   mdm_lock?: string;
+  carrier?: string;
+  model_number?: string;
+  do_number?: string;
+  sales_buyer_code?: string;
+  sales_buyer_name?: string;
+  sold_by_country?: string;
+  ship_to_country?: string;
+  sold_date?: string;
+  ship_date?: string;
+  knox_guard?: string;
+  blacklist_status?: string;
+  att_status?: string;
+  error_r01?: string;
 }
 
 export interface FavouriteIMEIData {

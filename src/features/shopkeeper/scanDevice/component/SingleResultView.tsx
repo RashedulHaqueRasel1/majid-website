@@ -99,6 +99,8 @@ interface ExtractedDeviceData {
   marketingName: string;
   deviceConfiguration: string;
   modelName: string;
+  fullName: string;
+  manufacturer: string;
 
   // Identifiers
   imeiValue: string;
@@ -111,6 +113,7 @@ interface ExtractedDeviceData {
   materialNumber: string;
   partNumber: string;
   modelNumber: string;
+  doNumber: string;
 
   // Purchase & Warranty
   warrantyStatus: string;
@@ -118,6 +121,7 @@ interface ExtractedDeviceData {
   warrantyStatusDescription: string;
   coverageStatus: string;
   purchaseDate: string;
+  productionDate: string;
   estimatedPurchaseDate: string;
   coverageEndDate: string;
   coverageStartDate: string;
@@ -170,6 +174,10 @@ interface ExtractedDeviceData {
   carrierName: string;
   sim1Carrier: string;
   soldToName: string;
+  salesBuyerCode: string;
+  salesBuyerName: string;
+  soldByCountry: string;
+  shipToCountry: string;
   purchaseCountryDesc: string;
   purchaseCountryCode: string;
   partCountry: string;
@@ -200,6 +208,8 @@ interface ExtractedDeviceData {
   lastRestoreDate: string;
   lastUnbrickOsBuild: string;
   initialUnbrick: string;
+  soldDate: string;
+  shipDate: string;
 
   // GSX & History
   gsxReplacementHistory: string;
@@ -209,6 +219,10 @@ interface ExtractedDeviceData {
   wirelessMacAddress: string;
   iccid: string;
   messages: string;
+  knoxGuard: string;
+  blacklistStatus: string;
+  attStatus: string;
+  errorR01: string;
   hasError: boolean;
   errorMessage: string;
   isEmpty: boolean;
@@ -271,10 +285,13 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
   const marketingName = parsedProviderData.marketing_name || "";
   const deviceConfiguration = parsedProviderData.device_configuration || "";
   const modelName = parsedProviderData.model_name || "";
+  const fullName = parsedProviderData.full_name || "";
+  const manufacturer = parsedProviderData.manufacturer || "";
 
   // Identifiers
   const imeiValue =
     parsedProviderData.imei_number ||
+    parsedProviderData.imei1 ||
     parsedProviderData.imei ||
     parsedProviderData.deviceid ||
     scanResult.imei ||
@@ -296,9 +313,11 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     parsedProviderData.eid || parsedProviderData.csncsn2eid || "N/A";
   const configCode = parsedProviderData.config_code || "";
   const materialNumber = parsedProviderData.material_number || "";
-  const partNumber = parsedProviderData.part_number || "";
+  const partNumber =
+    parsedProviderData.part_number || parsedProviderData.do_number || "";
   const modelNumber =
     parsedProviderData.model_number || parsedProviderData.basic_material || "";
+  const doNumber = parsedProviderData.do_number || "";
 
   // Warranty & Coverage
   let warrantyStatus =
@@ -318,10 +337,12 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     warrantyStatus = "AppleCare+";
 
   const purchaseDate = parsedProviderData.purchase_date || "";
+  const productionDate = parsedProviderData.production_date || "";
   const estimatedPurchaseDate =
     parsedProviderData.estimated_purchase_date || "";
   const coverageEndDate =
     parsedProviderData.warranty_expires ||
+    parsedProviderData.warranty_until ||
     parsedProviderData.coverage_end_date ||
     parsedProviderData.repairs_and_service_expiration_date ||
     "N/A";
@@ -410,11 +431,22 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
   }
 
   // Carrier & Network
-  const carrierName = parsedProviderData.carrier_name || "N/A";
+  const carrierName =
+    parsedProviderData.carrier_name || parsedProviderData.carrier || "N/A";
   const sim1Carrier =
     parsedProviderData.sim1_carrier || parsedProviderData.carrier || "";
-  const soldToName = parsedProviderData.sold_to_name || "";
-  const purchaseCountryDesc = parsedProviderData.purchase_country_desc || "";
+  const soldToName =
+    parsedProviderData.sold_to_name ||
+    parsedProviderData.sales_buyer_name ||
+    "";
+  const salesBuyerCode = parsedProviderData.sales_buyer_code || "";
+  const salesBuyerName = parsedProviderData.sales_buyer_name || "";
+  const soldByCountry = parsedProviderData.sold_by_country || "";
+  const shipToCountry = parsedProviderData.ship_to_country || "";
+  const purchaseCountryDesc =
+    parsedProviderData.purchase_country_desc ||
+    parsedProviderData.sold_by_country ||
+    "";
   const purchaseCountryCode = parsedProviderData.purchase_country_code || "";
   const partCountry = parsedProviderData.part_country || "";
   const partType = parsedProviderData.part_type || "";
@@ -464,6 +496,8 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
   const lastRestoreDate = parsedProviderData.last_restore_date || "";
   const lastUnbrickOsBuild = parsedProviderData.last_unbrick_os_build || "";
   const initialUnbrick = parsedProviderData.initial_unbrick || "";
+  const soldDate = parsedProviderData.sold_date || "";
+  const shipDate = parsedProviderData.ship_date || "";
 
   // GSX & History
   const gsxReplacementHistory =
@@ -474,6 +508,10 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
   const wirelessMacAddress = parsedProviderData.wireless_mac_address || "";
   const iccid = parsedProviderData.iccid || "";
   const messages = parsedProviderData.messages || "";
+  const knoxGuard = parsedProviderData.knox_guard || "";
+  const blacklistStatus = parsedProviderData.blacklist_status || "";
+  const attStatus = parsedProviderData.att_status || "";
+  const errorR01 = parsedProviderData.error_r01 || "";
 
   const hasError =
     !!parsedProviderData.error_r01 || !!parsedProviderData.failed_reason;
@@ -491,6 +529,8 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     marketingName,
     deviceConfiguration,
     modelName,
+    fullName,
+    manufacturer,
     imeiValue,
     imei2Value,
     meidValue,
@@ -501,11 +541,13 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     materialNumber,
     partNumber,
     modelNumber,
+    doNumber,
     warrantyStatus,
     warrantyStatusCode,
     warrantyStatusDescription,
     coverageStatus,
     purchaseDate,
+    productionDate,
     estimatedPurchaseDate,
     coverageEndDate,
     coverageStartDate,
@@ -550,6 +592,10 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     carrierName,
     sim1Carrier,
     soldToName,
+    salesBuyerCode,
+    salesBuyerName,
+    soldByCountry,
+    shipToCountry,
     purchaseCountryDesc,
     purchaseCountryCode,
     partCountry,
@@ -574,11 +620,17 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     lastRestoreDate,
     lastUnbrickOsBuild,
     initialUnbrick,
+    soldDate,
+    shipDate,
     gsxReplacementHistory,
     notice,
     wirelessMacAddress,
     iccid,
     messages,
+    knoxGuard,
+    blacklistStatus,
+    attStatus,
+    errorR01,
     hasError,
     errorMessage,
     isEmpty,
@@ -627,6 +679,8 @@ export const SingleResultView = ({
     marketingName,
     deviceConfiguration,
     modelName,
+    fullName,
+    manufacturer,
     imeiValue,
     imei2Value,
     meidValue,
@@ -637,11 +691,13 @@ export const SingleResultView = ({
     materialNumber,
     partNumber,
     modelNumber,
+    doNumber,
     warrantyStatus,
     warrantyStatusCode,
     warrantyStatusDescription,
     coverageStatus,
     purchaseDate,
+    productionDate,
     estimatedPurchaseDate,
     coverageEndDate,
     coverageStartDate,
@@ -686,6 +742,10 @@ export const SingleResultView = ({
     carrierName,
     sim1Carrier,
     soldToName,
+    salesBuyerCode,
+    salesBuyerName,
+    soldByCountry,
+    shipToCountry,
     purchaseCountryDesc,
     purchaseCountryCode,
     partCountry,
@@ -710,11 +770,17 @@ export const SingleResultView = ({
     lastRestoreDate,
     lastUnbrickOsBuild,
     initialUnbrick,
+    soldDate,
+    shipDate,
     gsxReplacementHistory,
     notice,
     wirelessMacAddress,
     iccid,
     messages,
+    knoxGuard,
+    blacklistStatus,
+    attStatus,
+    errorR01,
     hasError,
     errorMessage,
     isEmpty,
@@ -748,6 +814,8 @@ export const SingleResultView = ({
         condition: !!deviceConfiguration,
       },
       { label: "Model Name", value: modelName, condition: !!modelName },
+      { label: "Full Name", value: fullName, condition: !!fullName },
+      { label: "Manufacturer", value: manufacturer, condition: !!manufacturer },
 
       // Identifiers
       { label: "IMEI", value: imeiValue },
@@ -776,6 +844,7 @@ export const SingleResultView = ({
         value: modelNumber,
         condition: modelNumber !== "N/A" && !!modelNumber,
       },
+      { label: "DO Number", value: doNumber, condition: !!doNumber },
 
       // Product Specs
       {
@@ -833,6 +902,11 @@ export const SingleResultView = ({
         label: "Purchase Date",
         value: purchaseDate ? formatDate(purchaseDate) : null,
         condition: !!purchaseDate,
+      },
+      {
+        label: "Production Date",
+        value: productionDate ? formatDate(productionDate) : null,
+        condition: !!productionDate,
       },
       {
         label: "Estimated Purchase Date",
@@ -1092,6 +1166,26 @@ export const SingleResultView = ({
       { label: "SIM1 Carrier", value: sim1Carrier, condition: !!sim1Carrier },
       { label: "Sold To", value: soldToName, condition: !!soldToName },
       {
+        label: "Sales Buyer Code",
+        value: salesBuyerCode,
+        condition: !!salesBuyerCode,
+      },
+      {
+        label: "Sales Buyer Name",
+        value: salesBuyerName,
+        condition: !!salesBuyerName,
+      },
+      {
+        label: "Sold By Country",
+        value: soldByCountry,
+        condition: !!soldByCountry,
+      },
+      {
+        label: "Ship To Country",
+        value: shipToCountry,
+        condition: !!shipToCountry,
+      },
+      {
         label: "Purchase Country",
         value: purchaseCountryDesc || purchaseCountryCode,
         condition: !!(purchaseCountryDesc || purchaseCountryCode),
@@ -1167,6 +1261,16 @@ export const SingleResultView = ({
         value: initialUnbrick ? formatDate(initialUnbrick) : null,
         condition: !!initialUnbrick,
       },
+      {
+        label: "Sold Date",
+        value: soldDate ? formatDate(soldDate) : null,
+        condition: !!soldDate,
+      },
+      {
+        label: "Ship Date",
+        value: shipDate ? formatDate(shipDate) : null,
+        condition: !!shipDate,
+      },
 
       // GSX History
       {
@@ -1184,6 +1288,14 @@ export const SingleResultView = ({
       },
       { label: "ICCID", value: iccid, condition: !!iccid },
       { label: "Messages", value: messages, condition: !!messages },
+      { label: "Knox Guard", value: knoxGuard, condition: !!knoxGuard },
+      {
+        label: "Blacklist Status",
+        value: blacklistStatus,
+        condition: !!blacklistStatus,
+      },
+      { label: "AT&T Status", value: attStatus, condition: !!attStatus },
+      { label: "Error R01", value: errorR01, condition: !!errorR01 },
     ];
 
     return fields.filter((field) => {

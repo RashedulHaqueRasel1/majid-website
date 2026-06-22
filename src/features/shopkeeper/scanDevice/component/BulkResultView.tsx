@@ -115,6 +115,7 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
       warrantyStatus: "N/A",
       coverageStatus: "",
       purchaseDate: "N/A",
+      productionDate: "",
       coverageEndDate: "N/A",
       coverageStartDate: "",
       notice: "",
@@ -133,9 +134,12 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
       simlock: "",
       carrierName: "N/A",
       sim1Carrier: "",
+      manufacturer: "",
+      fullName: "",
       productDescription: "",
       modelNumber: "N/A",
       partNumber: "N/A",
+      doNumber: "",
       partCountry: "",
       capacity: "",
       color: "",
@@ -144,13 +148,23 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
       initialUnbrick: "",
       productVersion: "",
       soldToName: "",
+      salesBuyerCode: "",
+      salesBuyerName: "",
+      soldByCountry: "",
+      shipToCountry: "",
       purchaseCountry: "",
       purchaseCountryCode: "",
+      soldDate: "",
+      shipDate: "",
       gsxReplacementHistory: "",
       initialActivationPolicyDescription: "",
       lastActivationPolicyDescription: "",
       nextActivationPolicyDescription: "",
       nextTetherPolicy: "",
+      knoxGuard: "",
+      blacklistStatus: "",
+      attStatus: "",
+      errorR01: "",
       riskScore: 0,
       riskLevel: "N/A",
       image: null,
@@ -203,10 +217,13 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
 
   const deviceId =
     parsedProviderData.deviceid || parsedProviderData.device_id || "";
+  const manufacturer = parsedProviderData.manufacturer || "";
+  const fullName = parsedProviderData.full_name || "";
 
   // Identifiers
   const imeiValue =
     parsedProviderData.imei_number ||
+    parsedProviderData.imei1 ||
     parsedProviderData.imei ||
     parsedProviderData.deviceid ||
     item.imei ||
@@ -245,8 +262,10 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     parsedProviderData.estimated_purchase_date ||
     parsedProviderData.purchase_date ||
     "N/A";
+  const productionDate = parsedProviderData.production_date || "";
   let coverageEndDate =
     parsedProviderData.warranty_expires ||
+    parsedProviderData.warranty_until ||
     parsedProviderData.coverage_end_date ||
     "N/A";
   if (parsedProviderData.repairs_and_service_expiration_date)
@@ -316,7 +335,8 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
   }
 
   // Carrier & Network
-  const carrierName = parsedProviderData.carrier_name || "N/A";
+  const carrierName =
+    parsedProviderData.carrier_name || parsedProviderData.carrier || "N/A";
   const sim1Carrier =
     parsedProviderData.sim1_carrier || parsedProviderData.carrier || "";
 
@@ -331,8 +351,10 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     "N/A";
   const partNumber =
     parsedProviderData.part_number ||
+    parsedProviderData.do_number ||
     parsedProviderData.material_number ||
     "N/A";
+  const doNumber = parsedProviderData.do_number || "";
   const partCountry = parsedProviderData.part_country || "";
 
   // Capacity & Color
@@ -346,9 +368,21 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
   if (productDescription.includes("BLU")) color = "Blue";
 
   // Purchase Info
-  const soldToName = parsedProviderData.sold_to_name || "";
-  const purchaseCountry = parsedProviderData.purchase_country_desc || "";
+  const soldToName =
+    parsedProviderData.sold_to_name ||
+    parsedProviderData.sales_buyer_name ||
+    "";
+  const salesBuyerCode = parsedProviderData.sales_buyer_code || "";
+  const salesBuyerName = parsedProviderData.sales_buyer_name || "";
+  const soldByCountry = parsedProviderData.sold_by_country || "";
+  const shipToCountry = parsedProviderData.ship_to_country || "";
+  const purchaseCountry =
+    parsedProviderData.purchase_country_desc ||
+    parsedProviderData.sold_by_country ||
+    "";
   const purchaseCountryCode = parsedProviderData.purchase_country_code || "";
+  const soldDate = parsedProviderData.sold_date || "";
+  const shipDate = parsedProviderData.ship_date || "";
 
   // GSX Replacement History
   const gsxReplacementHistory =
@@ -368,6 +402,10 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
 
   // Image
   const image = parsedProviderData.image?.src || null;
+  const knoxGuard = parsedProviderData.knox_guard || "";
+  const blacklistStatus = parsedProviderData.blacklist_status || "";
+  const attStatus = parsedProviderData.att_status || "";
+  const errorR01 = parsedProviderData.error_r01 || "";
 
   // AI Insight
   const aiInsight = (mainData as any)?.aiInsight || null;
@@ -386,6 +424,7 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     warrantyStatus,
     coverageStatus,
     purchaseDate,
+    productionDate,
     coverageEndDate,
     coverageStartDate,
     notice,
@@ -404,9 +443,12 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     simlock,
     carrierName,
     sim1Carrier,
+    manufacturer,
+    fullName,
     productDescription,
     modelNumber,
     partNumber,
+    doNumber,
     partCountry,
     capacity,
     color,
@@ -415,13 +457,23 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     initialUnbrick,
     productVersion,
     soldToName,
+    salesBuyerCode,
+    salesBuyerName,
+    soldByCountry,
+    shipToCountry,
     purchaseCountry,
     purchaseCountryCode,
+    soldDate,
+    shipDate,
     gsxReplacementHistory,
     initialActivationPolicyDescription,
     lastActivationPolicyDescription,
     nextActivationPolicyDescription,
     nextTetherPolicy,
+    knoxGuard,
+    blacklistStatus,
+    attStatus,
+    errorR01,
     riskScore,
     riskLevel,
     image,
@@ -479,6 +531,7 @@ export const BulkResultView = ({
     warrantyStatus,
     coverageStatus,
     purchaseDate,
+    productionDate,
     coverageEndDate,
     coverageStartDate,
     notice,
@@ -497,9 +550,12 @@ export const BulkResultView = ({
     simlock,
     carrierName,
     sim1Carrier,
+    manufacturer,
+    fullName,
     productDescription,
     modelNumber,
     partNumber,
+    doNumber,
     partCountry,
     capacity,
     color,
@@ -508,13 +564,23 @@ export const BulkResultView = ({
     initialUnbrick,
     productVersion,
     soldToName,
+    salesBuyerCode,
+    salesBuyerName,
+    soldByCountry,
+    shipToCountry,
     purchaseCountry,
     purchaseCountryCode,
+    soldDate,
+    shipDate,
     gsxReplacementHistory,
     initialActivationPolicyDescription,
     lastActivationPolicyDescription,
     nextActivationPolicyDescription,
     nextTetherPolicy,
+    knoxGuard,
+    blacklistStatus,
+    attStatus,
+    errorR01,
     riskScore,
     riskLevel,
     image,
@@ -531,6 +597,8 @@ export const BulkResultView = ({
       // Basic Info
       { label: "Device Name", value: deviceName },
       { label: "Device ID", value: deviceId, condition: !!deviceId },
+      { label: "Full Name", value: fullName, condition: !!fullName },
+      { label: "Manufacturer", value: manufacturer, condition: !!manufacturer },
 
       // Identifiers
       { label: "IMEI", value: imeiValue },
@@ -560,6 +628,7 @@ export const BulkResultView = ({
         value: partNumber,
         condition: partNumber !== "N/A",
       },
+      { label: "DO Number", value: doNumber, condition: !!doNumber },
       { label: "Part Country", value: partCountry, condition: !!partCountry },
       { label: "Capacity", value: capacity, condition: !!capacity },
       { label: "Color", value: color, condition: !!color },
@@ -588,6 +657,11 @@ export const BulkResultView = ({
       {
         label: "Purchase Date",
         value: purchaseDate !== "N/A" ? formatDate(purchaseDate) : null,
+      },
+      {
+        label: "Production Date",
+        value: productionDate ? formatDate(productionDate) : null,
+        condition: !!productionDate,
       },
       {
         label: "Coverage Benefits",
@@ -656,9 +730,39 @@ export const BulkResultView = ({
       // Purchase Info
       { label: "Sold To", value: soldToName, condition: !!soldToName },
       {
+        label: "Sales Buyer Code",
+        value: salesBuyerCode,
+        condition: !!salesBuyerCode,
+      },
+      {
+        label: "Sales Buyer Name",
+        value: salesBuyerName,
+        condition: !!salesBuyerName,
+      },
+      {
+        label: "Sold By Country",
+        value: soldByCountry,
+        condition: !!soldByCountry,
+      },
+      {
+        label: "Ship To Country",
+        value: shipToCountry,
+        condition: !!shipToCountry,
+      },
+      {
         label: "Purchase Country",
         value: purchaseCountry || purchaseCountryCode,
         condition: !!(purchaseCountry || purchaseCountryCode),
+      },
+      {
+        label: "Sold Date",
+        value: soldDate ? formatDate(soldDate) : null,
+        condition: !!soldDate,
+      },
+      {
+        label: "Ship Date",
+        value: shipDate ? formatDate(shipDate) : null,
+        condition: !!shipDate,
       },
 
       // GSX History
@@ -692,6 +796,14 @@ export const BulkResultView = ({
 
       // Notice
       { label: "Notice", value: notice, condition: !!notice },
+      { label: "Knox Guard", value: knoxGuard, condition: !!knoxGuard },
+      {
+        label: "Blacklist Status",
+        value: blacklistStatus,
+        condition: !!blacklistStatus,
+      },
+      { label: "AT&T Status", value: attStatus, condition: !!attStatus },
+      { label: "Error R01", value: errorR01, condition: !!errorR01 },
     ];
 
     return fields.filter((field) => {

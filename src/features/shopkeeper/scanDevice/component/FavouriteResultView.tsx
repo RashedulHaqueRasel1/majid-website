@@ -66,13 +66,15 @@ export const FavouriteResultView = ({
   // Extract values from providerResults
   const deviceName =
     providerData.marketing_name || providerData.model_name || "iPhone";
-  const imeiValue = providerData.imei || imei;
+  const imeiValue = providerData.imei || providerData.imei1 || imei;
   const imei2Value = providerData.imei2 || "";
   const serialNumber = providerData.serial_number || "N/A";
   const eidNumber = providerData.eid || "N/A";
   const warrantyStatus = providerData.warranty_status || "Limited Warranty";
   const purchaseDate = providerData.purchase_date || "N/A";
-  const coverageEndDate = providerData.coverage_end_date || "N/A";
+  const productionDate = providerData.production_date || "";
+  const coverageEndDate =
+    providerData.coverage_end_date || providerData.warranty_until || "N/A";
   const coverageStartDate = providerData.coverage_start_date || "N/A";
   const replacedDevice = providerData.replaced_device || "No";
   const simlockStatus = providerData.simlock || "Unknown";
@@ -81,8 +83,11 @@ export const FavouriteResultView = ({
   const manufacturer = providerData.manufacturer || "Apple";
   const operatingSystem = providerData.operating_system || "iOS";
   const modelName = providerData.model_name || "";
+  const fullName = providerData.full_name || "";
+  const modelNumber = providerData.model_number || "";
   const materialNumber = providerData.material_number || "";
   const basicMaterial = providerData.basic_material || "";
+  const doNumber = providerData.do_number || "";
   const applecareDescription = providerData.applecare_description || "";
   const limitedWarranty = providerData.limited_warranty || "Yes";
   const mdmLock = providerData.mdm_lock || "OFF";
@@ -92,6 +97,17 @@ export const FavouriteResultView = ({
     providerData.initial_activation_policy_description || "10 - Unlock";
   const lockedCarrier = providerData.locked_carrier || "10 - Unlock";
   const description = providerData.description || "";
+  const carrierName = providerData.carrier || "";
+  const salesBuyerCode = providerData.sales_buyer_code || "";
+  const salesBuyerName = providerData.sales_buyer_name || "";
+  const soldByCountry = providerData.sold_by_country || "";
+  const shipToCountry = providerData.ship_to_country || "";
+  const soldDate = providerData.sold_date || "";
+  const shipDate = providerData.ship_date || "";
+  const knoxGuard = providerData.knox_guard || "";
+  const blacklistStatus = providerData.blacklist_status || "";
+  const attStatus = providerData.att_status || "";
+  const errorR01 = providerData.error_r01 || "";
 
   const isSimUnlocked = simlockStatus?.toLowerCase() === "unlocked";
   const isICloudUnlocked = icloudLock?.toLowerCase() === "off";
@@ -112,15 +128,30 @@ EID: ${eidNumber}
 Manufacturer: ${manufacturer}
 Operating System: ${operatingSystem}
 Model Name: ${modelName}
+${fullName ? `Full Name: ${fullName}` : ""}
+${modelNumber ? `Model Number: ${modelNumber}` : ""}
 Material Number: ${materialNumber}
 Basic Material: ${basicMaterial}
+${doNumber ? `DO Number: ${doNumber}` : ""}
 Description: ${description}
 Warranty Status: ${warrantyStatus}
 Limited Warranty: ${limitedWarranty}
 Purchase Date: ${formatDate(purchaseDate)}
+${productionDate ? `Production Date: ${formatDate(productionDate)}` : ""}
 Coverage Start Date: ${formatDate(coverageStartDate)}
 Coverage End Date: ${formatDate(coverageEndDate)}
 AppleCare Description: ${applecareDescription}
+${carrierName ? `Carrier: ${carrierName}` : ""}
+${salesBuyerCode ? `Sales Buyer Code: ${salesBuyerCode}` : ""}
+${salesBuyerName ? `Sales Buyer Name: ${salesBuyerName}` : ""}
+${soldByCountry ? `Sold By Country: ${soldByCountry}` : ""}
+${shipToCountry ? `Ship To Country: ${shipToCountry}` : ""}
+${soldDate ? `Sold Date: ${formatDate(soldDate)}` : ""}
+${shipDate ? `Ship Date: ${formatDate(shipDate)}` : ""}
+${knoxGuard ? `Knox Guard: ${knoxGuard}` : ""}
+${blacklistStatus ? `Blacklist Status: ${blacklistStatus}` : ""}
+${attStatus ? `AT&T Status: ${attStatus}` : ""}
+${errorR01 ? `Error R01: ${errorR01}` : ""}
 Find My iPhone: ${isICloudUnlocked ? "OFF" : "ON"}
 iCloud Status: ${isBlacklistClean ? "CLEAN" : "FLAGGED"}
 iCloud Lock: ${icloudLock}
@@ -262,6 +293,17 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
                 <span className="font-semibold">Model Name:</span> {modelName}
               </p>
             )}
+            {fullName && (
+              <p>
+                <span className="font-semibold">Full Name:</span> {fullName}
+              </p>
+            )}
+            {modelNumber && (
+              <p>
+                <span className="font-semibold">Model Number:</span>{" "}
+                {modelNumber}
+              </p>
+            )}
             {materialNumber && (
               <p>
                 <span className="font-semibold">Material Number:</span>{" "}
@@ -272,6 +314,11 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
               <p>
                 <span className="font-semibold">Basic Material:</span>{" "}
                 {basicMaterial}
+              </p>
+            )}
+            {doNumber && (
+              <p>
+                <span className="font-semibold">DO Number:</span> {doNumber}
               </p>
             )}
             {description && (
@@ -294,6 +341,12 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
               <span className="font-semibold">Purchase Date:</span>{" "}
               {formatDate(purchaseDate)}
             </p>
+            {productionDate && (
+              <p>
+                <span className="font-semibold">Production Date:</span>{" "}
+                {formatDate(productionDate)}
+              </p>
+            )}
             <p>
               <span className="font-semibold">Coverage Start:</span>{" "}
               {formatDate(coverageStartDate)}
@@ -306,6 +359,47 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
               <p>
                 <span className="font-semibold">AppleCare:</span>{" "}
                 {applecareDescription}
+              </p>
+            )}
+            {carrierName && (
+              <p>
+                <span className="font-semibold">Carrier:</span> {carrierName}
+              </p>
+            )}
+            {salesBuyerCode && (
+              <p>
+                <span className="font-semibold">Sales Buyer Code:</span>{" "}
+                {salesBuyerCode}
+              </p>
+            )}
+            {salesBuyerName && (
+              <p>
+                <span className="font-semibold">Sales Buyer Name:</span>{" "}
+                {salesBuyerName}
+              </p>
+            )}
+            {soldByCountry && (
+              <p>
+                <span className="font-semibold">Sold By Country:</span>{" "}
+                {soldByCountry}
+              </p>
+            )}
+            {shipToCountry && (
+              <p>
+                <span className="font-semibold">Ship To Country:</span>{" "}
+                {shipToCountry}
+              </p>
+            )}
+            {soldDate && (
+              <p>
+                <span className="font-semibold">Sold Date:</span>{" "}
+                {formatDate(soldDate)}
+              </p>
+            )}
+            {shipDate && (
+              <p>
+                <span className="font-semibold">Ship Date:</span>{" "}
+                {formatDate(shipDate)}
               </p>
             )}
 
@@ -368,6 +462,27 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
               <span className="font-semibold">Locked Carrier:</span>{" "}
               {lockedCarrier}
             </p>
+            {knoxGuard && (
+              <p>
+                <span className="font-semibold">Knox Guard:</span> {knoxGuard}
+              </p>
+            )}
+            {blacklistStatus && (
+              <p>
+                <span className="font-semibold">Blacklist Status:</span>{" "}
+                {blacklistStatus}
+              </p>
+            )}
+            {attStatus && (
+              <p>
+                <span className="font-semibold">AT&T Status:</span> {attStatus}
+              </p>
+            )}
+            {errorR01 && (
+              <p>
+                <span className="font-semibold">Error R01:</span> {errorR01}
+              </p>
+            )}
 
             <div className="flex flex-wrap items-center justify-center gap-2">
               <span className="font-semibold">Replaced by Apple:</span>
