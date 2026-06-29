@@ -219,6 +219,7 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     parsedProviderData.deviceid || parsedProviderData.device_id || "";
   const manufacturer = parsedProviderData.manufacturer || "";
   const fullName = parsedProviderData.full_name || "";
+  const deviceConfiguration = parsedProviderData.device_configuration || "";
 
   // Identifiers
   const imeiValue =
@@ -272,6 +273,7 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     coverageEndDate = parsedProviderData.repairs_and_service_expiration_date;
 
   const coverageStartDate = parsedProviderData.coverage_start_date || "";
+  const applecareDescription = parsedProviderData.applecare_description || "";
   const initialUnbrick = parsedProviderData.initial_unbrick || "";
   const productVersion = parsedProviderData.product_version || "";
 
@@ -287,6 +289,7 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
       ? "Not Activated"
       : "Activated") ||
     "Activated";
+  const deviceActivation = parsedProviderData.device_activation || "";
   const coverageBenefits =
     parsedProviderData.coverage_benefits ||
     parsedProviderData.applecare_description ||
@@ -345,6 +348,8 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     parsedProviderData.product_description ||
     parsedProviderData.config_description ||
     "";
+  const materialNumber = parsedProviderData.material_number || "";
+  const basicMaterial = parsedProviderData.basic_material || "";
   const modelNumber =
     parsedProviderData.model_number ||
     parsedProviderData.basic_material ||
@@ -416,6 +421,7 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     isEmpty: false,
     deviceName,
     deviceId,
+    deviceConfiguration,
     imeiValue,
     imei2Value,
     meidValue,
@@ -427,9 +433,11 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     productionDate,
     coverageEndDate,
     coverageStartDate,
+    applecareDescription,
     notice,
     replacedDevice,
     activationStatus,
+    deviceActivation,
     coverageBenefits,
     registrationStatus,
     tempCoverage,
@@ -446,6 +454,8 @@ const extractBatchDeviceData = (item: BatchImeiItemResult | null) => {
     manufacturer,
     fullName,
     productDescription,
+    materialNumber,
+    basicMaterial,
     modelNumber,
     partNumber,
     doNumber,
@@ -523,6 +533,7 @@ export const BulkResultView = ({
   const {
     deviceName,
     deviceId,
+    deviceConfiguration,
     imeiValue,
     imei2Value,
     meidValue,
@@ -534,9 +545,11 @@ export const BulkResultView = ({
     productionDate,
     coverageEndDate,
     coverageStartDate,
+    applecareDescription,
     notice,
     replacedDevice,
     activationStatus,
+    deviceActivation,
     coverageBenefits,
     registrationStatus,
     tempCoverage,
@@ -553,6 +566,8 @@ export const BulkResultView = ({
     manufacturer,
     fullName,
     productDescription,
+    materialNumber,
+    basicMaterial,
     modelNumber,
     partNumber,
     doNumber,
@@ -597,6 +612,11 @@ export const BulkResultView = ({
       // Basic Info
       { label: "Device Name", value: deviceName },
       { label: "Device ID", value: deviceId, condition: !!deviceId },
+      {
+        label: "Device Configuration",
+        value: deviceConfiguration,
+        condition: !!deviceConfiguration,
+      },
       { label: "Full Name", value: fullName, condition: !!fullName },
       { label: "Manufacturer", value: manufacturer, condition: !!manufacturer },
 
@@ -617,6 +637,16 @@ export const BulkResultView = ({
         label: "Product Description",
         value: productDescription,
         condition: !!productDescription,
+      },
+      {
+        label: "Material Number",
+        value: materialNumber,
+        condition: !!materialNumber,
+      },
+      {
+        label: "Basic Material",
+        value: basicMaterial,
+        condition: !!basicMaterial,
       },
       {
         label: "Model Number",
@@ -669,6 +699,11 @@ export const BulkResultView = ({
         condition: !!coverageBenefits,
       },
       {
+        label: "AppleCare Description",
+        value: applecareDescription,
+        condition: !!applecareDescription,
+      },
+      {
         label: "Limited Warranty",
         value:
           limitedWarranty === "Yes"
@@ -691,6 +726,16 @@ export const BulkResultView = ({
 
       // Status
       { label: "Activation Status", value: activationStatus },
+      {
+        label: "Device Activation",
+        value:
+          deviceActivation === "No"
+            ? "Not Activated"
+            : deviceActivation === "Yes"
+              ? "Activated"
+              : deviceActivation,
+        condition: !!deviceActivation,
+      },
       {
         label: "Registration Status",
         value: registrationStatus,

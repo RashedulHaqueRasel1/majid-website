@@ -66,9 +66,12 @@ export const FavouriteResultView = ({
   // Extract values from providerResults
   const deviceName =
     providerData.marketing_name || providerData.model_name || "iPhone";
-  const imeiValue = providerData.imei || providerData.imei1 || imei;
+  const deviceId = providerData.deviceid || "";
+  const imeiValue =
+    providerData.imei || providerData.imei1 || providerData.deviceid || imei;
   const imei2Value = providerData.imei2 || "";
-  const serialNumber = providerData.serial_number || "N/A";
+  const serialNumber =
+    providerData.serial_number || providerData.serial || "N/A";
   const eidNumber = providerData.eid || "N/A";
   const warrantyStatus = providerData.warranty_status || "Limited Warranty";
   const purchaseDate = providerData.purchase_date || "N/A";
@@ -76,12 +79,14 @@ export const FavouriteResultView = ({
   const coverageEndDate =
     providerData.coverage_end_date || providerData.warranty_until || "N/A";
   const coverageStartDate = providerData.coverage_start_date || "N/A";
+  const deviceActivation = providerData.device_activation || "";
   const replacedDevice = providerData.replaced_device || "No";
   const simlockStatus = providerData.simlock || "Unknown";
   const icloudLock = providerData.icloud_lock || "OFF";
   const icloudStatus = providerData.icloud_status || "CLEAN";
   const manufacturer = providerData.manufacturer || "Apple";
   const operatingSystem = providerData.operating_system || "iOS";
+  const deviceConfiguration = providerData.device_configuration || "";
   const modelName = providerData.model_name || "";
   const fullName = providerData.full_name || "";
   const modelNumber = providerData.model_number || "";
@@ -90,6 +95,7 @@ export const FavouriteResultView = ({
   const doNumber = providerData.do_number || "";
   const applecareDescription = providerData.applecare_description || "";
   const limitedWarranty = providerData.limited_warranty || "Yes";
+  const incidentsAvailable = providerData.incidents_available || "";
   const mdmLock = providerData.mdm_lock || "OFF";
   const simpolicyUnlockStatus =
     providerData.simpolicy_unlock_status || "UNLOCK";
@@ -121,12 +127,14 @@ export const FavouriteResultView = ({
   const handleCopyToClipboard = () => {
     const textToCopy = `
 Model: ${deviceName}
+${deviceId ? `Device ID: ${deviceId}` : ""}
 IMEI: ${imeiValue}
 ${imei2Value ? `IMEI2: ${imei2Value}` : ""}
 Serial Number: ${serialNumber}
 EID: ${eidNumber}
 Manufacturer: ${manufacturer}
 Operating System: ${operatingSystem}
+${deviceConfiguration ? `Device Configuration: ${deviceConfiguration}` : ""}
 Model Name: ${modelName}
 ${fullName ? `Full Name: ${fullName}` : ""}
 ${modelNumber ? `Model Number: ${modelNumber}` : ""}
@@ -140,7 +148,9 @@ Purchase Date: ${formatDate(purchaseDate)}
 ${productionDate ? `Production Date: ${formatDate(productionDate)}` : ""}
 Coverage Start Date: ${formatDate(coverageStartDate)}
 Coverage End Date: ${formatDate(coverageEndDate)}
+${deviceActivation ? `Device Activation: ${deviceActivation}` : ""}
 AppleCare Description: ${applecareDescription}
+${incidentsAvailable ? `Incidents Available: ${incidentsAvailable}` : ""}
 ${carrierName ? `Carrier: ${carrierName}` : ""}
 ${salesBuyerCode ? `Sales Buyer Code: ${salesBuyerCode}` : ""}
 ${salesBuyerName ? `Sales Buyer Name: ${salesBuyerName}` : ""}
@@ -272,6 +282,11 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
                 <span className="font-semibold">IMEI2:</span> {imei2Value}
               </p>
             )}
+            {deviceId && (
+              <p>
+                <span className="font-semibold">Device ID:</span> {deviceId}
+              </p>
+            )}
             <p>
               <span className="font-semibold">Serial Number:</span>{" "}
               {serialNumber}
@@ -291,6 +306,12 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
             {modelName && (
               <p>
                 <span className="font-semibold">Model Name:</span> {modelName}
+              </p>
+            )}
+            {deviceConfiguration && (
+              <p>
+                <span className="font-semibold">Device Configuration:</span>{" "}
+                {deviceConfiguration}
               </p>
             )}
             {fullName && (
@@ -355,10 +376,22 @@ AI Insight: ${scanResult.aiInsight?.message || "N/A"}
               <span className="font-semibold">Coverage End:</span>{" "}
               {formatDate(coverageEndDate)}
             </p>
+            {deviceActivation && (
+              <p>
+                <span className="font-semibold">Device Activation:</span>{" "}
+                {deviceActivation === "No" ? "Not Activated" : deviceActivation}
+              </p>
+            )}
             {applecareDescription && (
               <p>
                 <span className="font-semibold">AppleCare:</span>{" "}
                 {applecareDescription}
+              </p>
+            )}
+            {incidentsAvailable && (
+              <p>
+                <span className="font-semibold">Incidents Available:</span>{" "}
+                {incidentsAvailable}
               </p>
             )}
             {carrierName && (

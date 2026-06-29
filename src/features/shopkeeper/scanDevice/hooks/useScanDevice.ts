@@ -34,8 +34,12 @@ export const useScanDevice = () => {
     serviceId?: number;
   } | null>(null);
 
-  const isValidIMEI = (imei: string): boolean => {
-    return /^\d{15}$/.test(imei);
+  const isValidIdentifier = (value: string): boolean => {
+    const trimmedValue = value.trim();
+
+    return (
+      /^\d{15}$/.test(trimmedValue) || /^[a-zA-Z0-9]{8,20}$/.test(trimmedValue)
+    );
   };
 
   const parseIMEIInput = useCallback(
@@ -44,11 +48,11 @@ export const useScanDevice = () => {
       const items = input
         .split(/[,\n\r\t;]+/)
         .map((item) => item.trim())
-        .filter((item) => item.length > 0 && isValidIMEI(item));
+        .filter((item) => item.length > 0 && isValidIdentifier(item));
       console.log("📝 Parsed IMEIs:", items);
       return items;
     },
-    [isValidIMEI],
+    [isValidIdentifier],
   );
 
   // Check if selected service is favourite
@@ -68,7 +72,9 @@ export const useScanDevice = () => {
       console.log("📊 Is bulk:", imeiList.length > 1);
 
       if (imeiList.length === 0) {
-        setError("No valid IMEI found. Please enter valid IMEI numbers.");
+        setError(
+          "No valid device identifier found. Please enter a valid IMEI or serial number.",
+        );
         setIsScanning(false);
         return;
       }
@@ -239,7 +245,7 @@ export const useScanDevice = () => {
         setIsScanning(false);
       }
     },
-    [parseIMEIInput, isFavouriteService, isValidIMEI, isAuthenticated],
+    [parseIMEIInput, isFavouriteService, isValidIdentifier, isAuthenticated],
   );
 
   const handleRegenerateScan = useCallback(

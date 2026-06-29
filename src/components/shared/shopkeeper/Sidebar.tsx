@@ -83,6 +83,10 @@ const navItems = [
     icon: <Package size={20} />,
     label: "Inventory",
     href: "/shopkeeper/inventory",
+    submenu: [
+      { label: "Inventory List", href: "/shopkeeper/inventory" },
+      { label: "Supplier", href: "/shopkeeper/inventory/suppliers" },
+    ],
   },
   {
     icon: <ShoppingCart size={20} />,
@@ -108,7 +112,9 @@ const navItems = [
 
 export default function Sidebar() {
   const pathname = usePathname();
-  const [openSubmenu, setOpenSubmenu] = useState<string | null>("Payment"); // Default open as in screenshot
+  const [openSubmenu, setOpenSubmenu] = useState<string | null>(
+    pathname.startsWith("/shopkeeper/inventory") ? "Inventory" : "Payment",
+  );
   const [showLogoutModal, setShowLogoutModal] = useState(false);
   const { data: profileData } = useMyProfile();
   const user = profileData?.data;

@@ -111,6 +111,7 @@ interface ExtractedDeviceData {
   eidNumber: string;
   configCode: string;
   materialNumber: string;
+  basicMaterial: string;
   partNumber: string;
   modelNumber: string;
   doNumber: string;
@@ -313,6 +314,7 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     parsedProviderData.eid || parsedProviderData.csncsn2eid || "N/A";
   const configCode = parsedProviderData.config_code || "";
   const materialNumber = parsedProviderData.material_number || "";
+  const basicMaterial = parsedProviderData.basic_material || "";
   const partNumber =
     parsedProviderData.part_number || parsedProviderData.do_number || "";
   const modelNumber =
@@ -539,6 +541,7 @@ const extractDeviceData = (scanResult: IMEIResult): ExtractedDeviceData => {
     eidNumber,
     configCode,
     materialNumber,
+    basicMaterial,
     partNumber,
     modelNumber,
     doNumber,
@@ -689,6 +692,7 @@ export const SingleResultView = ({
     eidNumber,
     configCode,
     materialNumber,
+    basicMaterial,
     partNumber,
     modelNumber,
     doNumber,
@@ -833,6 +837,11 @@ export const SingleResultView = ({
         label: "Material Number",
         value: materialNumber,
         condition: !!materialNumber,
+      },
+      {
+        label: "Basic Material",
+        value: basicMaterial,
+        condition: !!basicMaterial,
       },
       {
         label: "Part Number",

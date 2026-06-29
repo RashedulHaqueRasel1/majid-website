@@ -155,9 +155,11 @@ export interface FavouriteProviderResults {
   imei?: string;
   imei1?: string;
   imei2?: string;
+  deviceid?: string;
   full_name?: string;
   meid?: string;
   serial_number?: string;
+  serial?: string;
   warranty_status?: string;
   warranty_until?: string;
   purchase_date?: string;
@@ -176,7 +178,9 @@ export interface FavouriteProviderResults {
   applecare_description?: string;
   coverage_start_date?: string;
   coverage_end_date?: string;
+  device_activation?: string;
   limited_warranty?: string;
+  incidents_available?: string;
   simpolicy_unlock_status?: string;
   initial_activation_policy_description?: string;
   locked_carrier?: string;
