@@ -71,7 +71,7 @@ export default function Pricing() {
           const error = err as { response?: { status?: number } };
           if (error.response?.status === 401) {
             toast.error("Please login to continue");
-            window.location.href = "/login";
+            window.location.href = "/auth/login";
           } else {
             toast.error("An error occurred while initiating payment");
           }

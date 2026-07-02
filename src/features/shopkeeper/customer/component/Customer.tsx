@@ -1,34 +1,171 @@
 "use client";
 
-import React, { useState, useMemo } from "react";
+import React, {
+  useCallback,
+  useEffect,
+  useMemo,
+  useReducer,
+  useState,
+} from "react";
 import { useSession } from "next-auth/react";
-import {
-  useCustomersByShopkeeper,
-  useDeleteCustomer,
-} from "../../inventory/hooks/useInventory";
 import { motion } from "framer-motion";
 import {
-  Users,
-  Search,
-  Mail,
-  Phone,
-  MapPin,
+  BadgePercent,
+  Calendar,
   CreditCard,
-  UserCheck,
-  Plus,
-  MoreVertical,
+  Download,
   Edit2,
+  Eye,
+  FileText,
+  Filter,
+  Grid2X2,
+  History,
+  Loader2,
+  Mail,
+  MoreVertical,
+  Plus,
+  Search,
+  Send,
+  ShoppingBag,
   Trash2,
+  TrendingUp,
+  UserCheck,
+  Users,
 } from "lucide-react";
+import { toast } from "sonner";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuItem,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import {
+  useCustomersByShopkeeper,
+  useDeleteCustomer,
+  useMyInvoiceHistory,
+} from "../../inventory/hooks/useInventory";
+import type { Customer, InvoiceHistoryItem } from "../../inventory/types";
 import { CustomerFormModal } from "./modals/CustomerFormModal";
-import { toast } from "sonner";
-import type { Customer } from "../../inventory/types";
+
+type CustomerInvoice = InvoiceHistoryItem & {
+  customerInfo?: Partial<Customer> | string | null;
+  dueAmount?: number;
+};
+
+type CustomerDiscount = {
+  id: string;
+  customerId: string;
+  title: string;
+  percentage: number;
+  usageLimit: number;
+  usedCount: number;
+  validFrom: string;
+  validUntil: string;
+  trackUsage: boolean;
+  createdAt: string;
+};
+
+type DiscountAction =
+  | { type: "load"; discounts: CustomerDiscount[] }
+  | { type: "add"; discount: CustomerDiscount }
+  | { type: "track"; discountId: string }
+  | { type: "delete"; discountId: string };
+
+type DiscountForm = {
+  title: string;
+  percentage: string;
+  usageLimit: string;
+  validFrom: string;
+  validUntil: string;
+  trackUsage: boolean;
+};
+
+type EmailForm = {
+  subject: string;
+  description: string;
+};
+
+const createDefaultEmailForm = (): EmailForm => ({
+  subject: "",
+  description: "",
+});
+
+const discountReducer = (
+  discounts: CustomerDiscount[],
+  action: DiscountAction,
+) => {
+  switch (action.type) {
+    case "load":
+      return action.discounts;
+    case "add":
+      return [action.discount, ...discounts];
+    case "track":
+      return discounts.map((discount) => {
+        if (discount.id !== action.discountId) return discount;
+        if (discount.usedCount >= discount.usageLimit) return discount;
+
+        return {
+          ...discount,
+          usedCount: discount.usedCount + 1,
+        };
+      });
+    case "delete":
+      return discounts.filter((discount) => discount.id !== action.discountId);
+    default:
+      return discounts;
+  }
+};
+
+const createDefaultDiscountForm = (): DiscountForm => {
+  const today = new Date();
+  const nextMonth = new Date(today);
+  nextMonth.setMonth(today.getMonth() + 1);
+
+  return {
+    title: "Loyal Customer Discount",
+    percentage: "10",
+    usageLimit: "1",
+    validFrom: today.toISOString().slice(0, 10),
+    validUntil: nextMonth.toISOString().slice(0, 10),
+    trackUsage: true,
+  };
+};
+
+const formatCurrency = (value?: number) =>
+  `$${(value || 0).toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: 2,
+  })}`;
+
+const formatDate = (date?: string) => {
+  if (!date) return "N/A";
+
+  return new Date(date).toLocaleDateString("en-US", {
+    year: "numeric",
+    month: "short",
+    day: "numeric",
+  });
+};
+
+const getInitial = (customer: Customer) =>
+  customer.firstName?.charAt(0).toUpperCase() ||
+  customer.lastName?.charAt(0).toUpperCase() ||
+  "C";
 
 export default function Customer() {
   const { data: session } = useSession();
@@ -38,38 +175,157 @@ export default function Customer() {
     isLoading,
     isError,
   } = useCustomersByShopkeeper(shopkeeperId || "");
+  const { data: invoicesResponse, isLoading: isInvoicesLoading } =
+    useMyInvoiceHistory(shopkeeperId || "", !!shopkeeperId);
   const deleteCustomerMutation = useDeleteCustomer();
 
   const [searchQuery, setSearchQuery] = useState("");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingCustomer, setEditingCustomer] = useState<Customer | null>(null);
+  const [selectedCustomer, setSelectedCustomer] = useState<Customer | null>(
+    null,
+  );
+  const [discountCustomer, setDiscountCustomer] = useState<Customer | null>(
+    null,
+  );
+  const [discounts, dispatchDiscounts] = useReducer(discountReducer, []);
+  const [discountForm, setDiscountForm] = useState<DiscountForm>(() =>
+    createDefaultDiscountForm(),
+  );
+  const [discountView, setDiscountView] = useState<"add" | "list">("add");
+  const [emailCustomer, setEmailCustomer] = useState<Customer | null>(null);
+  const [emailForm, setEmailForm] = useState<EmailForm>(() =>
+    createDefaultEmailForm(),
+  );
+  const todayDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
 
-  const customers = useMemo(() => {
-    return customersResponse?.data || [];
-  }, [customersResponse]);
+  const customers = useMemo(
+    () => customersResponse?.data || [],
+    [customersResponse],
+  );
 
-  const filteredCustomers = useMemo(() => {
-    if (!searchQuery.trim()) return customers;
+  const invoices = useMemo<CustomerInvoice[]>(
+    () => (invoicesResponse?.data || []) as CustomerInvoice[],
+    [invoicesResponse],
+  );
+
+  const getCustomerInvoices = useCallback(
+    (customer: Customer) =>
+      invoices.filter((invoice) => {
+        const customerInfo = invoice.customerInfo;
+
+        if (!customerInfo || typeof customerInfo === "string") {
+          return customerInfo === customer._id;
+        }
+
+        return (
+          customerInfo._id === customer._id ||
+          customerInfo.email === customer.email ||
+          customerInfo.phone === customer.phone ||
+          customerInfo.customerId === customer.customerId
+        );
+      }),
+    [invoices],
+  );
+
+  const customerRows = useMemo(() => {
+    return customers.map((customer) => {
+      const customerInvoices = getCustomerInvoices(customer);
+      const sortedInvoices = [...customerInvoices].sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+
+      return {
+        customer,
+        invoices: customerInvoices,
+        lastInvoice: sortedInvoices[0],
+        totalSpent: customer.alreadyPaid || 0,
+      };
+    });
+  }, [customers, getCustomerInvoices]);
+
+  const filteredRows = useMemo(() => {
+    if (!searchQuery.trim()) return customerRows;
+
     const query = searchQuery.toLowerCase();
-    return customers.filter(
-      (customer) =>
-        `${customer.firstName} ${customer.lastName}`
-          .toLowerCase()
-          .includes(query) ||
+    return customerRows.filter(({ customer }) => {
+      const name = `${customer.firstName || ""} ${customer.lastName || ""}`;
+
+      return (
+        name.toLowerCase().includes(query) ||
         customer.email?.toLowerCase().includes(query) ||
         customer.phone?.toLowerCase().includes(query) ||
-        customer.customerId?.toLowerCase().includes(query),
+        customer.customerId?.toLowerCase().includes(query)
+      );
+    });
+  }, [customerRows, searchQuery]);
+
+  const selectedCustomerInvoices = useMemo(() => {
+    if (!selectedCustomer) return [];
+    return getCustomerInvoices(selectedCustomer);
+  }, [getCustomerInvoices, selectedCustomer]);
+
+  const selectedDiscounts = useMemo(() => {
+    if (!discountCustomer) return [];
+
+    return discounts
+      .filter((discount) => discount.customerId === discountCustomer._id)
+      .sort(
+        (a, b) =>
+          new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
+      );
+  }, [discountCustomer, discounts]);
+
+  useEffect(() => {
+    if (!shopkeeperId) return;
+
+    const savedDiscounts = window.localStorage.getItem(
+      `customer-discounts:${shopkeeperId}`,
     );
-  }, [customers, searchQuery]);
+
+    if (!savedDiscounts) return;
+
+    try {
+      dispatchDiscounts({
+        type: "load",
+        discounts: JSON.parse(savedDiscounts) as CustomerDiscount[],
+      });
+    } catch {
+      dispatchDiscounts({ type: "load", discounts: [] });
+    }
+  }, [shopkeeperId]);
+
+  useEffect(() => {
+    if (!shopkeeperId) return;
+
+    window.localStorage.setItem(
+      `customer-discounts:${shopkeeperId}`,
+      JSON.stringify(discounts),
+    );
+  }, [discounts, shopkeeperId]);
+
+  const repeatCustomers = customerRows.filter(
+    ({ invoices: customerInvoices }) => customerInvoices.length > 1,
+  ).length;
+  const totalSpent = customerRows.reduce((sum, row) => sum + row.totalSpent, 0);
+  const thisMonthInvoices = invoices.filter((invoice) => {
+    const createdAt = new Date(invoice.createdAt);
+    const now = new Date();
+
+    return (
+      createdAt.getMonth() === now.getMonth() &&
+      createdAt.getFullYear() === now.getFullYear()
+    );
+  }).length;
 
   const handleDelete = async (customer: Customer) => {
     if (!shopkeeperId) return;
+
     await deleteCustomerMutation.mutateAsync(
       { id: customer._id, shopkeeperId },
       {
-        onSuccess: () => {
-          toast.success("Customer deleted successfully");
-        },
+        onSuccess: () => toast.success("Customer deleted successfully"),
         onError: (error: unknown) => {
           const err = error as { response?: { data?: { message?: string } } };
           toast.error(
@@ -90,15 +346,118 @@ export default function Customer() {
     setIsFormOpen(true);
   };
 
+  const handleOpenDiscounts = (customer: Customer, view: "add" | "list") => {
+    setDiscountCustomer(customer);
+    setDiscountView(view);
+    setDiscountForm(createDefaultDiscountForm());
+  };
+
+  const handleOpenEmail = (customer: Customer) => {
+    setEmailCustomer(customer);
+    setEmailForm(createDefaultEmailForm());
+  };
+
+  const handleSubmitEmail = () => {
+    if (!emailCustomer) return;
+
+    toast.success("Email UI is ready. API integration can be added next.");
+  };
+
+  const handleAddDiscount = () => {
+    if (!discountCustomer) return;
+
+    const percentage = Number(discountForm.percentage);
+    const usageLimit = Number(discountForm.usageLimit);
+
+    if (!discountForm.title.trim()) {
+      toast.error("Discount title is required");
+      return;
+    }
+
+    if (!percentage || percentage <= 0 || percentage > 100) {
+      toast.error("Percentage must be between 1 and 100");
+      return;
+    }
+
+    if (!usageLimit || usageLimit < 1) {
+      toast.error("Usage limit must be at least 1");
+      return;
+    }
+
+    if (!discountForm.validFrom || !discountForm.validUntil) {
+      toast.error("Validity dates are required");
+      return;
+    }
+
+    if (discountForm.validFrom > discountForm.validUntil) {
+      toast.error("Valid until date must be after valid from date");
+      return;
+    }
+
+    const newDiscount: CustomerDiscount = {
+      id: `${discountCustomer._id}-${Date.now()}`,
+      customerId: discountCustomer._id,
+      title: discountForm.title.trim(),
+      percentage,
+      usageLimit,
+      usedCount: 0,
+      validFrom: discountForm.validFrom,
+      validUntil: discountForm.validUntil,
+      trackUsage: discountForm.trackUsage,
+      createdAt: new Date().toISOString(),
+    };
+
+    dispatchDiscounts({ type: "add", discount: newDiscount });
+    setDiscountForm(createDefaultDiscountForm());
+    setDiscountView("list");
+    toast.success("Discount added for this customer");
+  };
+
+  const handleTrackDiscountUsage = (discountId: string) => {
+    dispatchDiscounts({ type: "track", discountId });
+  };
+
+  const handleDeleteDiscount = (discountId: string) => {
+    dispatchDiscounts({ type: "delete", discountId });
+    toast.success("Discount removed");
+  };
+
+  const handleDownload = async (url: string, filename: string) => {
+    try {
+      const response = await fetch(url);
+      const blob = await response.blob();
+      const blobUrl = window.URL.createObjectURL(blob);
+      const link = document.createElement("a");
+
+      link.href = blobUrl;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      window.URL.revokeObjectURL(blobUrl);
+    } catch (error) {
+      console.error("Download failed:", error);
+      toast.error("Failed to download invoice");
+    }
+  };
+
   if (isLoading) {
     return (
-      <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-6 font-poppins">
-        <div className="h-28 rounded-3xl bg-slate-100 dark:bg-slate-800 animate-pulse" />
-        <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-6">
-          {[1, 2, 3].map((item) => (
+      <div className="mx-auto max-w-[1600px] space-y-5 p-4 font-poppins md:p-8">
+        <div className="h-20 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800" />
+        <div className="grid gap-4 md:grid-cols-4">
+          {[1, 2, 3, 4].map((item) => (
             <div
               key={item}
-              className="h-56 rounded-[28px] bg-slate-100 dark:bg-slate-800 animate-pulse"
+              className="h-24 animate-pulse rounded-2xl bg-slate-100 dark:bg-slate-800"
+            />
+          ))}
+        </div>
+        <div className="rounded-2xl bg-slate-100 dark:bg-slate-800">
+          {[1, 2, 3, 4].map((item) => (
+            <div
+              key={item}
+              className="h-16 animate-pulse border-b border-slate-200 last:border-b-0 dark:border-slate-700"
             />
           ))}
         </div>
@@ -119,152 +478,318 @@ export default function Customer() {
     );
   }
 
+  const statCards = [
+    {
+      label: "Total Customers",
+      value: customers.length,
+      helper: "All time",
+      icon: Users,
+      color: "text-lime-600",
+      bg: "bg-lime-50",
+    },
+    {
+      label: "Total Invoices",
+      value: invoices.length,
+      helper: `${formatCurrency(totalSpent)} tracked`,
+      icon: ShoppingBag,
+      color: "text-blue-600",
+      bg: "bg-blue-50",
+    },
+    {
+      label: "This Month",
+      value: thisMonthInvoices,
+      helper: new Date().toLocaleDateString("en-US", {
+        month: "long",
+        year: "numeric",
+      }),
+      icon: TrendingUp,
+      color: "text-orange-600",
+      bg: "bg-orange-50",
+    },
+    {
+      label: "Repeat Customers",
+      value: repeatCustomers,
+      helper: `${customers.length ? Math.round((repeatCustomers / customers.length) * 100) : 0}% of total`,
+      icon: UserCheck,
+      color: "text-fuchsia-600",
+      bg: "bg-fuchsia-50",
+    },
+  ];
+
   return (
-    <div className="p-4 md:p-10 max-w-[1600px] mx-auto space-y-10 font-poppins dark:bg-background">
-      {/* Header Section */}
-      <div className="flex flex-col gap-5 rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm dark:border-slate-700 dark:bg-card md:flex-row md:items-center md:justify-between">
-        <div className="flex items-start gap-4">
-          <div className="mt-1 flex h-11 w-11 items-center justify-center rounded-xl bg-blue-50 text-blue-500 dark:bg-blue-500/10">
-            <Users size={20} />
-          </div>
-          <div>
-            <h1 className="text-3xl font-black tracking-tight text-[#0F172A] dark:text-white">
-              Customers
-            </h1>
-            <p className="mt-1 text-sm font-bold text-[#64748B] dark:text-slate-300">
-              {customers.length} total customer{customers.length !== 1 && "s"}{" "}
-              registered
-            </p>
-          </div>
+    <div className="mx-auto max-w-[1600px] space-y-5 p-4 font-poppins md:p-8 dark:bg-background">
+      <div className="flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
+        <div>
+          <h1 className="text-2xl font-black tracking-tight text-slate-950 dark:text-white md:text-3xl">
+            Customers
+          </h1>
+          <p className="mt-1 text-sm font-semibold text-slate-500 dark:text-slate-300">
+            Manage your customers, view invoices and customer details
+          </p>
         </div>
 
-        <div className="flex items-center gap-4 flex-wrap md:flex-nowrap w-full md:w-auto">
-          {/* <div className="relative w-full md:w-80">
+        <Button
+          onClick={handleAdd}
+          className="h-10 rounded-lg bg-[#84CC16] px-5 text-xs font-black text-white shadow-sm hover:bg-[#76b813] lg:self-start"
+        >
+          <Plus className="h-4 w-4" />
+          Add Customer
+        </Button>
+      </div>
+
+      <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
+        {statCards.map((stat) => (
+          <div
+            key={stat.label}
+            className="rounded-2xl border border-slate-100 bg-white p-5 shadow-sm dark:border-slate-700 dark:bg-card"
+          >
+            <div className="flex items-center gap-4">
+              <div
+                className={`flex h-12 w-12 items-center justify-center rounded-full ${stat.bg} ${stat.color} dark:bg-slate-800`}
+              >
+                <stat.icon className="h-5 w-5" />
+              </div>
+              <div>
+                <p className="text-[11px] font-black uppercase tracking-wider text-slate-400">
+                  {stat.label}
+                </p>
+                <p className="mt-1 text-2xl font-black text-slate-950 dark:text-white">
+                  {stat.value}
+                </p>
+                <p className="text-xs font-semibold text-slate-500">
+                  {stat.helper}
+                </p>
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+
+      <div className="flex flex-col gap-3 rounded-2xl border border-slate-100 bg-white p-4 shadow-sm dark:border-slate-700 dark:bg-card xl:flex-row xl:items-center xl:justify-between">
+        <div>
+          <h2 className="text-sm font-black text-slate-950 dark:text-white">
+            Customer List
+          </h2>
+          <p className="text-xs font-semibold text-slate-500">
+            {filteredRows.length} customer{filteredRows.length !== 1 && "s"}{" "}
+            showing
+          </p>
+        </div>
+
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="relative w-full sm:w-96">
             <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />
             <input
               type="text"
               value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              placeholder="Search by name, email, phone..."
-              className="h-12 w-full rounded-xl border border-slate-100 bg-slate-50 pl-12 pr-4 text-sm font-bold outline-none transition focus:border-blue-500 focus:ring-blue-500 dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+              onChange={(event) => setSearchQuery(event.target.value)}
+              placeholder="Search customers by name, email, phone..."
+              className="h-10 w-full rounded-lg border border-slate-100 bg-slate-50 pl-11 pr-4 text-xs font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
             />
-          </div> */}
-
-          <button
-            onClick={handleAdd}
-            className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#84CC16] px-6 text-sm font-black text-white shadow-lg shadow-lime-500/20 transition hover:bg-[#76b813] active:scale-95 cursor-pointer w-full md:w-auto shrink-0"
+          </div>
+          <Button
+            type="button"
+            variant="outline"
+            className="h-10 rounded-lg border-slate-100 px-4 text-xs font-black text-slate-600 dark:border-slate-700"
           >
-            <Plus size={18} strokeWidth={3} />
-            Add Customer
-          </button>
+            <Filter className="h-4 w-4" />
+            Filter
+          </Button>
+          <Button
+            type="button"
+            variant="outline"
+            size="icon"
+            className="h-10 w-10 rounded-lg border-slate-100 text-slate-500 dark:border-slate-700"
+          >
+            <Grid2X2 className="h-4 w-4" />
+          </Button>
         </div>
       </div>
 
-      {/* Customer Grid */}
-      {filteredCustomers.length > 0 ? (
-        <div className="grid grid-cols-1 gap-6 md:grid-cols-2 xl:grid-cols-3">
-          {filteredCustomers.map((customer: Customer, index: number) => (
-            <motion.div
-              key={customer._id}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: index * 0.05 }}
-              className="group relative overflow-hidden rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md dark:border-slate-700 dark:bg-card"
-            >
-              <div className="flex items-start justify-between mb-4">
-                <div className="flex items-center gap-4">
-                  <div className="flex h-12 w-12 items-center justify-center rounded-full bg-gradient-to-br from-blue-100 to-blue-50 text-xl font-black text-blue-600 dark:from-blue-900/50 dark:to-blue-800/30 dark:text-blue-400">
-                    {customer.firstName?.charAt(0).toUpperCase() || (
-                      <UserCheck size={20} />
-                    )}
-                  </div>
-                  <div>
-                    <h3 className="text-lg font-black text-[#0F172A] dark:text-white line-clamp-1">
-                      {customer.firstName} {customer.lastName}
-                    </h3>
-                    <div className="flex items-center gap-2 mt-0.5">
-                      <span className="rounded-md bg-slate-100 px-2 py-0.5 text-[10px] font-black uppercase tracking-wider text-slate-500 dark:bg-slate-800 dark:text-slate-400">
-                        ID: {customer.customerId || "N/A"}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="p-1.5 text-slate-400 hover:text-foreground transition cursor-pointer rounded-lg hover:bg-slate-50 dark:hover:bg-slate-800">
-                      <MoreVertical size={16} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="rounded-xl border-slate-100 p-2 shadow-xl"
+      {filteredRows.length > 0 ? (
+        <motion.div
+          initial={{ opacity: 0, y: 12 }}
+          animate={{ opacity: 1, y: 0 }}
+          className="overflow-hidden rounded-2xl border border-slate-100 bg-white shadow-sm dark:border-slate-700 dark:bg-card"
+        >
+          <Table>
+            <TableHeader className="bg-slate-50 dark:bg-slate-800/70">
+              <TableRow className="hover:bg-transparent">
+                <TableHead className="w-10 px-4 py-3">
+                  <input
+                    type="checkbox"
+                    className="h-4 w-4 rounded border-slate-300"
+                    aria-label="Select all customers"
+                  />
+                </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Customer
+                </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Contact
+                </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Invoices
+                </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Last Invoice
+                </TableHead>
+                <TableHead className="px-4 py-3 text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Total Spent
+                </TableHead>
+                <TableHead className="px-4 py-3 text-right text-[11px] font-black uppercase tracking-wider text-slate-500">
+                  Actions
+                </TableHead>
+              </TableRow>
+            </TableHeader>
+            <TableBody>
+              {filteredRows.map(
+                ({
+                  customer,
+                  invoices: customerInvoices,
+                  lastInvoice,
+                  totalSpent,
+                }) => (
+                  <TableRow
+                    key={customer._id}
+                    className="border-slate-100 hover:bg-slate-50/70 dark:border-slate-700/70 dark:hover:bg-slate-800/60"
                   >
-                    <DropdownMenuItem
-                      onClick={() => handleEdit(customer)}
-                      className="flex items-center gap-2 p-3 font-bold text-xs rounded-lg cursor-pointer"
+                    <TableCell className="px-4 py-3">
+                      <input
+                        type="checkbox"
+                        className="h-4 w-4 rounded border-slate-300"
+                        aria-label={`Select ${customer.firstName} ${customer.lastName}`}
+                      />
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="flex min-w-52 items-center gap-3">
+                        <div className="flex h-9 w-9 shrink-0 items-center justify-center rounded-full bg-blue-50 text-xs font-black text-blue-600 dark:bg-blue-500/10 dark:text-blue-300">
+                          {getInitial(customer)}
+                        </div>
+                        <div className="min-w-0">
+                          <button
+                            onClick={() => setSelectedCustomer(customer)}
+                            className="block max-w-56 truncate text-left text-sm font-black text-slate-950 underline-offset-4 hover:text-[#84CC16] hover:underline dark:text-white"
+                          >
+                            {customer.firstName} {customer.lastName}
+                          </button>
+                          <div className="mt-1 flex items-center gap-2">
+                            <span className="text-xs font-semibold text-slate-500">
+                              {customer.customerId || "No ID"}
+                            </span>
+                            {customer.paymentType && (
+                              <span className="rounded-full bg-lime-50 px-2 py-0.5 text-[10px] font-black uppercase text-lime-700">
+                                {customer.paymentType}
+                              </span>
+                            )}
+                          </div>
+                        </div>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="max-w-72 space-y-1 text-xs font-semibold text-slate-500 dark:text-slate-400">
+                        <p className="truncate">{customer.email || "N/A"}</p>
+                        <p className="truncate">{customer.phone || "N/A"}</p>
+                      </div>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="text-sm font-black text-slate-800 dark:text-slate-100">
+                        {customerInvoices.length}
+                      </div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        Total invoices
+                      </p>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="text-sm font-black text-slate-800 dark:text-slate-100">
+                        {formatDate(lastInvoice?.createdAt)}
+                      </div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {lastInvoice ? lastInvoice.type : "No invoices"}
+                      </p>
+                    </TableCell>
+                    <TableCell className="px-4 py-3">
+                      <div className="text-sm font-black text-slate-950 dark:text-white">
+                        {formatCurrency(totalSpent)}
+                      </div>
+                      <p className="text-xs font-semibold text-slate-500">
+                        {customerInvoices.length} invoice
+                        {customerInvoices.length !== 1 && "s"}
+                      </p>
+                    </TableCell>
+                    <TableCell
+                      className="px-4 py-3 text-right"
+                      onClick={(event) => event.stopPropagation()}
                     >
-                      <Edit2 size={14} />
-                      Edit Customer
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(customer)}
-                      className="flex items-center gap-2 p-3 font-bold text-xs rounded-lg text-red-500 hover:text-red-600 hover:bg-red-50 dark:hover:bg-red-950/20 cursor-pointer"
-                    >
-                      <Trash2 size={14} />
-                      Delete
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
-              </div>
-
-              <div className="space-y-3 mt-5">
-                <div className="flex items-center gap-3 text-sm font-bold text-slate-500 dark:text-slate-400">
-                  <Mail size={16} className="text-slate-400" />
-                  <span className="truncate">
-                    {customer.email || "No email"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-sm font-bold text-slate-500 dark:text-slate-400">
-                  <Phone size={16} className="text-slate-400" />
-                  <span className="truncate">
-                    {customer.phone || "No phone"}
-                  </span>
-                </div>
-                <div className="flex items-center gap-3 text-sm font-bold text-slate-500 dark:text-slate-400">
-                  <MapPin size={16} className="text-slate-400" />
-                  <span className="truncate line-clamp-1">
-                    {customer.address || "No address"}
-                  </span>
-                </div>
-              </div>
-
-              <div className="mt-6 border-t border-slate-100 pt-5 dark:border-slate-700/50">
-                <div className="flex items-center justify-between">
-                  <div className="flex flex-col">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Payment Type
-                    </span>
-                    <span className="mt-1 flex items-center gap-1.5 text-xs font-black text-[#0F172A] dark:text-white capitalize">
-                      <CreditCard size={14} className="text-[#84CC16]" />
-                      {customer.paymentType || "N/A"}
-                    </span>
-                  </div>
-                  <div className="flex flex-col items-end">
-                    <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-                      Already Paid
-                    </span>
-                    <span className="mt-1 text-lg font-black text-[#84CC16]">
-                      ${customer.alreadyPaid?.toLocaleString() || "0"}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </motion.div>
-          ))}
-        </div>
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          type="button"
+                          variant="outline"
+                          size="sm"
+                          onClick={() => setSelectedCustomer(customer)}
+                          className="h-8 rounded-lg border-lime-100 px-3 text-xs font-black text-[#84CC16] hover:bg-lime-50"
+                        >
+                          View
+                        </Button>
+                        <DropdownMenu>
+                          <DropdownMenuTrigger asChild>
+                            <button className="flex h-8 w-8 items-center justify-center rounded-lg border border-slate-100 text-slate-400 transition hover:bg-slate-50 hover:text-foreground dark:border-slate-700 dark:hover:bg-slate-800">
+                              <MoreVertical size={15} />
+                            </button>
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent
+                            align="end"
+                            className="w-52 rounded-xl border-slate-100 p-2 shadow-xl"
+                          >
+                            <DropdownMenuItem
+                              onClick={() => handleOpenEmail(customer)}
+                              className="flex cursor-pointer items-center gap-2 rounded-lg p-2.5 text-xs font-bold"
+                            >
+                              <Send size={14} />
+                              Send Email
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() =>
+                                handleOpenDiscounts(customer, "list")
+                              }
+                              className="flex cursor-pointer items-center gap-2 rounded-lg p-2.5 text-xs font-bold"
+                            >
+                              <BadgePercent size={14} />
+                              See Discounts
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => setSelectedCustomer(customer)}
+                              className="flex cursor-pointer items-center gap-2 rounded-lg p-2.5 text-xs font-bold"
+                            >
+                              <FileText size={14} />
+                              View Invoices
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleEdit(customer)}
+                              className="flex cursor-pointer items-center gap-2 rounded-lg p-2.5 text-xs font-bold"
+                            >
+                              <Edit2 size={14} />
+                              Customer Details
+                            </DropdownMenuItem>
+                            <DropdownMenuItem
+                              onClick={() => handleDelete(customer)}
+                              className="flex cursor-pointer items-center gap-2 rounded-lg p-2.5 text-xs font-bold text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                            >
+                              <Trash2 size={14} />
+                              Delete Customer
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                ),
+              )}
+            </TableBody>
+          </Table>
+        </motion.div>
       ) : (
-        <div className="flex flex-col items-center justify-center rounded-[32px] border border-dashed border-slate-200 bg-slate-50 py-24 text-center dark:border-slate-700 dark:bg-slate-800/50">
+        <div className="flex flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 py-24 text-center dark:border-slate-700 dark:bg-slate-800/50">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-full bg-slate-100 dark:bg-slate-800">
             <Users className="h-8 w-8 text-slate-400" />
           </div>
@@ -279,7 +804,6 @@ export default function Customer() {
         </div>
       )}
 
-      {/* Customer Form Modal */}
       <CustomerFormModal
         isOpen={isFormOpen}
         onClose={() => {
@@ -288,6 +812,604 @@ export default function Customer() {
         }}
         customer={editingCustomer}
       />
+
+      <Dialog
+        open={!!emailCustomer}
+        onOpenChange={(open) => {
+          if (!open) {
+            setEmailCustomer(null);
+            setEmailForm(createDefaultEmailForm());
+          }
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl p-0 sm:max-w-2xl">
+          <DialogHeader className="border-b border-slate-100 px-6 py-5 dark:border-slate-700">
+            <DialogTitle className="flex items-center gap-3 text-xl font-black">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-lime-50 text-[#84CC16] dark:bg-lime-500/10">
+                <Mail size={18} />
+              </span>
+              Send Email
+            </DialogTitle>
+          </DialogHeader>
+
+          {emailCustomer && (
+            <div className="space-y-5 p-6">
+              <div className="rounded-2xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60">
+                <p className="text-sm font-black text-slate-950 dark:text-white">
+                  {emailCustomer.firstName} {emailCustomer.lastName}
+                </p>
+                <p className="mt-1 text-xs font-semibold text-slate-500">
+                  {emailCustomer.phone || "No phone"}
+                </p>
+              </div>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  Recipient Email
+                </span>
+                <input
+                  type="email"
+                  value={emailCustomer.email || ""}
+                  readOnly
+                  placeholder="No email available"
+                  className="mt-2 h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 text-sm font-bold text-slate-600 outline-none dark:border-slate-700 dark:bg-slate-800 dark:text-slate-200"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  Subject
+                </span>
+                <input
+                  type="text"
+                  value={emailForm.subject}
+                  onChange={(event) =>
+                    setEmailForm((current) => ({
+                      ...current,
+                      subject: event.target.value,
+                    }))
+                  }
+                  placeholder="Enter email subject"
+                  className="mt-2 h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 text-sm font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+
+              <label className="block">
+                <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                  Description
+                </span>
+                <textarea
+                  value={emailForm.description}
+                  onChange={(event) =>
+                    setEmailForm((current) => ({
+                      ...current,
+                      description: event.target.value,
+                    }))
+                  }
+                  rows={7}
+                  placeholder="Write your message..."
+                  className="mt-2 min-h-36 w-full resize-y rounded-lg border border-slate-100 bg-slate-50 px-3 py-3 text-sm font-bold leading-relaxed outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                />
+              </label>
+
+              <div className="flex flex-col-reverse gap-3 border-t border-slate-100 pt-5 dark:border-slate-700 sm:flex-row sm:justify-end">
+                <Button
+                  type="button"
+                  variant="outline"
+                  className="rounded-lg text-xs font-black"
+                  onClick={() => {
+                    setEmailCustomer(null);
+                    setEmailForm(createDefaultEmailForm());
+                  }}
+                >
+                  Cancel
+                </Button>
+                <Button
+                  type="button"
+                  onClick={handleSubmitEmail}
+                  disabled={!emailCustomer.email}
+                  className="rounded-lg bg-[#84CC16] text-xs font-black text-white hover:bg-[#76b813] disabled:opacity-60"
+                >
+                  <Send className="h-4 w-4" />
+                  Submit
+                </Button>
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!discountCustomer}
+        onOpenChange={(open) => {
+          if (!open) setDiscountCustomer(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl p-0 sm:max-w-4xl">
+          <DialogHeader className="border-b border-slate-100 px-6 py-5 dark:border-slate-700">
+            <DialogTitle className="flex items-center gap-3 text-xl font-black">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-lime-50 text-[#84CC16] dark:bg-lime-500/10">
+                <BadgePercent size={18} />
+              </span>
+              Customer Discounts
+            </DialogTitle>
+          </DialogHeader>
+
+          {discountCustomer && (
+            <div className="max-h-[calc(90vh-92px)] overflow-y-auto p-6">
+              <div className="mb-5 flex flex-col gap-3 rounded-2xl border border-slate-100 bg-slate-50 p-4 dark:border-slate-700 dark:bg-slate-800/60 sm:flex-row sm:items-center sm:justify-between">
+                <div>
+                  <p className="text-sm font-black text-slate-950 dark:text-white">
+                    {discountCustomer.firstName} {discountCustomer.lastName}
+                  </p>
+                  <p className="text-xs font-semibold text-slate-500">
+                    {discountCustomer.email || "No email"} •{" "}
+                    {discountCustomer.phone || "No phone"}
+                  </p>
+                </div>
+                <div className="flex rounded-lg border border-slate-100 bg-white p-1 dark:border-slate-700 dark:bg-card">
+                  <button
+                    type="button"
+                    onClick={() => setDiscountView("add")}
+                    className={`h-8 rounded-md px-3 text-xs font-black transition ${
+                      discountView === "add"
+                        ? "bg-[#84CC16] text-white"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    Add Discount
+                  </button>
+                  <button
+                    type="button"
+                    onClick={() => setDiscountView("list")}
+                    className={`h-8 rounded-md px-3 text-xs font-black transition ${
+                      discountView === "list"
+                        ? "bg-[#84CC16] text-white"
+                        : "text-slate-500 hover:text-slate-900 dark:hover:text-white"
+                    }`}
+                  >
+                    See Discounts ({selectedDiscounts.length})
+                  </button>
+                </div>
+              </div>
+
+              {discountView === "add" ? (
+                <div className="grid gap-5 lg:grid-cols-[1fr_280px]">
+                  <div className="rounded-2xl border border-slate-100 p-5 dark:border-slate-700">
+                    <div className="grid gap-4 sm:grid-cols-2">
+                      <label className="sm:col-span-2">
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                          Discount Name
+                        </span>
+                        <input
+                          type="text"
+                          value={discountForm.title}
+                          onChange={(event) =>
+                            setDiscountForm((current) => ({
+                              ...current,
+                              title: event.target.value,
+                            }))
+                          }
+                          className="mt-2 h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 text-sm font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          placeholder="VIP customer discount"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                          Percentage
+                        </span>
+                        <div className="relative mt-2">
+                          <input
+                            type="number"
+                            min="1"
+                            max="100"
+                            value={discountForm.percentage}
+                            onChange={(event) =>
+                              setDiscountForm((current) => ({
+                                ...current,
+                                percentage: event.target.value,
+                              }))
+                            }
+                            className="h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 pr-9 text-sm font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                          />
+                          <span className="absolute right-3 top-1/2 -translate-y-1/2 text-sm font-black text-slate-400">
+                            %
+                          </span>
+                        </div>
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                          Usage Limit
+                        </span>
+                        <input
+                          type="number"
+                          min="1"
+                          value={discountForm.usageLimit}
+                          onChange={(event) =>
+                            setDiscountForm((current) => ({
+                              ...current,
+                              usageLimit: event.target.value,
+                            }))
+                          }
+                          className="mt-2 h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 text-sm font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                          Valid From
+                        </span>
+                        <input
+                          type="date"
+                          value={discountForm.validFrom}
+                          onChange={(event) =>
+                            setDiscountForm((current) => ({
+                              ...current,
+                              validFrom: event.target.value,
+                            }))
+                          }
+                          className="mt-2 h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 text-sm font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        />
+                      </label>
+
+                      <label>
+                        <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                          Valid Until
+                        </span>
+                        <input
+                          type="date"
+                          value={discountForm.validUntil}
+                          onChange={(event) =>
+                            setDiscountForm((current) => ({
+                              ...current,
+                              validUntil: event.target.value,
+                            }))
+                          }
+                          className="mt-2 h-11 w-full rounded-lg border border-slate-100 bg-slate-50 px-3 text-sm font-bold outline-none transition focus:border-[#84CC16] focus:bg-white dark:border-slate-700 dark:bg-slate-800 dark:text-white"
+                        />
+                      </label>
+
+                      <label className="flex items-center gap-3 rounded-xl border border-slate-100 bg-slate-50 p-3 dark:border-slate-700 dark:bg-slate-800/60 sm:col-span-2">
+                        <input
+                          type="checkbox"
+                          checked={discountForm.trackUsage}
+                          onChange={(event) =>
+                            setDiscountForm((current) => ({
+                              ...current,
+                              trackUsage: event.target.checked,
+                            }))
+                          }
+                          className="h-4 w-4 rounded border-slate-300"
+                        />
+                        <span>
+                          <span className="block text-sm font-black text-slate-900 dark:text-white">
+                            Track usages
+                          </span>
+                          <span className="block text-xs font-semibold text-slate-500">
+                            Keep count each time this customer uses the
+                            discount.
+                          </span>
+                        </span>
+                      </label>
+                    </div>
+
+                    <div className="mt-5 flex justify-end gap-3 border-t border-slate-100 pt-5 dark:border-slate-700">
+                      <Button
+                        type="button"
+                        variant="outline"
+                        className="rounded-lg text-xs font-black"
+                        onClick={() =>
+                          setDiscountForm(createDefaultDiscountForm())
+                        }
+                      >
+                        Reset
+                      </Button>
+                      <Button
+                        type="button"
+                        onClick={handleAddDiscount}
+                        className="rounded-lg bg-[#84CC16] text-xs font-black text-white hover:bg-[#76b813]"
+                      >
+                        <BadgePercent className="h-4 w-4" />
+                        Add Discount
+                      </Button>
+                    </div>
+                  </div>
+
+                  <div className="rounded-2xl border border-lime-100 bg-lime-50 p-5 dark:border-lime-500/20 dark:bg-lime-500/10">
+                    <p className="text-xs font-black uppercase tracking-wider text-lime-700 dark:text-lime-300">
+                      Preview
+                    </p>
+                    <p className="mt-4 text-4xl font-black text-lime-700 dark:text-lime-300">
+                      {discountForm.percentage || 0}%
+                    </p>
+                    <p className="mt-2 text-sm font-black text-slate-900 dark:text-white">
+                      {discountForm.title || "Customer Discount"}
+                    </p>
+                    <div className="mt-5 space-y-3 text-xs font-bold text-slate-600 dark:text-slate-300">
+                      <p className="flex items-center gap-2">
+                        <History className="h-4 w-4 text-lime-600" />
+                        Limit: {discountForm.usageLimit || 0} use
+                        {discountForm.usageLimit === "1" ? "" : "s"}
+                      </p>
+                      <p className="flex items-center gap-2">
+                        <Calendar className="h-4 w-4 text-lime-600" />
+                        {formatDate(discountForm.validFrom)} -{" "}
+                        {formatDate(discountForm.validUntil)}
+                      </p>
+                    </div>
+                  </div>
+                </div>
+              ) : selectedDiscounts.length > 0 ? (
+                <div className="space-y-3">
+                  {selectedDiscounts.map((discount) => {
+                    const isUsedUp = discount.usedCount >= discount.usageLimit;
+                    const isExpired = todayDate
+                      ? discount.validUntil < todayDate
+                      : false;
+
+                    return (
+                      <div
+                        key={discount.id}
+                        className="rounded-2xl border border-slate-100 bg-white p-4 dark:border-slate-700 dark:bg-card"
+                      >
+                        <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+                          <div className="flex items-start gap-4">
+                            <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-full bg-lime-50 text-lg font-black text-lime-700 dark:bg-lime-500/10 dark:text-lime-300">
+                              {discount.percentage}%
+                            </div>
+                            <div>
+                              <p className="text-sm font-black text-slate-950 dark:text-white">
+                                {discount.title}
+                              </p>
+                              <p className="mt-1 text-xs font-semibold text-slate-500">
+                                Valid {formatDate(discount.validFrom)} -{" "}
+                                {formatDate(discount.validUntil)}
+                              </p>
+                              <div className="mt-2 flex flex-wrap gap-2">
+                                <span className="rounded-full bg-slate-100 px-2.5 py-1 text-[11px] font-black text-slate-600 dark:bg-slate-800 dark:text-slate-300">
+                                  Used {discount.usedCount}/
+                                  {discount.usageLimit}
+                                </span>
+                                <span
+                                  className={`rounded-full px-2.5 py-1 text-[11px] font-black ${
+                                    isExpired || isUsedUp
+                                      ? "bg-red-50 text-red-600"
+                                      : "bg-lime-50 text-lime-700"
+                                  }`}
+                                >
+                                  {isExpired
+                                    ? "Expired"
+                                    : isUsedUp
+                                      ? "Limit reached"
+                                      : "Active"}
+                                </span>
+                                {discount.trackUsage && (
+                                  <span className="rounded-full bg-blue-50 px-2.5 py-1 text-[11px] font-black text-blue-700">
+                                    Tracking enabled
+                                  </span>
+                                )}
+                              </div>
+                            </div>
+                          </div>
+
+                          <div className="flex flex-wrap justify-end gap-2">
+                            <Button
+                              type="button"
+                              variant="outline"
+                              size="sm"
+                              onClick={() => handleDeleteDiscount(discount.id)}
+                              className="rounded-lg text-xs font-black text-red-500 hover:bg-red-50 hover:text-red-600"
+                            >
+                              <Trash2 className="h-3.5 w-3.5" />
+                              Delete
+                            </Button>
+                          </div>
+                        </div>
+                      </div>
+                    );
+                  })}
+                </div>
+              ) : (
+                <div className="flex h-52 flex-col items-center justify-center rounded-2xl border border-dashed border-slate-200 bg-slate-50 text-center dark:border-slate-700 dark:bg-slate-800/50">
+                  <BadgePercent className="mb-3 h-10 w-10 text-slate-300" />
+                  <p className="text-sm font-black text-slate-900 dark:text-white">
+                    No discounts added yet
+                  </p>
+                  <p className="mt-1 text-xs font-semibold text-slate-500">
+                    Create a customer-specific discount from Add Discount.
+                  </p>
+                  <Button
+                    type="button"
+                    onClick={() => setDiscountView("add")}
+                    className="mt-4 rounded-lg bg-[#84CC16] text-xs font-black text-white hover:bg-[#76b813]"
+                  >
+                    <Plus className="h-4 w-4" />
+                    Add Discount
+                  </Button>
+                </div>
+              )}
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
+
+      <Dialog
+        open={!!selectedCustomer}
+        onOpenChange={(open) => {
+          if (!open) setSelectedCustomer(null);
+        }}
+      >
+        <DialogContent className="max-h-[90vh] overflow-hidden rounded-2xl p-0 sm:max-w-5xl">
+          <DialogHeader className="border-b border-slate-100 px-6 py-5 dark:border-slate-700">
+            <DialogTitle className="flex items-center gap-3 text-xl font-black">
+              <span className="flex h-10 w-10 items-center justify-center rounded-full bg-lime-50 text-[#84CC16] dark:bg-lime-500/10">
+                <UserCheck size={18} />
+              </span>
+              Customer Details
+            </DialogTitle>
+          </DialogHeader>
+
+          {selectedCustomer && (
+            <div className="max-h-[calc(90vh-92px)] overflow-y-auto p-6">
+              <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-4">
+                <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Name
+                  </span>
+                  <p className="mt-1 text-base font-black text-slate-900 dark:text-white">
+                    {selectedCustomer.firstName} {selectedCustomer.lastName}
+                  </p>
+                  <p className="mt-1 text-xs font-bold text-slate-500">
+                    ID: {selectedCustomer.customerId || "N/A"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Email
+                  </span>
+                  <p className="mt-1 break-all text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {selectedCustomer.email || "No email"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Phone
+                  </span>
+                  <p className="mt-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {selectedCustomer.phone || "No phone"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Already Paid
+                  </span>
+                  <p className="mt-1 text-base font-black text-[#84CC16]">
+                    {formatCurrency(selectedCustomer.alreadyPaid)}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700 md:col-span-2 xl:col-span-3">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Address
+                  </span>
+                  <p className="mt-1 text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {selectedCustomer.address || "No address"}
+                  </p>
+                </div>
+                <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700">
+                  <span className="text-[10px] font-black uppercase tracking-widest text-slate-400">
+                    Payment Type
+                  </span>
+                  <p className="mt-1 flex items-center gap-1.5 text-sm font-black capitalize text-slate-900 dark:text-white">
+                    <CreditCard className="h-4 w-4 text-[#84CC16]" />
+                    {selectedCustomer.paymentType || "N/A"}
+                  </p>
+                </div>
+              </div>
+
+              <div className="mt-8 overflow-hidden rounded-2xl border border-slate-100 dark:border-slate-700">
+                <div className="flex flex-col gap-2 border-b border-slate-100 bg-slate-50 px-5 py-4 dark:border-slate-700 dark:bg-slate-800/70 sm:flex-row sm:items-center sm:justify-between">
+                  <div className="flex items-center gap-2">
+                    <FileText className="h-5 w-5 text-[#84CC16]" />
+                    <h3 className="text-base font-black text-slate-900 dark:text-white">
+                      Invoice History
+                    </h3>
+                  </div>
+                  <span className="text-xs font-black uppercase tracking-wider text-slate-500">
+                    Total: {selectedCustomerInvoices.length}
+                  </span>
+                </div>
+
+                {isInvoicesLoading ? (
+                  <div className="flex h-32 items-center justify-center gap-2 text-sm font-bold text-slate-500">
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                    Loading invoices...
+                  </div>
+                ) : selectedCustomerInvoices.length > 0 ? (
+                  <Table>
+                    <TableHeader className="bg-white dark:bg-card">
+                      <TableRow>
+                        <TableHead className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500">
+                          Invoice ID
+                        </TableHead>
+                        <TableHead className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500">
+                          Type
+                        </TableHead>
+                        <TableHead className="px-5 py-3 text-xs font-black uppercase tracking-wider text-slate-500">
+                          Date
+                        </TableHead>
+                        <TableHead className="px-5 py-3 text-right text-xs font-black uppercase tracking-wider text-slate-500">
+                          Actions
+                        </TableHead>
+                      </TableRow>
+                    </TableHeader>
+                    <TableBody>
+                      {selectedCustomerInvoices.map((invoice) => (
+                        <TableRow key={invoice._id}>
+                          <TableCell className="px-5 py-4 font-mono text-xs font-bold text-slate-600 dark:text-slate-300">
+                            #INV-{invoice._id.slice(-8).toUpperCase()}
+                          </TableCell>
+                          <TableCell className="px-5 py-4">
+                            <span className="inline-flex rounded-full border border-orange-100 bg-orange-50 px-2.5 py-1 text-xs font-bold text-orange-700">
+                              {invoice.type || "N/A"}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 text-sm font-bold text-slate-500">
+                            <span className="flex items-center gap-1.5">
+                              <Calendar className="h-3.5 w-3.5 text-slate-400" />
+                              {formatDate(invoice.createdAt)}
+                            </span>
+                          </TableCell>
+                          <TableCell className="px-5 py-4 text-right">
+                            <div className="flex items-center justify-end gap-2">
+                              <Button
+                                size="sm"
+                                variant="outline"
+                                className="rounded-xl text-xs font-bold"
+                                onClick={() =>
+                                  window.open(
+                                    invoice.invoice.url,
+                                    "_blank",
+                                    "noopener,noreferrer",
+                                  )
+                                }
+                              >
+                                <Eye className="h-3.5 w-3.5" />
+                                View
+                              </Button>
+                              <Button
+                                size="sm"
+                                className="rounded-xl text-xs font-bold"
+                                onClick={() =>
+                                  handleDownload(
+                                    invoice.invoice.url,
+                                    `invoice_${invoice._id.slice(-6)}.pdf`,
+                                  )
+                                }
+                              >
+                                <Download className="h-3.5 w-3.5" />
+                                Download
+                              </Button>
+                            </div>
+                          </TableCell>
+                        </TableRow>
+                      ))}
+                    </TableBody>
+                  </Table>
+                ) : (
+                  <div className="flex h-32 flex-col items-center justify-center text-center">
+                    <FileText className="mb-2 h-8 w-8 text-slate-300" />
+                    <p className="text-sm font-bold text-slate-500">
+                      No invoices found for this customer.
+                    </p>
+                  </div>
+                )}
+              </div>
+            </div>
+          )}
+        </DialogContent>
+      </Dialog>
     </div>
   );
 }
