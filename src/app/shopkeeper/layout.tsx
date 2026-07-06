@@ -15,6 +15,7 @@ export default function ShopkeeperLayout({
   children: React.ReactNode;
 }) {
   const [openSidebar, setOpenSidebar] = useState(false);
+  const [isSidebarCollapsed, setIsSidebarCollapsed] = useState(false);
   const { status } = useSession();
   const pathname = usePathname();
   const router = useRouter();
@@ -44,7 +45,10 @@ export default function ShopkeeperLayout({
       {/* Desktop Sidebar — authenticated only */}
       {isAuthenticated && (
         <div className="hidden lg:block">
-          <Sidebar />
+          <Sidebar
+            collapsed={isSidebarCollapsed}
+            onToggleCollapse={() => setIsSidebarCollapsed((value) => !value)}
+          />
         </div>
       )}
 

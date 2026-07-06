@@ -7,7 +7,8 @@ export async function proxy(request: NextRequest) {
   const { pathname } = request.nextUrl;
 
   const userRole = (token?.role as string)?.toUpperCase();
-  const isShopkeeper = userRole === "SHOPKEEPER";
+  const isShopkeeper = userRole === "SHOPKEEPER" || userRole === "STAFF";
+  const isStaff = userRole === "STAFF";
   const isUser = userRole === "USER" || userRole === "CUSTOMER";
   const isGuest = !token;
 
@@ -22,6 +23,11 @@ export async function proxy(request: NextRequest) {
     if (isUser) {
       const newPath = pathname.replace(/^\/shopkeeper/, "/customer");
       return NextResponse.redirect(new URL(newPath, request.url));
+    }
+    if (isStaff && pathname.startsWith("/shopkeeper/settings")) {
+      return NextResponse.redirect(
+        new URL("/shopkeeper/dashboard", request.url),
+      );
     }
   }
 

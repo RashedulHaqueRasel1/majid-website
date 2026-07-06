@@ -10,6 +10,8 @@ import {
   Package,
   Mail,
   ChevronDown,
+  PanelLeftClose,
+  PanelLeftOpen,
   HelpCircle,
   Phone,
   Wrench,
@@ -17,12 +19,13 @@ import {
   SearchCheckIcon,
   User,
   ShoppingCart,
+  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { motion, AnimatePresence } from "framer-motion";
-import { signOut } from "next-auth/react";
+import { signOut, useSession } from "next-auth/react";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
 import {
   getShopkeeperDisplayName,
@@ -99,6 +102,11 @@ const navItems = [
     href: "/shopkeeper/customer",
   },
   {
+    icon: <UsersRound size={20} />,
+    label: "Staff",
+    href: "/shopkeeper/staff",
+  },
+  {
     icon: <Wrench size={20} />,
     label: "Repair Requests",
     href: "/shopkeeper/repair-requests",
@@ -110,17 +118,32 @@ const navItems = [
   },
 ];
 
-export default function Sidebar() {
+interface SidebarProps {
+  collapsed?: boolean;
+  onToggleCollapse?: () => void;
+}
+
+export default function Sidebar({
+  collapsed = false,
+  onToggleCollapse,
+}: SidebarProps) {
   const pathname = usePathname();
   const [openSubmenu, setOpenSubmenu] = useState<string | null>(
     pathname.startsWith("/shopkeeper/inventory") ? "Inventory" : "Payment",
   );
   const [showLogoutModal, setShowLogoutModal] = useState(false);
+  const { data: session } = useSession();
   const { data: profileData } = useMyProfile();
   const user = profileData?.data;
   const profileName = getShopkeeperDisplayName(user);
   const profileImage = getShopkeeperImage(user);
   const profileSubtitle = getShopkeeperSubtitle(user);
+  const isStaff =
+    session?.user?.role?.toLowerCase() === "staff" ||
+    user?.role?.toLowerCase() === "staff";
+  const visibleNavItems = navItems.filter(
+    (item) => !(isStaff && item.href === "/shopkeeper/settings"),
+  );
 
   const [openSupport, setOpenSupport] = useState(false);
 
@@ -138,33 +161,55 @@ export default function Sidebar() {
 
   return (
     <>
-      <aside className="sticky top-0 flex h-dvh w-[min(300px,100vw)] max-w-full flex-col border-r border-border bg-sidebar font-poppins text-sidebar-foreground shadow-[4px_0_24px_rgba(0,0,0,0.02)]">
+      <aside
+        className={`sticky top-0 flex h-dvh max-w-full flex-col border-r border-border bg-sidebar font-poppins text-sidebar-foreground shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-[width] duration-300 ${
+          collapsed ? "w-[88px]" : "w-[min(300px,100vw)]"
+        }`}
+      >
         {/* Logo Section */}
-        <div className="p-8 pb-10 flex items-center justify-center">
-          <Link href="/" className="flex items-center gap-1.5 group">
-            <div className="relative w-[100px] shrink-0 sm:w-[128px] md:h-[50px] md:w-[200px] cursor-pointer">
-              <Image
-                src="/images/logo.png"
-                alt="Logo"
-                fill
-                className="object-contain "
-              />
-            </div>
-          </Link>
+        <div className="flex items-center justify-center gap-2 p-4 pb-6">
+          {!collapsed && (
+            <Link href="/" className="flex items-center gap-1.5 group">
+              <div className="relative w-[100px] shrink-0 sm:w-[128px] md:h-[50px] md:w-[180px] cursor-pointer">
+                <Image
+                  src="/images/logo.png"
+                  alt="Logo"
+                  fill
+                  className="object-contain "
+                />
+              </div>
+            </Link>
+          )}
+          {onToggleCollapse && (
+            <button
+              type="button"
+              onClick={onToggleCollapse}
+              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground transition hover:bg-[#84CC16]/10 hover:text-[#84CC16] lg:flex"
+              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            >
+              {collapsed ? (
+                <PanelLeftOpen size={20} />
+              ) : (
+                <PanelLeftClose size={20} />
+              )}
+            </button>
+          )}
         </div>
 
         {/* Navigation */}
-        <nav className="flex-1 px-4 space-y-2 overflow-y-auto custom-scrollbar">
-          {navItems.map((item) => {
+        <nav className="flex-1 px-3 space-y-2 overflow-y-auto custom-scrollbar">
+          {visibleNavItems.map((item) => {
             const isActive = pathname.startsWith(item.href);
-            const isSubmenuOpen = openSubmenu === item.label;
+            const isSubmenuOpen = !collapsed && openSubmenu === item.label;
 
             if (item.isSpecial) {
               return (
                 <Link
                   key={item.href}
                   href={item.href}
-                  className={`flex items-center gap-3 px-6 py-4.5 font-black rounded-2xl transition-all mb-4 group ${
+                  title={collapsed ? item.label : undefined}
+                  className={`flex items-center ${collapsed ? "justify-center px-3" : "gap-3 px-6"} py-4.5 font-black rounded-2xl transition-all mb-4 group ${
                     isActive
                       ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/25"
                       : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
@@ -179,9 +224,11 @@ export default function Sidebar() {
                   >
                     {item.icon}
                   </div>
-                  <span className="text-[15px] font-black tracking-tight uppercase tracking-wider">
-                    {item.label}
-                  </span>
+                  {!collapsed && (
+                    <span className="text-[15px] font-black tracking-tight uppercase tracking-wider">
+                      {item.label}
+                    </span>
+                  )}
                 </Link>
               );
             }
@@ -190,55 +237,69 @@ export default function Sidebar() {
               <div key={item.label} className="space-y-1">
                 {item.submenu ? (
                   <button
-                    onClick={() =>
-                      setOpenSubmenu(isSubmenuOpen ? null : item.label)
-                    }
-                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
+                    onClick={() => {
+                      if (!collapsed) {
+                        setOpenSubmenu(isSubmenuOpen ? null : item.label);
+                      }
+                    }}
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center ${collapsed ? "justify-center px-3" : "justify-between px-5"} py-4 rounded-2xl transition-all group relative overflow-hidden ${
                       isActive
                         ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
                         : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
-                    <div className="flex items-center gap-4 relative z-10">
+                    <div
+                      className={`flex items-center ${collapsed ? "justify-center" : "gap-4"} relative z-10`}
+                    >
                       <span
                         className={`${isActive ? "text-white" : "text-[#94A3B8] group-hover:text-[#84CC16] transition-colors"}`}
                       >
                         {item.icon}
                       </span>
-                      <span className="text-[15px] font-black tracking-tight">
-                        {item.label}
-                      </span>
+                      {!collapsed && (
+                        <span className="text-[15px] font-black tracking-tight">
+                          {item.label}
+                        </span>
+                      )}
                     </div>
 
-                    <motion.div
-                      animate={{ rotate: isSubmenuOpen ? 180 : 0 }}
-                      transition={{ duration: 0.2 }}
-                      className="relative z-10"
-                    >
-                      <ChevronDown
-                        size={18}
-                        className={isActive ? "text-white" : "text-[#94A3B8]"}
-                      />
-                    </motion.div>
+                    {!collapsed && (
+                      <motion.div
+                        animate={{ rotate: isSubmenuOpen ? 180 : 0 }}
+                        transition={{ duration: 0.2 }}
+                        className="relative z-10"
+                      >
+                        <ChevronDown
+                          size={18}
+                          className={isActive ? "text-white" : "text-[#94A3B8]"}
+                        />
+                      </motion.div>
+                    )}
                   </button>
                 ) : (
                   <Link
                     href={item.href}
-                    className={`w-full flex items-center justify-between px-5 py-4 rounded-2xl transition-all group relative overflow-hidden ${
+                    title={collapsed ? item.label : undefined}
+                    className={`w-full flex items-center ${collapsed ? "justify-center px-3" : "justify-between px-5"} py-4 rounded-2xl transition-all group relative overflow-hidden ${
                       isActive
                         ? "bg-[#84CC16] text-white shadow-lg shadow-lime-500/20"
                         : "text-muted-foreground hover:bg-sidebar-accent hover:text-sidebar-accent-foreground"
                     }`}
                   >
-                    <div className="flex items-center gap-4 relative z-10">
+                    <div
+                      className={`flex items-center ${collapsed ? "justify-center" : "gap-4"} relative z-10`}
+                    >
                       <span
                         className={`${isActive ? "text-white" : "text-[#94A3B8] group-hover:text-[#84CC16] transition-colors"}`}
                       >
                         {item.icon}
                       </span>
-                      <span className="text-[15px] font-black tracking-tight">
-                        {item.label}
-                      </span>
+                      {!collapsed && (
+                        <span className="text-[15px] font-black tracking-tight">
+                          {item.label}
+                        </span>
+                      )}
                     </div>
 
                     {isActive && (
@@ -284,75 +345,77 @@ export default function Sidebar() {
         </nav>
 
         {/* Support Section - Premium Design */}
-        <div className="mx-4 mb-3">
-          <button
-            onClick={() => setOpenSupport(!openSupport)}
-            className="flex w-full items-center justify-between rounded-[24px] border border-border bg-surface p-4 transition-all sm:p-5"
-          >
-            <div className="flex items-center gap-2">
-              <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                <HelpCircle size={16} className="text-blue-600" />
+        {!collapsed && (
+          <div className="mx-4 mb-3">
+            <button
+              onClick={() => setOpenSupport(!openSupport)}
+              className="flex w-full items-center justify-between rounded-[24px] border border-border bg-surface p-4 transition-all sm:p-5"
+            >
+              <div className="flex items-center gap-2">
+                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
+                  <HelpCircle size={16} className="text-blue-600" />
+                </div>
+
+                <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">
+                  Support
+                </h3>
               </div>
 
-              <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">
-                Support
-              </h3>
-            </div>
-
-            <motion.div
-              animate={{ rotate: openSupport ? 180 : 0 }}
-              transition={{ duration: 0.2 }}
-            >
-              <ChevronDown size={18} className="text-muted-foreground" />
-            </motion.div>
-          </button>
-
-          <AnimatePresence>
-            {openSupport && (
               <motion.div
-                initial={{ opacity: 0, height: 0 }}
-                animate={{ opacity: 1, height: "auto" }}
-                exit={{ opacity: 0, height: 0 }}
+                animate={{ rotate: openSupport ? 180 : 0 }}
                 transition={{ duration: 0.2 }}
-                className="overflow-hidden"
               >
-                <div className="mt-2 p-5 bg-surface rounded-[24px] border border-border space-y-3">
-                  <Link
-                    href="tel:+447777787771"
-                    className="flex items-center gap-3 group transition-transform hover:translate-x-1"
-                  >
-                    <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
-                      <Phone size={14} className="text-[#25D366]" />
-                    </div>
-
-                    <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition">
-                      +447777787771
-                    </span>
-                  </Link>
-
-                  <Link
-                    href="mailto:reports@imoscan.com"
-                    className="flex items-center gap-3 group transition-transform hover:translate-x-1"
-                  >
-                    <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
-                      <Mail size={14} className="text-[#EA4335]" />
-                    </div>
-
-                    <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition truncate">
-                      reports@imoscan.com
-                    </span>
-                  </Link>
-                </div>
+                <ChevronDown size={18} className="text-muted-foreground" />
               </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+            </button>
+
+            <AnimatePresence>
+              {openSupport && (
+                <motion.div
+                  initial={{ opacity: 0, height: 0 }}
+                  animate={{ opacity: 1, height: "auto" }}
+                  exit={{ opacity: 0, height: 0 }}
+                  transition={{ duration: 0.2 }}
+                  className="overflow-hidden"
+                >
+                  <div className="mt-2 p-5 bg-surface rounded-[24px] border border-border space-y-3">
+                    <Link
+                      href="tel:+447777787771"
+                      className="flex items-center gap-3 group transition-transform hover:translate-x-1"
+                    >
+                      <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
+                        <Phone size={14} className="text-[#25D366]" />
+                      </div>
+
+                      <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition">
+                        +447777787771
+                      </span>
+                    </Link>
+
+                    <Link
+                      href="mailto:reports@imoscan.com"
+                      className="flex items-center gap-3 group transition-transform hover:translate-x-1"
+                    >
+                      <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
+                        <Mail size={14} className="text-[#EA4335]" />
+                      </div>
+
+                      <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition truncate">
+                        reports@imoscan.com
+                      </span>
+                    </Link>
+                  </div>
+                </motion.div>
+              )}
+            </AnimatePresence>
+          </div>
+        )}
         {/* User Section */}
         <div className="p-4 pt-0">
           <div className="bg-surface border border-border rounded-[28px] p-4 flex flex-col gap-4 shadow-sm">
             <Link
-              href="/shopkeeper/settings"
-              className="flex items-center gap-3 px-1 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 p-1.5 rounded-2xl transition-all cursor-pointer min-w-0"
+              href={isStaff ? "/shopkeeper/dashboard" : "/shopkeeper/settings"}
+              className={`flex items-center ${collapsed ? "justify-center" : "gap-3"} px-1 hover:bg-slate-100/50 dark:hover:bg-slate-800/40 p-1.5 rounded-2xl transition-all cursor-pointer min-w-0`}
             >
               <div className="relative w-11 h-11 rounded-2xl overflow-hidden border-2 border-white/10 flex-shrink-0">
                 <Image
@@ -362,14 +425,16 @@ export default function Sidebar() {
                   className="object-cover"
                 />
               </div>
-              <div className="flex min-w-0 flex-col">
-                <span className="truncate text-[14px] font-black text-foreground leading-tight">
-                  {profileName}
-                </span>
-                <span className="truncate text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                  {profileSubtitle}
-                </span>
-              </div>
+              {!collapsed && (
+                <div className="flex min-w-0 flex-col">
+                  <span className="truncate text-[14px] font-black text-foreground leading-tight">
+                    {profileName}
+                  </span>
+                  <span className="truncate text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
+                    {profileSubtitle}
+                  </span>
+                </div>
+              )}
             </Link>
 
             <button
@@ -380,7 +445,7 @@ export default function Sidebar() {
                 size={16}
                 className="group-hover:-translate-x-1 transition-transform"
               />
-              <span>Log out</span>
+              {!collapsed && <span>Log out</span>}
             </button>
           </div>
         </div>

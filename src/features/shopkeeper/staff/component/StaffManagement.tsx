@@ -1,0 +1,368 @@
+"use client";
+
+import { FormEvent, useMemo, useState } from "react";
+import Image from "next/image";
+import { Loader2, Mail, Phone, Plus, UsersRound } from "lucide-react";
+import { Button } from "@/components/ui/button";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+} from "@/components/ui/dialog";
+import { Input } from "@/components/ui/input";
+import { Label } from "@/components/ui/label";
+import {
+  Table,
+  TableBody,
+  TableCell,
+  TableHead,
+  TableHeader,
+  TableRow,
+} from "@/components/ui/table";
+import { useCreateStaff, useStaffList } from "../hooks/useStaff";
+
+const initialForm = {
+  firstName: "",
+  lastName: "",
+  email: "",
+  phone: "",
+  password: "",
+};
+
+function getStaffName(staff: {
+  firstName?: string;
+  lastName?: string;
+  name?: string;
+}) {
+  const name = [staff.firstName, staff.lastName].filter(Boolean).join(" ");
+  return name || staff.name || "Unnamed Staff";
+}
+
+function getInitials(name: string) {
+  return name
+    .split(" ")
+    .map((part) => part[0])
+    .join("")
+    .slice(0, 2)
+    .toUpperCase();
+}
+
+export default function StaffManagement() {
+  const [isOpen, setIsOpen] = useState(false);
+  const [form, setForm] = useState(initialForm);
+  const { data: staff = [], isLoading, isError } = useStaffList();
+  const createStaff = useCreateStaff();
+
+  const activeCount = useMemo(
+    () => staff.filter((member) => member.isVerified).length,
+    [staff],
+  );
+
+  const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
+    event.preventDefault();
+
+    await createStaff.mutateAsync({
+      firstName: form.firstName.trim(),
+      lastName: form.lastName.trim(),
+      email: form.email.trim(),
+      phone: form.phone.trim(),
+      password: form.password,
+    });
+
+    setForm(initialForm);
+    setIsOpen(false);
+  };
+
+  return (
+    <section className="min-h-full bg-background p-4 font-poppins sm:p-6 lg:p-8">
+      <div className="mx-auto max-w-7xl space-y-6">
+        <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
+          <div>
+            <div className="flex items-center gap-3">
+              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#84CC16]/10 text-[#65A30D]">
+                <UsersRound size={22} />
+              </div>
+              <div>
+                <h1 className="text-xl font-black tracking-tight text-foreground sm:text-2xl">
+                  Staff Management
+                </h1>
+                <p className="mt-1 text-sm font-medium text-muted-foreground">
+                  Add and manage staff members for your shop account.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <Button
+            onClick={() => setIsOpen(true)}
+            className="h-11 rounded-xl bg-[#84CC16] px-5 text-sm font-black text-white shadow-lg shadow-lime-500/20 hover:bg-[#76B814]"
+          >
+            <Plus size={18} />
+            Add Staff Member
+          </Button>
+        </div>
+
+        <div className="grid gap-4 sm:grid-cols-3">
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Total Staff
+            </p>
+            <p className="mt-3 text-3xl font-black text-foreground">
+              {staff.length}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Verified
+            </p>
+            <p className="mt-3 text-3xl font-black text-[#65A30D]">
+              {activeCount}
+            </p>
+          </div>
+          <div className="rounded-xl border border-border bg-card p-5 shadow-sm">
+            <p className="text-xs font-black uppercase tracking-widest text-muted-foreground">
+              Pending
+            </p>
+            <p className="mt-3 text-3xl font-black text-amber-600">
+              {staff.length - activeCount}
+            </p>
+          </div>
+        </div>
+
+        <div className="overflow-hidden rounded-xl border border-border bg-card shadow-sm">
+          <div className="overflow-x-auto">
+            <Table>
+              <TableHeader>
+                <TableRow className="bg-surface/80">
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Staff Name
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Email
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Phone
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Job Role
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Status
+                  </TableHead>
+                </TableRow>
+              </TableHeader>
+              <TableBody>
+                {isLoading && (
+                  <TableRow>
+                    <TableCell colSpan={5} className="h-40 text-center">
+                      <div className="flex items-center justify-center gap-2 text-sm font-bold text-muted-foreground">
+                        <Loader2 className="h-5 w-5 animate-spin" />
+                        Loading staff...
+                      </div>
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {isError && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-40 text-center text-sm font-bold text-destructive"
+                    >
+                      Failed to load staff members.
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {!isLoading && !isError && staff.length === 0 && (
+                  <TableRow>
+                    <TableCell
+                      colSpan={5}
+                      className="h-44 text-center text-sm font-bold text-muted-foreground"
+                    >
+                      No staff members found.
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {!isLoading &&
+                  staff.map((member) => {
+                    const name = getStaffName(member);
+                    const imageUrl = member.image?.url;
+
+                    return (
+                      <TableRow
+                        key={member._id || member.id || member.email}
+                        className="hover:bg-surface/60"
+                      >
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-3">
+                            <div className="relative flex h-11 w-11 shrink-0 items-center justify-center overflow-hidden rounded-full bg-[#84CC16]/10 text-sm font-black text-[#65A30D]">
+                              {imageUrl ? (
+                                <Image
+                                  src={imageUrl}
+                                  alt={name}
+                                  fill
+                                  className="object-cover"
+                                />
+                              ) : (
+                                getInitials(name)
+                              )}
+                            </div>
+                            <div>
+                              <p className="font-black text-foreground">
+                                {name}
+                              </p>
+                              <p className="text-xs font-bold text-muted-foreground">
+                                Staff Member
+                              </p>
+                            </div>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                            <Mail size={15} />
+                            {member.email}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="flex items-center gap-2 text-sm font-bold text-muted-foreground">
+                            <Phone size={15} />
+                            {member.phone || "Not added"}
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span className="rounded-full bg-blue-50 px-3 py-1 text-xs font-black text-blue-700">
+                            Staff
+                          </span>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <span
+                            className={`rounded-full px-3 py-1 text-xs font-black ${
+                              member.isVerified
+                                ? "bg-[#84CC16]/10 text-[#65A30D]"
+                                : "bg-amber-50 text-amber-700"
+                            }`}
+                          >
+                            {member.isVerified ? "Active" : "Pending"}
+                          </span>
+                        </TableCell>
+                      </TableRow>
+                    );
+                  })}
+              </TableBody>
+            </Table>
+          </div>
+        </div>
+      </div>
+
+      <Dialog open={isOpen} onOpenChange={setIsOpen}>
+        <DialogContent className="sm:max-w-xl">
+          <DialogHeader>
+            <DialogTitle>Add Staff Member</DialogTitle>
+            <DialogDescription>
+              Create a staff login. The role will be saved as staff.
+            </DialogDescription>
+          </DialogHeader>
+
+          <form onSubmit={handleSubmit} className="space-y-4">
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="firstName">First name</Label>
+                <Input
+                  id="firstName"
+                  value={form.firstName}
+                  onChange={(event) =>
+                    setForm((value) => ({
+                      ...value,
+                      firstName: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+              <div className="space-y-2">
+                <Label htmlFor="lastName">Last name</Label>
+                <Input
+                  id="lastName"
+                  value={form.lastName}
+                  onChange={(event) =>
+                    setForm((value) => ({
+                      ...value,
+                      lastName: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="email">Email</Label>
+              <Input
+                id="email"
+                type="email"
+                value={form.email}
+                onChange={(event) =>
+                  setForm((value) => ({ ...value, email: event.target.value }))
+                }
+                required
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone</Label>
+              <Input
+                id="phone"
+                value={form.phone}
+                onChange={(event) =>
+                  setForm((value) => ({ ...value, phone: event.target.value }))
+                }
+                placeholder="+44..."
+              />
+            </div>
+
+            <div className="space-y-2">
+              <Label htmlFor="password">Password</Label>
+              <Input
+                id="password"
+                type="password"
+                value={form.password}
+                onChange={(event) =>
+                  setForm((value) => ({
+                    ...value,
+                    password: event.target.value,
+                  }))
+                }
+                minLength={6}
+                required
+              />
+            </div>
+
+            <div className="flex justify-end gap-3 pt-2">
+              <Button
+                type="button"
+                variant="outline"
+                onClick={() => setIsOpen(false)}
+              >
+                Cancel
+              </Button>
+              <Button
+                type="submit"
+                disabled={createStaff.isPending}
+                className="bg-[#84CC16] font-black text-white hover:bg-[#76B814]"
+              >
+                {createStaff.isPending && (
+                  <Loader2 className="h-4 w-4 animate-spin" />
+                )}
+                Create Staff
+              </Button>
+            </div>
+          </form>
+        </DialogContent>
+      </Dialog>
+    </section>
+  );
+}
