@@ -142,7 +142,12 @@ export default function Sidebar({
     session?.user?.role?.toLowerCase() === "staff" ||
     user?.role?.toLowerCase() === "staff";
   const visibleNavItems = navItems.filter(
-    (item) => !(isStaff && item.href === "/shopkeeper/settings"),
+    (item) =>
+      !(
+        isStaff &&
+        (item.href === "/shopkeeper/settings" ||
+          item.href === "/shopkeeper/staff")
+      ),
   );
 
   const [openSupport, setOpenSupport] = useState(false);
