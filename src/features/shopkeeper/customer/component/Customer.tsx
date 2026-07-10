@@ -1,13 +1,8 @@
 "use client";
 
-import React, {
-  useCallback,
-  useEffect,
-  useMemo,
-  useReducer,
-  useState,
-} from "react";
+import React, { useCallback, useEffect, useMemo, useState } from "react";
 import { useSession } from "next-auth/react";
+import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query";
 import { motion } from "framer-motion";
 import {
   BadgePercent,
@@ -34,6 +29,7 @@ import {
 } from "lucide-react";
 import { toast } from "sonner";
 import { Button } from "@/components/ui/button";
+import { api } from "@/lib/api";
 import {
   Dialog,
   DialogContent,
@@ -67,6 +63,27 @@ type CustomerInvoice = InvoiceHistoryItem & {
   dueAmount?: number;
 };
 
+type CustomerDiscountRecord = {
+  _id: string;
+  discountName: string;
+  percentage: number;
+  usageLimit: number;
+  validFrom: string;
+  until?: string | null;
+  shopkeeperId: string;
+  status: "active" | "inactive";
+  customerId: string;
+  createdAt: string;
+  updatedAt: string;
+};
+
+type CustomerDiscountResponse = {
+  success: boolean;
+  message: string;
+  statusCode: number;
+  data: CustomerDiscountRecord[];
+};
+
 type CustomerDiscount = {
   id: string;
   customerId: string;
@@ -78,13 +95,8 @@ type CustomerDiscount = {
   validUntil: string;
   trackUsage: boolean;
   createdAt: string;
+  status: "active" | "inactive";
 };
-
-type DiscountAction =
-  | { type: "load"; discounts: CustomerDiscount[] }
-  | { type: "add"; discount: CustomerDiscount }
-  | { type: "track"; discountId: string }
-  | { type: "delete"; discountId: string };
 
 type DiscountForm = {
   title: string;
@@ -95,15 +107,100 @@ type DiscountForm = {
   trackUsage: boolean;
 };
 
+type CustomerDiscountPayload = {
+  discountName: string;
+  percentage: number;
+  usageLimit?: number;
+  validFrom: string;
+  until?: string;
+  shopkeeperId?: string;
+  status?: "active" | "inactive";
+  customerId: string;
+};
+
+type CustomerDiscountMutationInput = {
+  id?: string;
+  customerId: string;
+  payload: Partial<CustomerDiscountPayload>;
+};
+
 type EmailForm = {
   subject: string;
   description: string;
 };
 
+const CUSTOMER_DISCOUNT_BASE = "/customer-discounts";
+
+const getCustomerDiscountsByCustomerId = async (
+  customerId: string,
+): Promise<CustomerDiscountResponse> => {
+  const response = await api.get(
+    `${CUSTOMER_DISCOUNT_BASE}/customer/${customerId}`,
+  );
+
+  return response.data;
+};
+
+const createCustomerDiscountRequest = async (
+  payload: CustomerDiscountPayload,
+) => {
+  const response = await api.post(`${CUSTOMER_DISCOUNT_BASE}/create`, payload);
+
+  return response.data;
+};
+
+const updateCustomerDiscountRequest = async ({
+  id,
+  payload,
+}: CustomerDiscountMutationInput) => {
+  const response = await api.put(
+    `${CUSTOMER_DISCOUNT_BASE}/update/${id}`,
+    payload,
+  );
+
+  return response.data;
+};
+
+const deleteCustomerDiscountRequest = async (id: string) => {
+  const response = await api.delete(`${CUSTOMER_DISCOUNT_BASE}/delete/${id}`);
+
+  return response.data;
+};
+
+const resetCustomerDiscountRequest = async (id: string) => {
+  const response = await api.patch(`${CUSTOMER_DISCOUNT_BASE}/reset/${id}`);
+
+  return response.data;
+};
+
+const mapDiscountRecordToUi = (
+  discount: CustomerDiscountRecord,
+): CustomerDiscount => ({
+  id: discount._id,
+  customerId: discount.customerId,
+  title: discount.discountName,
+  percentage: discount.percentage,
+  usageLimit: discount.usageLimit ?? 1,
+  usedCount: 0,
+  validFrom: new Date(discount.validFrom).toISOString().slice(0, 10),
+  validUntil: discount.until
+    ? new Date(discount.until).toISOString().slice(0, 10)
+    : "",
+  trackUsage: (discount.usageLimit ?? 1) > 1,
+  createdAt: discount.createdAt,
+  status: discount.status,
+});
+
 const createDefaultEmailForm = (): EmailForm => ({
   subject: "",
   description: "",
 });
+
+type DiscountAction =
+  | { type: "load"; discounts: CustomerDiscount[] }
+  | { type: "add"; discount: CustomerDiscount }
+  | { type: "track"; discountId: string }
+  | { type: "delete"; discountId: string };
 
 const discountReducer = (
   discounts: CustomerDiscount[],
@@ -169,6 +266,7 @@ const getInitial = (customer: Customer) =>
 
 export default function Customer() {
   const { data: session } = useSession();
+  const queryClient = useQueryClient();
   const shopkeeperId = (session?.user as { id?: string })?.id;
   const {
     data: customersResponse,
@@ -188,7 +286,6 @@ export default function Customer() {
   const [discountCustomer, setDiscountCustomer] = useState<Customer | null>(
     null,
   );
-  const [discounts, dispatchDiscounts] = useReducer(discountReducer, []);
   const [discountForm, setDiscountForm] = useState<DiscountForm>(() =>
     createDefaultDiscountForm(),
   );
@@ -198,6 +295,49 @@ export default function Customer() {
     createDefaultEmailForm(),
   );
   const todayDate = useMemo(() => new Date().toISOString().slice(0, 10), []);
+
+  const customerDiscountsQuery = useQuery({
+    queryKey: ["customer-discounts", discountCustomer?._id || ""],
+    queryFn: () =>
+      getCustomerDiscountsByCustomerId(discountCustomer?._id || ""),
+    enabled: !!discountCustomer?._id,
+  });
+
+  const createCustomerDiscountMutation = useMutation({
+    mutationFn: createCustomerDiscountRequest,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["customer-discounts", discountCustomer?._id || ""],
+      });
+    },
+  });
+
+  const updateCustomerDiscountMutation = useMutation({
+    mutationFn: updateCustomerDiscountRequest,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["customer-discounts", discountCustomer?._id || ""],
+      });
+    },
+  });
+
+  const deleteCustomerDiscountMutation = useMutation({
+    mutationFn: deleteCustomerDiscountRequest,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["customer-discounts", discountCustomer?._id || ""],
+      });
+    },
+  });
+
+  const resetCustomerDiscountMutation = useMutation({
+    mutationFn: resetCustomerDiscountRequest,
+    onSuccess: async () => {
+      await queryClient.invalidateQueries({
+        queryKey: ["customer-discounts", discountCustomer?._id || ""],
+      });
+    },
+  });
 
   const customers = useMemo(
     () => customersResponse?.data || [],
@@ -267,43 +407,15 @@ export default function Customer() {
   }, [getCustomerInvoices, selectedCustomer]);
 
   const selectedDiscounts = useMemo(() => {
-    if (!discountCustomer) return [];
+    const apiDiscounts = customerDiscountsQuery.data?.data || [];
 
-    return discounts
-      .filter((discount) => discount.customerId === discountCustomer._id)
+    return apiDiscounts
+      .map(mapDiscountRecordToUi)
       .sort(
         (a, b) =>
           new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime(),
       );
-  }, [discountCustomer, discounts]);
-
-  useEffect(() => {
-    if (!shopkeeperId) return;
-
-    const savedDiscounts = window.localStorage.getItem(
-      `customer-discounts:${shopkeeperId}`,
-    );
-
-    if (!savedDiscounts) return;
-
-    try {
-      dispatchDiscounts({
-        type: "load",
-        discounts: JSON.parse(savedDiscounts) as CustomerDiscount[],
-      });
-    } catch {
-      dispatchDiscounts({ type: "load", discounts: [] });
-    }
-  }, [shopkeeperId]);
-
-  useEffect(() => {
-    if (!shopkeeperId) return;
-
-    window.localStorage.setItem(
-      `customer-discounts:${shopkeeperId}`,
-      JSON.stringify(discounts),
-    );
-  }, [discounts, shopkeeperId]);
+  }, [customerDiscountsQuery.data]);
 
   const repeatCustomers = customerRows.filter(
     ({ invoices: customerInvoices }) => customerInvoices.length > 1,
@@ -394,32 +506,78 @@ export default function Customer() {
       return;
     }
 
-    const newDiscount: CustomerDiscount = {
-      id: `${discountCustomer._id}-${Date.now()}`,
-      customerId: discountCustomer._id,
-      title: discountForm.title.trim(),
+    const payload: CustomerDiscountPayload = {
+      discountName: discountForm.title.trim(),
       percentage,
       usageLimit,
-      usedCount: 0,
-      validFrom: discountForm.validFrom,
-      validUntil: discountForm.validUntil,
-      trackUsage: discountForm.trackUsage,
-      createdAt: new Date().toISOString(),
+      validFrom: new Date(discountForm.validFrom).toISOString(),
+      until: discountForm.validUntil
+        ? new Date(discountForm.validUntil).toISOString()
+        : undefined,
+      shopkeeperId,
+      status: "active",
+      customerId: discountCustomer._id,
     };
 
-    dispatchDiscounts({ type: "add", discount: newDiscount });
-    setDiscountForm(createDefaultDiscountForm());
-    setDiscountView("list");
-    toast.success("Discount added for this customer");
+    createCustomerDiscountMutation.mutate(payload, {
+      onSuccess: () => {
+        setDiscountForm(createDefaultDiscountForm());
+        setDiscountView("list");
+        toast.success("Discount added for this customer");
+      },
+      onError: (error: unknown) => {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to add discount");
+      },
+    });
   };
 
   const handleTrackDiscountUsage = (discountId: string) => {
-    dispatchDiscounts({ type: "track", discountId });
+    updateCustomerDiscountMutation.mutate(
+      {
+        id: discountId,
+        customerId: discountCustomer?._id || "",
+        payload: {
+          discountName: "",
+          percentage: 0,
+          customerId: discountCustomer?._id || "",
+        },
+      },
+      {
+        onError: (error: unknown) => {
+          const err = error as {
+            response?: { data?: { message?: string } };
+          };
+          toast.error(
+            err.response?.data?.message || "Failed to track discount",
+          );
+        },
+      },
+    );
   };
 
   const handleDeleteDiscount = (discountId: string) => {
-    dispatchDiscounts({ type: "delete", discountId });
-    toast.success("Discount removed");
+    deleteCustomerDiscountMutation.mutate(discountId, {
+      onSuccess: () => {
+        toast.success("Discount removed");
+      },
+      onError: (error: unknown) => {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to delete discount");
+      },
+    });
+  };
+
+  const handleResetDiscount = (discountId: string) => {
+    resetCustomerDiscountMutation.mutate(discountId, {
+      onSuccess: () => {
+        toast.success("Discount reset successfully");
+      },
+      onError: (error: unknown) => {
+        const err = error as { response?: { data?: { message?: string } } };
+        toast.error(err.response?.data?.message || "Failed to reset discount");
+      },
+    });
   };
 
   const handleDownload = async (url: string, filename: string) => {
