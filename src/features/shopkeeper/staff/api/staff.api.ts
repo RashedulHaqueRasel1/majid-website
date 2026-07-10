@@ -1,6 +1,6 @@
+import axiosInstance from "@/lib/instance/axios-instance";
 import { api } from "@/lib/api";
-import { registerUserApi } from "@/features/auth/api/auth.api";
-import { ApiResponse, RegisterPayload } from "@/features/auth/types/auth.types";
+import { ApiResponse } from "@/features/auth/types/auth.types";
 
 export interface StaffUser {
   _id?: string;
@@ -15,7 +15,35 @@ export interface StaffUser {
     url?: string;
   } | null;
   isVerified?: boolean;
+  wageType?: "per-day" | "per-hour";
+  wageAmount?: number;
+  workingDays?: string[];
+  weekendDays?: string[];
+  idVerificationStatus?: "pending" | "verified" | "rejected";
+  idNumber?: string;
   createdAt?: string;
+}
+
+export interface StaffCreationPayload {
+  firstName: string;
+  lastName: string;
+  email: string;
+  password: string;
+  phone?: string;
+  shopkeeperId: string;
+  wageType?: "per-day" | "per-hour";
+  wageAmount?: number;
+  workingDays?: string[];
+  weekendDays?: string[];
+  idVerificationStatus?: "pending" | "verified" | "rejected";
+  idNumber?: string;
+}
+
+export interface StaffIdVerificationResponse {
+  nidNumber: string;
+  isValid: boolean;
+  message: string;
+  processingTime?: number;
 }
 
 export const getAllUsersApi = async (): Promise<ApiResponse<StaffUser[]>> => {
@@ -23,11 +51,22 @@ export const getAllUsersApi = async (): Promise<ApiResponse<StaffUser[]>> => {
   return response.data;
 };
 
-export const createStaffApi = async (
-  payload: Omit<RegisterPayload, "role"> & { phone?: string },
-) => {
-  return registerUserApi({
-    ...payload,
-    role: "staff",
-  });
+export const createStaffApi = async (payload: StaffCreationPayload) => {
+  const response = await axiosInstance.post("/user/create-staff", payload);
+  return response.data;
+};
+
+export const verifyStaffIdCardApi = async (payload: {
+  frontFile: File;
+  backFile?: File | null;
+}): Promise<ApiResponse<StaffIdVerificationResponse>> => {
+  const formData = new FormData();
+  formData.append("nid_front", payload.frontFile);
+
+  if (payload.backFile) {
+    formData.append("nid_back", payload.backFile);
+  }
+
+  const response = await axiosInstance.post("/ocr/extract-nid", formData);
+  return response.data;
 };

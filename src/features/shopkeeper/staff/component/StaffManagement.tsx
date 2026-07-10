@@ -2,9 +2,22 @@
 
 import { FormEvent, useMemo, useState } from "react";
 import Image from "next/image";
-import { Loader2, Mail, Phone, Plus, UsersRound } from "lucide-react";
+import {
+  CalendarDays,
+  CheckCircle2,
+  Clock3,
+  CreditCard,
+  Loader2,
+  Mail,
+  Phone,
+  Plus,
+  UsersRound,
+} from "lucide-react";
 import { useSession } from "next-auth/react";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
 import {
   Dialog,
   DialogContent,
@@ -15,6 +28,13 @@ import {
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select";
+import {
   Table,
   TableBody,
   TableCell,
@@ -22,15 +42,46 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
+import { verifyStaffIdCardApi } from "../api/staff.api";
 import { useCreateStaff, useStaffList } from "../hooks/useStaff";
 
-const initialForm = {
+type StaffFormState = {
+  firstName: string;
+  lastName: string;
+  email: string;
+  phone: string;
+  password: string;
+  wageType: "per-day" | "per-hour";
+  wageAmount: string;
+  workingDays: string[];
+  weekendDays: string[];
+  idNumber: string;
+  idVerificationStatus: "pending" | "verified" | "rejected";
+};
+
+const initialForm: StaffFormState = {
   firstName: "",
   lastName: "",
   email: "",
   phone: "",
   password: "",
+  wageType: "per-day",
+  wageAmount: "",
+  workingDays: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday"],
+  weekendDays: ["Friday", "Saturday"],
+  idNumber: "",
+  idVerificationStatus: "pending",
 };
+
+const weekDays = [
+  "Sunday",
+  "Monday",
+  "Tuesday",
+  "Wednesday",
+  "Thursday",
+  "Friday",
+  "Saturday",
+];
 
 function getStaffName(staff: {
   firstName?: string;
@@ -50,9 +101,20 @@ function getInitials(name: string) {
     .toUpperCase();
 }
 
+function formatDays(days?: string[]) {
+  if (!days || days.length === 0) {
+    return "Not set";
+  }
+
+  return days.join(", ");
+}
+
 export default function StaffManagement() {
   const [isOpen, setIsOpen] = useState(false);
-  const [form, setForm] = useState(initialForm);
+  const [form, setForm] = useState<StaffFormState>(initialForm);
+  const [idFrontFile, setIdFrontFile] = useState<File | null>(null);
+  const [idBackFile, setIdBackFile] = useState<File | null>(null);
+  const [isVerifyingId, setIsVerifyingId] = useState(false);
   const { data: session } = useSession();
   const { data: staff = [], isLoading, isError } = useStaffList();
   const createStaff = useCreateStaff();
@@ -63,8 +125,67 @@ export default function StaffManagement() {
     [staff],
   );
 
+  const toggleSelection = (
+    key: "workingDays" | "weekendDays",
+    value: string,
+  ) => {
+    setForm((current) => {
+      const exists = current[key].includes(value);
+
+      return {
+        ...current,
+        [key]: exists
+          ? current[key].filter((entry) => entry !== value)
+          : [...current[key], value],
+      };
+    });
+  };
+
+  const handleVerifyIdCard = async () => {
+    if (!idFrontFile) {
+      toast.error("Please upload the front side of the ID card first.");
+      return;
+    }
+
+    setIsVerifyingId(true);
+    try {
+      const response = await verifyStaffIdCardApi({
+        frontFile: idFrontFile,
+        backFile: idBackFile,
+      });
+
+      if (response.success && response.data?.isValid) {
+        setForm((current) => ({
+          ...current,
+          idNumber: response.data?.nidNumber || "",
+          idVerificationStatus: "verified",
+        }));
+        toast.success(response.message || "ID card verified successfully");
+      } else {
+        setForm((current) => ({
+          ...current,
+          idVerificationStatus: "rejected",
+        }));
+        toast.error(response.message || "ID card verification failed");
+      }
+    } catch (error: unknown) {
+      const message =
+        (error as { response?: { data?: { message?: string } } })?.response
+          ?.data?.message || "Failed to verify ID card";
+      toast.error(message);
+    } finally {
+      setIsVerifyingId(false);
+    }
+  };
+
   const handleSubmit = async (event: FormEvent<HTMLFormElement>) => {
     event.preventDefault();
+    if (!shopkeeperId) {
+      toast.error(
+        "Unable to determine shopkeeper ID. Please re-login and try again.",
+      );
+      return;
+    }
 
     await createStaff.mutateAsync({
       firstName: form.firstName.trim(),
@@ -73,9 +194,17 @@ export default function StaffManagement() {
       phone: form.phone.trim(),
       password: form.password,
       shopkeeperId,
+      wageType: form.wageType,
+      wageAmount: form.wageAmount ? Number(form.wageAmount) : undefined,
+      workingDays: form.workingDays,
+      weekendDays: form.weekendDays,
+      idVerificationStatus: form.idVerificationStatus,
+      idNumber: form.idNumber.trim() || undefined,
     });
 
     setForm(initialForm);
+    setIdFrontFile(null);
+    setIdBackFile(null);
     setIsOpen(false);
   };
 
@@ -153,6 +282,18 @@ export default function StaffManagement() {
                     Job Role
                   </TableHead>
                   <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Wage Setup
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Working Days
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    Weekend
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
+                    ID Verification
+                  </TableHead>
+                  <TableHead className="px-6 py-4 text-xs font-black uppercase tracking-widest text-muted-foreground">
                     Status
                   </TableHead>
                 </TableRow>
@@ -160,7 +301,7 @@ export default function StaffManagement() {
               <TableBody>
                 {isLoading && (
                   <TableRow>
-                    <TableCell colSpan={5} className="h-40 text-center">
+                    <TableCell colSpan={9} className="h-40 text-center">
                       <div className="flex items-center justify-center gap-2 text-sm font-bold text-muted-foreground">
                         <Loader2 className="h-5 w-5 animate-spin" />
                         Loading staff...
@@ -172,7 +313,7 @@ export default function StaffManagement() {
                 {isError && (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={9}
                       className="h-40 text-center text-sm font-bold text-destructive"
                     >
                       Failed to load staff members.
@@ -183,7 +324,7 @@ export default function StaffManagement() {
                 {!isLoading && !isError && staff.length === 0 && (
                   <TableRow>
                     <TableCell
-                      colSpan={5}
+                      colSpan={9}
                       className="h-44 text-center text-sm font-bold text-muted-foreground"
                     >
                       No staff members found.
@@ -243,6 +384,50 @@ export default function StaffManagement() {
                           </span>
                         </TableCell>
                         <TableCell className="px-6 py-4">
+                          <div className="space-y-1 text-sm font-bold text-foreground">
+                            <p>{member.wageType || "Not set"}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {member.wageAmount !== undefined &&
+                              member.wageAmount !== null
+                                ? `${member.wageAmount} / ${
+                                    member.wageType === "per-hour"
+                                      ? "hour"
+                                      : "day"
+                                  }`
+                                : "Wage amount not set"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <p className="text-sm font-bold text-muted-foreground">
+                            {formatDays(member.workingDays)}
+                          </p>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <p className="text-sm font-bold text-muted-foreground">
+                            {formatDays(member.weekendDays)}
+                          </p>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
+                          <div className="space-y-1">
+                            <Badge
+                              variant="outline"
+                              className={
+                                member.idVerificationStatus === "verified"
+                                  ? "border-[#84CC16]/30 bg-[#84CC16]/10 text-[#65A30D]"
+                                  : member.idVerificationStatus === "rejected"
+                                    ? "border-destructive/30 bg-destructive/10 text-destructive"
+                                    : "border-amber-300 bg-amber-50 text-amber-700"
+                              }
+                            >
+                              {member.idVerificationStatus || "pending"}
+                            </Badge>
+                            <p className="text-xs font-semibold text-muted-foreground">
+                              {member.idNumber || "No ID saved"}
+                            </p>
+                          </div>
+                        </TableCell>
+                        <TableCell className="px-6 py-4">
                           <span
                             className={`rounded-full px-3 py-1 text-xs font-black ${
                               member.isVerified
@@ -263,15 +448,16 @@ export default function StaffManagement() {
       </div>
 
       <Dialog open={isOpen} onOpenChange={setIsOpen}>
-        <DialogContent className="sm:max-w-xl">
+        <DialogContent className="max-h-[90vh] overflow-y-auto sm:max-w-3xl">
           <DialogHeader>
             <DialogTitle>Add Staff Member</DialogTitle>
             <DialogDescription>
-              Create a staff login. The role will be saved as staff.
+              Create a staff login with wage, working day, weekend, and ID
+              verification setup.
             </DialogDescription>
           </DialogHeader>
 
-          <form onSubmit={handleSubmit} className="space-y-4">
+          <form onSubmit={handleSubmit} className="space-y-6">
             <div className="grid gap-4 sm:grid-cols-2">
               <div className="space-y-2">
                 <Label htmlFor="firstName">First name</Label>
@@ -303,29 +489,194 @@ export default function StaffManagement() {
               </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="email">Email</Label>
-              <Input
-                id="email"
-                type="email"
-                value={form.email}
-                onChange={(event) =>
-                  setForm((value) => ({ ...value, email: event.target.value }))
-                }
-                required
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="email">Email</Label>
+                <Input
+                  id="email"
+                  type="email"
+                  value={form.email}
+                  onChange={(event) =>
+                    setForm((value) => ({
+                      ...value,
+                      email: event.target.value,
+                    }))
+                  }
+                  required
+                />
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="phone">Phone</Label>
+                <Input
+                  id="phone"
+                  value={form.phone}
+                  onChange={(event) =>
+                    setForm((value) => ({
+                      ...value,
+                      phone: event.target.value,
+                    }))
+                  }
+                  placeholder="+44..."
+                />
+              </div>
             </div>
 
-            <div className="space-y-2">
-              <Label htmlFor="phone">Phone</Label>
-              <Input
-                id="phone"
-                value={form.phone}
-                onChange={(event) =>
-                  setForm((value) => ({ ...value, phone: event.target.value }))
-                }
-                placeholder="+44..."
-              />
+            <div className="grid gap-4 sm:grid-cols-2">
+              <div className="space-y-2">
+                <Label htmlFor="wageType">Wage type</Label>
+                <Select
+                  value={form.wageType}
+                  onValueChange={(value) =>
+                    setForm((current) => ({
+                      ...current,
+                      wageType: value as StaffFormState["wageType"],
+                    }))
+                  }
+                >
+                  <SelectTrigger id="wageType" className="w-full">
+                    <SelectValue placeholder="Select wage type" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="per-day">Per day</SelectItem>
+                    <SelectItem value="per-hour">Per hour</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              <div className="space-y-2">
+                <Label htmlFor="wageAmount">Wage amount</Label>
+                <Input
+                  id="wageAmount"
+                  type="number"
+                  min={0}
+                  step="0.01"
+                  value={form.wageAmount}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      wageAmount: event.target.value,
+                    }))
+                  }
+                  placeholder="Enter amount"
+                />
+              </div>
+            </div>
+
+            <div className="grid gap-4 lg:grid-cols-2">
+              <div className="rounded-xl border border-border bg-surface/40 p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <CalendarDays className="h-4 w-4 text-[#65A30D]" />
+                  <h3 className="text-sm font-black text-foreground">
+                    Working day setup
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {weekDays.map((day) => (
+                    <label
+                      key={day}
+                      className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                    >
+                      <Checkbox
+                        checked={form.workingDays.includes(day)}
+                        onCheckedChange={() =>
+                          toggleSelection("workingDays", day)
+                        }
+                      />
+                      {day}
+                    </label>
+                  ))}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-surface/40 p-4">
+                <div className="mb-4 flex items-center gap-2">
+                  <Clock3 className="h-4 w-4 text-[#65A30D]" />
+                  <h3 className="text-sm font-black text-foreground">
+                    Weekend options
+                  </h3>
+                </div>
+                <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
+                  {weekDays.map((day) => (
+                    <label
+                      key={day}
+                      className="flex items-center gap-2 text-sm font-semibold text-foreground"
+                    >
+                      <Checkbox
+                        checked={form.weekendDays.includes(day)}
+                        onCheckedChange={() =>
+                          toggleSelection("weekendDays", day)
+                        }
+                      />
+                      {day}
+                    </label>
+                  ))}
+                </div>
+              </div>
+            </div>
+
+            <div className="space-y-4 rounded-xl border border-border bg-surface/40 p-4">
+              <div className="flex items-center gap-2">
+                <CreditCard className="h-4 w-4 text-[#65A30D]" />
+                <h3 className="text-sm font-black text-foreground">
+                  Staff ID verification
+                </h3>
+              </div>
+
+              <div className="grid gap-4 sm:grid-cols-2">
+                <div className="space-y-2">
+                  <Label htmlFor="idFront">ID front image</Label>
+                  <Input
+                    id="idFront"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      setIdFrontFile(event.target.files?.[0] || null)
+                    }
+                  />
+                </div>
+                <div className="space-y-2">
+                  <Label htmlFor="idBack">ID back image</Label>
+                  <Input
+                    id="idBack"
+                    type="file"
+                    accept="image/*"
+                    onChange={(event) =>
+                      setIdBackFile(event.target.files?.[0] || null)
+                    }
+                  />
+                </div>
+              </div>
+
+              <div className="flex flex-wrap items-center gap-3">
+                <Button
+                  type="button"
+                  variant="outline"
+                  onClick={handleVerifyIdCard}
+                  disabled={isVerifyingId}
+                >
+                  {isVerifyingId ? (
+                    <Loader2 className="h-4 w-4 animate-spin" />
+                  ) : (
+                    <CheckCircle2 className="h-4 w-4" />
+                  )}
+                  Verify ID card
+                </Button>
+                <Badge variant="outline">
+                  Status: {form.idVerificationStatus}
+                </Badge>
+                <Input
+                  className="max-w-xs"
+                  value={form.idNumber}
+                  onChange={(event) =>
+                    setForm((current) => ({
+                      ...current,
+                      idNumber: event.target.value,
+                    }))
+                  }
+                  placeholder="Verified ID number"
+                />
+              </div>
             </div>
 
             <div className="space-y-2">
