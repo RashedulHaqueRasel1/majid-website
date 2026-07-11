@@ -23,6 +23,8 @@ import {
   useUpdateResentRepairQuoteStatus,
 } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
+import { getCurrencySymbol } from "@/lib/currency";
 import RepairOfferModal from "@/features/customer/repairHistory/component/RepairOfferModal";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
@@ -97,6 +99,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   const updateStatus = useUpdateRepairRequestStatusByShopkeeper();
   const session = useSession();
   const { data: profileData } = useMyProfile();
+  const { currency, formatCurrency } = useCurrency();
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const updateResentQuote = useUpdateResentRepairQuoteStatus();

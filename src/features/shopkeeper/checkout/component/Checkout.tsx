@@ -49,6 +49,7 @@ import {
 } from "../../inventory/hooks/useInventory";
 import { useGetMyRepairRequests } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // API instance
 import { api } from "@/lib/api";
@@ -76,6 +77,7 @@ export default function Checkout() {
 
   // Data fetching queries
   const { data: profileData } = useMyProfile();
+  const { currency, formatCurrency } = useCurrency();
   const { data: categoriesData, isLoading: isCategoriesLoading } =
     useCategories();
   const { data: inventoryData, isLoading: isInventoryLoading } =
@@ -532,6 +534,7 @@ export default function Checkout() {
           subtotal={subtotal}
           tax={tax}
           total={totalPayment}
+          currency={currency}
         />
       );
 
@@ -804,7 +807,7 @@ export default function Checkout() {
                     {/* Price and Add Row */}
                     <div className="flex items-center justify-between mt-4">
                       <p className="text-[15px] font-black text-slate-900">
-                        ${item.expectedPrice.toFixed(2)}
+                        {formatCurrency(item.expectedPrice)}
                       </p>
 
                       {/* Quantity select & Add */}
@@ -1001,7 +1004,7 @@ export default function Checkout() {
                         {item?.brand || "Brand"} - {item?.currentState || "New"}
                       </p>
                       <p className="text-xs font-black text-slate-950 mt-1">
-                        ${price.toFixed(2)}
+                        {formatCurrency(price)}
                       </p>
                     </div>
                   </div>
@@ -1177,8 +1180,8 @@ export default function Checkout() {
                             {item?.itemName || "Custom Item"}
                           </p>
                           <p className="text-[10px] font-bold text-slate-500">
-                            Qty {cartItem.quantity} • $
-                            {Number(item?.expectedPrice || 0).toFixed(2)}
+                            Qty {cartItem.quantity} •{" "}
+                            {formatCurrency(Number(item?.expectedPrice || 0))}
                           </p>
                         </div>
                       </label>
@@ -1294,15 +1297,17 @@ export default function Checkout() {
         <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-2 mt-4 text-xs font-bold text-slate-600">
           <div className="flex justify-between">
             <span>Subtotal</span>
-            <span className="text-slate-900">${subtotal.toFixed(2)}</span>
+            <span className="text-slate-900">{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tax (8.5%)</span>
-            <span className="text-slate-900">${tax.toFixed(2)}</span>
+            <span className="text-slate-900">{formatCurrency(tax)}</span>
           </div>
           <div className="flex justify-between text-base font-black text-slate-900 border-t border-slate-200/60 pt-2 mt-2">
             <span>Total Payment</span>
-            <span className="text-[#84CC16]">${totalPayment.toFixed(2)}</span>
+            <span className="text-[#84CC16]">
+              {formatCurrency(totalPayment)}
+            </span>
           </div>
         </div>
 

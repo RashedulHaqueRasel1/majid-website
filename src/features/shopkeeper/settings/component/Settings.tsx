@@ -19,6 +19,7 @@ import {
   Copy,
   Check,
   User,
+  Globe,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
 import Image from "next/image";
@@ -36,6 +37,8 @@ import {
   ProfileValues,
   PasswordValues,
 } from "../types";
+import { detectCurrency } from "../api/settings.api";
+import { CURRENCY_LIST, getCurrencySymbol } from "@/lib/currency";
 
 function generateShopkeeperId(id: string, name: string): string {
   const prefix = "IMS";
@@ -327,6 +330,8 @@ export default function Settings() {
 
   const [selectedImage, setSelectedImage] = useState<File | null>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [currency, setCurrency] = useState<string>("USD");
+  const [isDetectingCurrency, setIsDetectingCurrency] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const qrRef = useRef<HTMLDivElement>(null);
 
@@ -364,6 +369,29 @@ export default function Settings() {
         shopAddress: user.shopAddress || "",
         whatsappNumber: user.whatsappNumber || "",
       });
+
+      if (user.currency) {
+        setCurrency(user.currency);
+      } else {
+        // Auto-detect currency from IP if not set
+        (async () => {
+          try {
+            setIsDetectingCurrency(true);
+            const res = await detectCurrency();
+            if (res?.data?.currency) {
+              setCurrency(res.data.currency);
+              // Save detected currency to profile
+              const formData = new FormData();
+              formData.append("currency", res.data.currency);
+              await updateProfileMutation.mutateAsync(formData);
+            }
+          } catch {
+            // Silent fallback to USD
+          } finally {
+            setIsDetectingCurrency(false);
+          }
+        })();
+      }
     }
   }, [profileData, profileForm]);
 
@@ -385,6 +413,7 @@ export default function Settings() {
     formData.append("shopName", values.shopName);
     formData.append("shopAddress", values.shopAddress);
     formData.append("whatsappNumber", values.whatsappNumber);
+    formData.append("currency", currency);
 
     if (selectedImage) {
       formData.append("image", selectedImage);
@@ -785,6 +814,35 @@ export default function Settings() {
                     {profileForm.formState.errors.shopAddress.message}
                   </span>
                 )}
+              </div>
+
+              {/* Currency */}
+              <div className="space-y-2">
+                <label className="text-[13px] font-black text-foreground ml-1 flex items-center gap-2">
+                  <Globe size={14} /> Currency
+                  {isDetectingCurrency && (
+                    <Loader2
+                      size={12}
+                      className="animate-spin text-muted-foreground"
+                    />
+                  )}
+                </label>
+                <select
+                  disabled={!isEditing}
+                  value={currency}
+                  onChange={(e) => setCurrency(e.target.value)}
+                  className="w-full px-6 py-4 bg-background border border-border rounded-2xl outline-none focus:border-primary focus:ring-4 focus:ring-primary/5 transition-all text-sm font-semibold text-muted-foreground disabled:opacity-70 appearance-none cursor-pointer"
+                >
+                  {CURRENCY_LIST.map((c) => (
+                    <option key={c.code} value={c.code}>
+                      {c.symbol} {c.code} - {c.name}
+                    </option>
+                  ))}
+                </select>
+                <p className="text-[11px] text-muted-foreground ml-1">
+                  {getCurrencySymbol(currency)} All prices will be displayed in{" "}
+                  {currency}
+                </p>
               </div>
             </div>
           </div>

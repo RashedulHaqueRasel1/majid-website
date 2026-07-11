@@ -40,6 +40,7 @@ export interface UserProfile {
   shopName?: string;
   shopAddress?: string;
   whatsappNumber?: string;
+  currency?: string;
   image?: {
     url: string;
     public_id: string;
