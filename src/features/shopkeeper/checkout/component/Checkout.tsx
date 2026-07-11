@@ -5,7 +5,7 @@ import React, { useEffect, useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Wrench,
   Search,
@@ -108,6 +108,11 @@ export default function Checkout() {
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [customerDiscount, setCustomerDiscount] = useState<{
+    id?: string;
+    discountName?: string;
+    percentage: number;
+  } | null>(null);
   const [onlineOrderDetails, setOnlineOrderDetails] = useState({
     marketplace: "",
     orderNumber: "",
@@ -199,6 +204,20 @@ export default function Checkout() {
     [customersResponse],
   );
 
+  const selectedCustomerId =
+    selectedCustomer?._id || selectedCustomer?.id || "";
+
+  const { data: customerDiscountsResponse } = useQuery({
+    queryKey: ["customer-discounts", selectedCustomerId],
+    queryFn: async () => {
+      const response = await api.get(
+        `/customer-discounts/customer/${selectedCustomerId}`,
+      );
+      return response.data;
+    },
+    enabled: !!selectedCustomerId,
+  });
+
   // Filters for Browse Inventory
   const filteredInventory = useMemo(() => {
     let items = inventoryItems;
@@ -263,8 +282,64 @@ export default function Checkout() {
     }, 0);
   }, [orderCartItems]);
 
-  const tax = useMemo(() => subtotal * 0.085, [subtotal]); // 8.5% tax
-  const totalPayment = useMemo(() => subtotal + tax, [subtotal, tax]);
+  const selectedCustomerDiscount = useMemo(() => {
+    const discounts = customerDiscountsResponse?.data || [];
+
+    if (!Array.isArray(discounts)) return null;
+
+    const activeDiscounts = discounts.filter((discount: any) => {
+      if (discount.status !== "active") return false;
+      if ((discount.usageLimit ?? 1) <= 0) return false;
+
+      const validFrom = discount.validFrom
+        ? new Date(discount.validFrom)
+        : null;
+      const validUntil = discount.until ? new Date(discount.until) : null;
+      const now = new Date();
+
+      if (validFrom && validFrom > now) return false;
+      if (validUntil && validUntil < now) return false;
+
+      return true;
+    });
+
+    if (!activeDiscounts.length) return null;
+
+    return activeDiscounts.reduce((best: any, current: any) => {
+      if (!best || Number(current.percentage) > Number(best.percentage)) {
+        return current;
+      }
+      return best;
+    }, null);
+  }, [customerDiscountsResponse]);
+
+  useEffect(() => {
+    if (!selectedCustomerDiscount) {
+      setCustomerDiscount(null);
+      return;
+    }
+
+    setCustomerDiscount({
+      id: selectedCustomerDiscount._id,
+      discountName: selectedCustomerDiscount.discountName,
+      percentage: Number(selectedCustomerDiscount.percentage || 0),
+    });
+  }, [selectedCustomerDiscount]);
+
+  const discountAmount = useMemo(() => {
+    if (!customerDiscount?.percentage) return 0;
+    return subtotal * (customerDiscount.percentage / 100);
+  }, [customerDiscount, subtotal]);
+
+  const discountedSubtotal = useMemo(() => {
+    return Math.max(subtotal - discountAmount, 0);
+  }, [subtotal, discountAmount]);
+
+  const tax = useMemo(() => discountedSubtotal * 0.085, [discountedSubtotal]); // 8.5% tax
+  const totalPayment = useMemo(
+    () => discountedSubtotal + tax,
+    [discountedSubtotal, tax],
+  );
   const totalCartCount = useMemo(
     () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
     [cartItems],
@@ -532,6 +607,9 @@ export default function Checkout() {
           customer={selectedCustomer}
           paymentMethod={paymentMethod}
           subtotal={subtotal}
+          discountAmount={discountAmount}
+          discountPercentage={customerDiscount?.percentage}
+          discountLabel={customerDiscount?.discountName}
           tax={tax}
           total={totalPayment}
           currency={currency}
@@ -555,6 +633,9 @@ export default function Checkout() {
         customerInfo: customerInfoPayload,
         itemsIds,
         dueAmount: 0, // fully paid
+        discountName: customerDiscount?.discountName,
+        discountPercentage: customerDiscount?.percentage,
+        discountAmount,
       });
 
       // Download file locally
@@ -1299,6 +1380,17 @@ export default function Checkout() {
             <span>Subtotal</span>
             <span className="text-slate-900">{formatCurrency(subtotal)}</span>
           </div>
+          {customerDiscount?.percentage ? (
+            <div className="flex justify-between text-emerald-600">
+              <span>
+                Discount ({customerDiscount.percentage}%){" "}
+                {customerDiscount.discountName
+                  ? `• ${customerDiscount.discountName}`
+                  : ""}
+              </span>
+              <span>-{formatCurrency(discountAmount)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <span>Tax (8.5%)</span>
             <span className="text-slate-900">{formatCurrency(tax)}</span>

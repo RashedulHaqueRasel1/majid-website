@@ -196,6 +196,9 @@ export const createInvoice = async (input: {
   customerInfo?: string;
   itemsIds?: string[];
   dueAmount?: number;
+  discountName?: string;
+  discountPercentage?: number;
+  discountAmount?: number;
 }) => {
   const formData = new FormData();
 
@@ -206,6 +209,13 @@ export const createInvoice = async (input: {
   if (input.dueAmount) formData.append("dueAmount", String(input.dueAmount));
 
   if (input.customerInfo) formData.append("customerInfo", input.customerInfo);
+  if (input.discountName) formData.append("discountName", input.discountName);
+  if (input.discountPercentage !== undefined) {
+    formData.append("discountPercentage", String(input.discountPercentage));
+  }
+  if (input.discountAmount !== undefined) {
+    formData.append("discountAmount", String(input.discountAmount));
+  }
   if (input.itemsIds?.length) {
     input.itemsIds.forEach((id: string) => {
       formData.append("itemsIds", id);

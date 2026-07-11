@@ -168,6 +168,9 @@ export function useCreateInvoice() {
       customerInfo?: string;
       itemsIds?: string[];
       dueAmount?: number;
+      discountName?: string;
+      discountPercentage?: number;
+      discountAmount?: number;
     }) => createInvoice(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INVENTORY_KEYS.all });

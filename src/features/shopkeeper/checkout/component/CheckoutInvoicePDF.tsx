@@ -261,6 +261,9 @@ export interface CheckoutInvoicePDFProps {
   customer?: any;
   paymentMethod: string;
   subtotal: number;
+  discountAmount?: number;
+  discountPercentage?: number;
+  discountLabel?: string;
   tax: number;
   total: number;
   currency?: string;
@@ -287,6 +290,9 @@ export default function CheckoutInvoicePDF({
   customer,
   paymentMethod,
   subtotal,
+  discountAmount = 0,
+  discountPercentage,
+  discountLabel,
   tax,
   total,
   currency = "USD",
@@ -428,6 +434,16 @@ export default function CheckoutInvoicePDF({
               <Text>Subtotal</Text>
               <Text>{formatCurrency(subtotal, currency)}</Text>
             </View>
+            {discountAmount > 0 ? (
+              <View style={styles.totalLine}>
+                <Text>
+                  Discount{" "}
+                  {discountPercentage ? `(${discountPercentage}%)` : ""}
+                  {discountLabel ? ` • ${discountLabel}` : ""}
+                </Text>
+                <Text>-{formatCurrency(discountAmount, currency)}</Text>
+              </View>
+            ) : null}
             <View style={styles.totalLine}>
               <Text>Tax (8.5%)</Text>
               <Text>{formatCurrency(tax, currency)}</Text>
