@@ -15,9 +15,11 @@ import {
   Clock3,
   MessageSquare,
   Phone,
+  ImagePlus,
 } from "lucide-react";
 import { useState } from "react";
 import {
+  useAddRepairRequestNote,
   useRepairRequestDetails,
   useUpdateRepairRequestStatusByShopkeeper,
   useUpdateResentRepairQuoteStatus,
@@ -103,8 +105,12 @@ export default function RepairRequestDetails({ id }: { id: string }) {
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [isReassignModalOpen, setIsReassignModalOpen] = useState(false);
   const updateResentQuote = useUpdateResentRepairQuoteStatus();
+  const addRepairNote = useAddRepairRequestNote();
   const [isConfirmOpen, setIsConfirmOpen] = useState(false);
   const [isGeneratingFeedback, setIsGeneratingFeedback] = useState(false);
+  const [selectedImage, setSelectedImage] = useState<File | null>(null);
+  const [imagePreview, setImagePreview] = useState<string | null>(null);
+  const [uploadNote, setUploadNote] = useState("");
   const token = session.data?.accessToken;
 
   const [lightbox, setLightbox] = useState<{
@@ -226,6 +232,28 @@ export default function RepairRequestDetails({ id }: { id: string }) {
 
   const handleStatusUpdate = (status: string) => {
     updateStatus.mutate({ id, status });
+  };
+
+  const handleImageUpload = async () => {
+    if (!selectedImage) return;
+
+    try {
+      await addRepairNote.mutateAsync({
+        id,
+        payload: {
+          message:
+            uploadNote.trim() || "Photo uploaded for this repair request",
+          images: [selectedImage],
+        },
+      });
+
+      setSelectedImage(null);
+      setImagePreview(null);
+      setUploadNote("");
+      await refetch();
+    } catch (error) {
+      console.error("Error uploading image:", error);
+    }
   };
 
   const handleGenerateTechnicianFeedback = async () => {
@@ -741,6 +769,76 @@ export default function RepairRequestDetails({ id }: { id: string }) {
 
             {/* Right Column */}
             <div className="space-y-6">
+              {/* Upload Evidence Photo */}
+              <div className="rounded-3xl border border-border bg-card p-6 shadow-sm space-y-4">
+                <div className="flex items-center gap-3">
+                  <div className="w-10 h-10 rounded-xl bg-blue-500/10 flex items-center justify-center text-blue-600">
+                    <ImagePlus className="w-5 h-5" />
+                  </div>
+                  <div>
+                    <h3 className="text-base font-black text-foreground">
+                      Upload Evidence Photo
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                      Attach a picture to this repair request.
+                    </p>
+                  </div>
+                </div>
+
+                <label className="flex cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-border bg-surface px-4 py-6 text-center transition hover:border-primary hover:bg-primary/5">
+                  <ImagePlus className="mb-2 h-6 w-6 text-muted-foreground" />
+                  <span className="text-sm font-semibold text-foreground">
+                    {selectedImage ? selectedImage.name : "Choose image"}
+                  </span>
+                  <span className="mt-1 text-xs text-muted-foreground">
+                    JPG, PNG, or WEBP
+                  </span>
+                  <input
+                    type="file"
+                    accept="image/*"
+                    className="hidden"
+                    onChange={(e) => {
+                      const file = e.target.files?.[0] ?? null;
+                      setSelectedImage(file);
+                      if (file) {
+                        setImagePreview(URL.createObjectURL(file));
+                      } else {
+                        setImagePreview(null);
+                      }
+                    }}
+                  />
+                </label>
+
+                {imagePreview && (
+                  <div className="relative h-40 overflow-hidden rounded-2xl border border-border">
+                    <Image
+                      src={imagePreview}
+                      alt="Selected preview"
+                      fill
+                      className="object-cover"
+                    />
+                  </div>
+                )}
+
+                <textarea
+                  value={uploadNote}
+                  onChange={(e) => setUploadNote(e.target.value)}
+                  placeholder="Optional note for this photo"
+                  className="min-h-20 w-full rounded-2xl border border-border bg-background px-3 py-2 text-sm outline-none focus:border-primary"
+                />
+
+                <Button
+                  onClick={handleImageUpload}
+                  disabled={!selectedImage || addRepairNote.isPending}
+                  className="w-full rounded-full bg-primary text-primary-foreground font-black"
+                >
+                  {addRepairNote.isPending ? (
+                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                  ) : null}
+                  Upload Photo
+                </Button>
+              </div>
+
               {/* Approval Required */}
 
               <div className="rounded-3xl border border-yellow-200 bg-yellow-50/50 p-6 shadow-sm dark:bg-yellow-900/10 dark:border-yellow-900/50">
