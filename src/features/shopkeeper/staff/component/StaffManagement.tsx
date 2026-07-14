@@ -209,7 +209,7 @@ export default function StaffManagement() {
   };
 
   return (
-    <section className="min-h-full bg-background p-4 font-poppins sm:p-6 lg:p-8">
+    <section className="min-h-full font-poppins">
       <div className="mx-auto max-w-7xl space-y-6">
         <div className="flex flex-col gap-4 rounded-xl border border-border bg-card p-5 shadow-sm sm:flex-row sm:items-center sm:justify-between">
           <div>

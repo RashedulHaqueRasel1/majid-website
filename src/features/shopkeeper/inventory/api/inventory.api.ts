@@ -27,6 +27,13 @@ export const getInventoryByCategory = async (
   return response.data;
 };
 
+export const getInventoryBySupplier = async (
+  supplierId: string,
+): Promise<InventoryListResponse> => {
+  const response = await api.get(BASE, { params: { supplierId } });
+  return response.data;
+};
+
 export const getCategories = async (): Promise<CategoryListResponse> => {
   const response = await api.get(CATEGORY_BASE);
   return response.data;

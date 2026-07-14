@@ -8,18 +8,14 @@ import {
   Scan,
   CreditCard,
   Package,
-  Mail,
   ChevronDown,
   PanelLeftClose,
   PanelLeftOpen,
-  HelpCircle,
-  Phone,
   Wrench,
   FileText,
   SearchCheckIcon,
   User,
   ShoppingCart,
-  UsersRound,
 } from "lucide-react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
@@ -102,11 +98,6 @@ const navItems = [
     href: "/shopkeeper/customer",
   },
   {
-    icon: <UsersRound size={20} />,
-    label: "Staff",
-    href: "/shopkeeper/staff",
-  },
-  {
     icon: <Wrench size={20} />,
     label: "Repair Requests",
     href: "/shopkeeper/repair-requests",
@@ -142,15 +133,8 @@ export default function Sidebar({
     session?.user?.role?.toLowerCase() === "staff" ||
     user?.role?.toLowerCase() === "staff";
   const visibleNavItems = navItems.filter(
-    (item) =>
-      !(
-        isStaff &&
-        (item.href === "/shopkeeper/settings" ||
-          item.href === "/shopkeeper/staff")
-      ),
+    (item) => !(isStaff && item.href === "/shopkeeper/settings"),
   );
-
-  const [openSupport, setOpenSupport] = useState(false);
 
   const handleLogout = async () => {
     // Clear all storage to ensure no sensitive data remains
@@ -167,9 +151,9 @@ export default function Sidebar({
   return (
     <>
       <aside
-        className={`sticky top-0 flex h-dvh max-w-full flex-col border-r border-border bg-sidebar font-poppins text-sidebar-foreground shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-[width] duration-300 ${
+        className={`sticky top-0 flex h-dvh max-w-full flex-col border-r border-border bg-sidebar font-poppins text-sidebar-foreground shadow-[4px_0_24px_rgba(0,0,0,0.02)] transition-[width] duration-300 overflow-visible ${
           collapsed ? "w-[88px]" : "w-[min(300px,100vw)]"
-        }`}
+        } relative`}
       >
         {/* Logo Section */}
         <div className="flex items-center justify-center gap-2 p-4 pb-6">
@@ -184,21 +168,6 @@ export default function Sidebar({
                 />
               </div>
             </Link>
-          )}
-          {onToggleCollapse && (
-            <button
-              type="button"
-              onClick={onToggleCollapse}
-              className="hidden h-11 w-11 shrink-0 items-center justify-center rounded-2xl border border-border bg-card text-muted-foreground transition hover:bg-[#84CC16]/10 hover:text-[#84CC16] lg:flex"
-              aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-              title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
-            >
-              {collapsed ? (
-                <PanelLeftOpen size={20} />
-              ) : (
-                <PanelLeftClose size={20} />
-              )}
-            </button>
           )}
         </div>
 
@@ -349,72 +318,6 @@ export default function Sidebar({
           })}
         </nav>
 
-        {/* Support Section - Premium Design */}
-        {!collapsed && (
-          <div className="mx-4 mb-3">
-            <button
-              onClick={() => setOpenSupport(!openSupport)}
-              className="flex w-full items-center justify-between rounded-[24px] border border-border bg-surface p-4 transition-all sm:p-5"
-            >
-              <div className="flex items-center gap-2">
-                <div className="w-8 h-8 bg-blue-100 rounded-lg flex items-center justify-center">
-                  <HelpCircle size={16} className="text-blue-600" />
-                </div>
-
-                <h3 className="text-[13px] font-black text-foreground uppercase tracking-widest">
-                  Support
-                </h3>
-              </div>
-
-              <motion.div
-                animate={{ rotate: openSupport ? 180 : 0 }}
-                transition={{ duration: 0.2 }}
-              >
-                <ChevronDown size={18} className="text-muted-foreground" />
-              </motion.div>
-            </button>
-
-            <AnimatePresence>
-              {openSupport && (
-                <motion.div
-                  initial={{ opacity: 0, height: 0 }}
-                  animate={{ opacity: 1, height: "auto" }}
-                  exit={{ opacity: 0, height: 0 }}
-                  transition={{ duration: 0.2 }}
-                  className="overflow-hidden"
-                >
-                  <div className="mt-2 p-5 bg-surface rounded-[24px] border border-border space-y-3">
-                    <Link
-                      href="tel:+447777787771"
-                      className="flex items-center gap-3 group transition-transform hover:translate-x-1"
-                    >
-                      <div className="w-8 h-8 bg-[#25D366]/10 rounded-lg flex items-center justify-center">
-                        <Phone size={14} className="text-[#25D366]" />
-                      </div>
-
-                      <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition">
-                        +447777787771
-                      </span>
-                    </Link>
-
-                    <Link
-                      href="mailto:reports@imoscan.com"
-                      className="flex items-center gap-3 group transition-transform hover:translate-x-1"
-                    >
-                      <div className="w-8 h-8 bg-[#EA4335]/10 rounded-lg flex items-center justify-center">
-                        <Mail size={14} className="text-[#EA4335]" />
-                      </div>
-
-                      <span className="text-[13px] font-bold text-muted-foreground group-hover:text-foreground transition truncate">
-                        reports@imoscan.com
-                      </span>
-                    </Link>
-                  </div>
-                </motion.div>
-              )}
-            </AnimatePresence>
-          </div>
-        )}
         {/* User Section */}
         <div className="p-4 pt-0">
           <div className="bg-surface border border-border rounded-[28px] p-4 flex flex-col gap-4 shadow-sm">
@@ -470,6 +373,22 @@ export default function Sidebar({
             background: #cbd5e1;
           }
         `}</style>
+
+        {onToggleCollapse && (
+          <button
+            type="button"
+            onClick={onToggleCollapse}
+            className="absolute top-1/2 right-1 z-10 hidden -translate-y-1/2 items-center justify-center text-muted-foreground transition hover:text-[#84CC16] lg:flex"
+            aria-label={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+            title={collapsed ? "Expand sidebar" : "Collapse sidebar"}
+          >
+            {collapsed ? (
+              <PanelLeftOpen size={14} />
+            ) : (
+              <PanelLeftClose size={14} />
+            )}
+          </button>
+        )}
       </aside>
 
       <AnimatePresence>

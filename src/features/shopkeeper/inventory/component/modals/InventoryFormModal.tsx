@@ -59,6 +59,7 @@ import {
   CreditCard,
   ShoppingCart,
   Phone,
+  Truck,
 } from "lucide-react";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
@@ -92,6 +93,11 @@ import {
   useCreateInvoice,
   useImportCsvInventory,
 } from "../../hooks/useInventory";
+import {
+  useSuppliers,
+  useCreateSupplier,
+} from "../../../supplier/hooks/useSuppliers";
+import { SupplierFormModal } from "../../../supplier/component/modals/SupplierFormModal";
 import { ScanResultModal } from "./ScanResultModal";
 
 // ─── Import CSV sub-component (used as the 3rd tab inside the modal) ──────────
@@ -344,6 +350,20 @@ export function InventoryFormModal({
   const [isCustomColor, setIsCustomColor] = useState(false);
   const [isCustomSaleMethod, setIsCustomSaleMethod] = useState(false);
 
+  // Supplier search state
+  const [supplierSearch, setSupplierSearch] = useState("");
+  const [showSupplierDropdown, setShowSupplierDropdown] = useState(false);
+  const [isSupplierFormOpen, setIsSupplierFormOpen] = useState(false);
+  const supplierDropdownRef = React.useRef<HTMLDivElement>(null);
+
+  const { data: suppliersResponse } = useSuppliers({
+    search: supplierSearch.trim() || undefined,
+    isActive: true,
+    limit: 50,
+  });
+  const suppliers = suppliersResponse?.data || [];
+  const createSupplierMutation = useCreateSupplier();
+
   const BRANDS = [
     "Apple",
     "Samsung",
@@ -499,6 +519,20 @@ export function InventoryFormModal({
         !dropdownRef.current.contains(event.target as Node)
       ) {
         setShowCustomerDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  // Close supplier dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(event: MouseEvent) {
+      if (
+        supplierDropdownRef.current &&
+        !supplierDropdownRef.current.contains(event.target as Node)
+      ) {
+        setShowSupplierDropdown(false);
       }
     }
     document.addEventListener("mousedown", handleClickOutside);
@@ -1654,6 +1688,114 @@ export function InventoryFormModal({
               </div>
 
               <div className="grid grid-cols-2 gap-4">
+                {/* Supplier */}
+                <FormField
+                  control={
+                    form.control as unknown as Control<CreateInventoryInput>
+                  }
+                  name="supplierId"
+                  render={({ field }) => (
+                    <FormItem className="col-span-2">
+                      <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-white mb-2 block ml-1">
+                        Supplier
+                      </FormLabel>
+                      <div className="relative" ref={supplierDropdownRef}>
+                        <div className="absolute left-2 top-1/2 -translate-y-1/2 w-10 h-10 bg-white dark:bg-slate-800 rounded-[14px] flex items-center justify-center shadow-sm border border-slate-100 dark:border-slate-700 group-focus-within:border-[#84CC16]/30 group-focus-within:bg-[#84CC16]/5 transition-all z-10">
+                          <Truck className="w-4 h-4 text-slate-400" />
+                        </div>
+                        <input
+                          type="text"
+                          placeholder="Search supplier..."
+                          autoComplete="off"
+                          className="w-full pl-14 pr-10 bg-slate-50/80 dark:bg-slate-900/50 border border-slate-200 dark:border-slate-800 hover:border-slate-300 dark:hover:border-slate-700 hover:bg-slate-50 dark:hover:bg-slate-900 rounded-[20px] h-[56px] font-bold text-sm text-slate-900 dark:text-white placeholder:text-slate-400 focus-visible:bg-white dark:focus-visible:bg-slate-950 focus-visible:ring-4 focus-visible:ring-[#84CC16]/15 focus-visible:border-[#84CC16] transition-all shadow-sm"
+                          value={
+                            field.value
+                              ? suppliers.find((s) => s._id === field.value)
+                                  ?.name || supplierSearch
+                              : supplierSearch
+                          }
+                          onChange={(e) => {
+                            setSupplierSearch(e.target.value);
+                            setShowSupplierDropdown(true);
+                            if (field.value) {
+                              field.onChange("");
+                            }
+                          }}
+                          onFocus={() => setShowSupplierDropdown(true)}
+                        />
+                        {field.value && (
+                          <button
+                            type="button"
+                            onClick={() => {
+                              field.onChange("");
+                              setSupplierSearch("");
+                            }}
+                            className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-slate-600 transition"
+                          >
+                            <X className="w-4 h-4" />
+                          </button>
+                        )}
+                        {showSupplierDropdown && (
+                          <div className="absolute top-full left-0 right-0 mt-2 bg-white dark:bg-slate-900 rounded-[20px] shadow-2xl border border-slate-100 dark:border-slate-800 z-50 max-h-60 overflow-y-auto animate-in fade-in slide-in-from-top-2">
+                            <div className="p-2">
+                              {suppliers.length > 0 ? (
+                                suppliers.map((supplier) => (
+                                  <div
+                                    key={supplier._id}
+                                    className={`flex items-center gap-3 p-3 cursor-pointer rounded-2xl transition-all ${
+                                      field.value === supplier._id
+                                        ? "bg-[#84CC16]/10"
+                                        : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                                    }`}
+                                    onClick={() => {
+                                      field.onChange(supplier._id);
+                                      setSupplierSearch("");
+                                      setShowSupplierDropdown(false);
+                                    }}
+                                  >
+                                    <div className="w-10 h-10 rounded-full bg-[#84CC16]/10 flex items-center justify-center shrink-0">
+                                      <Truck className="w-4 h-4 text-[#84CC16]" />
+                                    </div>
+                                    <div className="flex flex-col min-w-0">
+                                      <p className="text-sm font-bold text-slate-900 dark:text-white truncate">
+                                        {supplier.name}
+                                      </p>
+                                      {(supplier.email || supplier.phone) && (
+                                        <p className="text-[10px] text-slate-500 truncate">
+                                          {supplier.email || supplier.phone}
+                                        </p>
+                                      )}
+                                    </div>
+                                  </div>
+                                ))
+                              ) : (
+                                <div className="p-3 text-center text-xs text-slate-400">
+                                  No suppliers found
+                                </div>
+                              )}
+                              <button
+                                type="button"
+                                className="flex w-full items-center gap-3 p-3 cursor-pointer hover:bg-[#84CC16]/5 rounded-2xl transition-all border-t border-slate-100 dark:border-slate-800 mt-1"
+                                onClick={() => {
+                                  setShowSupplierDropdown(false);
+                                  setIsSupplierFormOpen(true);
+                                }}
+                              >
+                                <div className="w-10 h-10 rounded-full bg-[#84CC16]/10 flex items-center justify-center shrink-0">
+                                  <Plus className="w-4 h-4 text-[#84CC16]" />
+                                </div>
+                                <span className="text-sm font-bold text-[#84CC16]">
+                                  Create New Supplier
+                                </span>
+                              </button>
+                            </div>
+                          </div>
+                        )}
+                      </div>
+                    </FormItem>
+                  )}
+                />
+
                 {/* Group Key */}
                 <FormField
                   control={
@@ -2445,23 +2587,99 @@ export function InventoryFormModal({
 
                               {/* Secondary Section: Source & Condition */}
                               <div className="lg:col-span-4 p-6 grid grid-cols-1 gap-4 bg-slate-50/30 dark:bg-slate-800/10 border-b lg:border-b-0 lg:border-r border-slate-50 dark:border-slate-800/50">
-                                <div className="space-y-1.5">
+                                <div
+                                  className="space-y-1.5 relative"
+                                  ref={
+                                    index === 0
+                                      ? supplierDropdownRef
+                                      : undefined
+                                  }
+                                >
                                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
-                                    Supplier Name
+                                    Supplier
                                   </label>
                                   <input
                                     type="text"
-                                    placeholder="Who provided this?"
+                                    placeholder="Search supplier..."
                                     className="w-full px-4 bg-white dark:bg-slate-950 border border-slate-200 dark:border-slate-800 rounded-[18px] h-[52px] font-bold text-sm outline-none focus:ring-4 focus:ring-[#84CC16]/10 focus:border-[#84CC16] transition-all dark:text-white"
-                                    value={item.supplierId}
-                                    onChange={(e) =>
-                                      updateBulkItem(
-                                        index,
-                                        "supplierId",
-                                        e.target.value,
-                                      )
+                                    value={
+                                      item.supplierId
+                                        ? suppliers.find(
+                                            (s) => s._id === item.supplierId,
+                                          )?.name || ""
+                                        : ""
                                     }
+                                    onFocus={() =>
+                                      setShowSupplierDropdown(true)
+                                    }
+                                    onChange={(e) => {
+                                      setSupplierSearch(e.target.value);
+                                      setShowSupplierDropdown(true);
+                                      if (item.supplierId) {
+                                        updateBulkItem(index, "supplierId", "");
+                                      }
+                                    }}
                                   />
+                                  {item.supplierId && (
+                                    <button
+                                      type="button"
+                                      onClick={() =>
+                                        updateBulkItem(index, "supplierId", "")
+                                      }
+                                      className="absolute right-3 top-[34px] text-slate-400 hover:text-slate-600 transition"
+                                    >
+                                      <X className="w-3.5 h-3.5" />
+                                    </button>
+                                  )}
+                                  {showSupplierDropdown && (
+                                    <div className="absolute top-full left-0 right-0 mt-1 bg-white dark:bg-slate-900 rounded-2xl shadow-2xl border border-slate-100 dark:border-slate-800 z-50 max-h-48 overflow-y-auto animate-in fade-in">
+                                      <div className="p-1.5">
+                                        {suppliers.length > 0 ? (
+                                          suppliers.map((supplier) => (
+                                            <div
+                                              key={supplier._id}
+                                              className={`flex items-center gap-2 p-2.5 cursor-pointer rounded-xl transition-all text-sm ${
+                                                item.supplierId === supplier._id
+                                                  ? "bg-[#84CC16]/10"
+                                                  : "hover:bg-slate-50 dark:hover:bg-slate-800"
+                                              }`}
+                                              onClick={() => {
+                                                updateBulkItem(
+                                                  index,
+                                                  "supplierId",
+                                                  supplier._id,
+                                                );
+                                                setSupplierSearch("");
+                                                setShowSupplierDropdown(false);
+                                              }}
+                                            >
+                                              <Truck className="w-3.5 h-3.5 text-[#84CC16] shrink-0" />
+                                              <span className="font-bold text-slate-900 dark:text-white truncate">
+                                                {supplier.name}
+                                              </span>
+                                            </div>
+                                          ))
+                                        ) : (
+                                          <div className="p-2 text-center text-xs text-slate-400">
+                                            No suppliers found
+                                          </div>
+                                        )}
+                                        <button
+                                          type="button"
+                                          className="flex w-full items-center gap-2 p-2.5 cursor-pointer hover:bg-[#84CC16]/5 rounded-xl transition-all border-t border-slate-100 dark:border-slate-800 mt-1"
+                                          onClick={() => {
+                                            setShowSupplierDropdown(false);
+                                            setIsSupplierFormOpen(true);
+                                          }}
+                                        >
+                                          <Plus className="w-3.5 h-3.5 text-[#84CC16]" />
+                                          <span className="text-xs font-bold text-[#84CC16]">
+                                            New Supplier
+                                          </span>
+                                        </button>
+                                      </div>
+                                    </div>
+                                  )}
                                 </div>
                                 <div className="space-y-1.5">
                                   <label className="text-[10px] font-black uppercase tracking-widest text-slate-400 dark:text-slate-500">
@@ -2643,6 +2861,16 @@ export function InventoryFormModal({
           onClose();
         }}
         data={scanResultModalData}
+      />
+
+      <SupplierFormModal
+        isOpen={isSupplierFormOpen}
+        onClose={() => setIsSupplierFormOpen(false)}
+        onCreated={(newSupplier) => {
+          form.setValue("supplierId", newSupplier._id);
+          setSupplierSearch("");
+          setIsSupplierFormOpen(false);
+        }}
       />
     </>
   );

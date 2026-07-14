@@ -156,6 +156,8 @@ export default function Banner() {
     },
   ];
 
+  const heroBackgroundColumns = Array.from({ length: 20 });
+
   return (
     <section
       id="banner"
@@ -163,9 +165,21 @@ export default function Banner() {
     >
       {/* Background */}
       <div className="absolute inset-0 z-0 bg-background">
-        <div className="absolute left-1/2 top-[42%] h-[240px] w-[90%] md:w-[1280px] md:h-[520px] lg:h-[658px] lg:w-[1520px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-[linear-gradient(90deg,rgba(189,230,59,0.9)_0%,rgba(124,203,180,0.72)_48%,rgba(49,138,251,0.9)_100%)] blur-[60px] md:blur-[82px]" />
-        <div className="absolute left-1/2 top-[42%] h-[180px] w-[80%] md:w-[900px] md:h-[420px] lg:h-[538px] lg:w-[1016px] -translate-x-1/2 -translate-y-1/2 rounded-full bg-background/20 blur-[40px] md:blur-[60px]" />
-        <div className="absolute inset-0 opacity-[0.05] md:opacity-[0.08] [background-image:repeating-linear-gradient(90deg,var(--color-foreground),0,var(--color-foreground)_95px,var(--color-foreground)_96px,var(--color-foreground)_100px)]" />
+        <div className="absolute left-1/2 top-[42%] h-[320px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.7] bg-[linear-gradient(90deg,rgba(183,255,72,0.96)_0%,rgba(138,226,116,0.82)_34%,rgba(102,200,194,0.56)_50%,rgba(62,146,255,0.84)_68%,rgba(31,105,235,0.96)_100%)] blur-[58px] md:h-[560px] md:w-[1120px] md:blur-[88px] lg:h-[720px] lg:w-[1280px] lg:blur-[108px]" />
+        <div className="absolute left-1/2 top-[42%] h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.7] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.8)_0%,rgba(231,255,236,0.44)_28%,rgba(199,234,255,0.2)_52%,rgba(255,255,255,0)_78%)] blur-[22px] dark:hidden md:h-[480px] md:w-[920px] md:blur-[34px] lg:h-[560px] lg:w-[1060px] lg:blur-[42px]" />
+        <div className="absolute left-1/2 top-[42%] hidden h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.46] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.18)_0%,rgba(103,232,249,0.14)_26%,rgba(59,130,246,0.12)_48%,rgba(255,255,255,0)_78%)] blur-[24px] dark:block md:h-[480px] md:w-[920px] md:blur-[36px] lg:h-[560px] lg:w-[1060px] lg:blur-[44px]" />
+        <div className="absolute left-1/2 top-[42%] h-[340px] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/8 opacity-[0.7] [mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] backdrop-blur-[18px] dark:hidden md:h-[520px] md:w-[980px] lg:h-[610px] lg:w-[1160px]" />
+        <div className="absolute left-1/2 top-[42%] hidden h-[340px] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900/20 opacity-[0.55] [mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] backdrop-blur-[18px] dark:block md:h-[520px] md:w-[980px] lg:h-[610px] lg:w-[1160px]" />
+        <div className="absolute left-1/2 top-[42%] hidden h-[760px] w-[1540px] -translate-x-1/2 -translate-y-1/2 items-start opacity-[0.36] [mask-image:radial-gradient(ellipse_63%_38%_at_50%_42%,black_0%,black_58%,rgba(0,0,0,0.65)_72%,transparent_100%)] lg:flex">
+          {heroBackgroundColumns.map((_, index) => (
+            <div key={index} className="relative h-[1200px] w-24 shrink-0">
+              <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.42)_0%,rgba(255,255,255,0.14)_42%,rgba(255,255,255,0.04)_100%)] dark:bg-[linear-gradient(90deg,rgba(255,255,255,0.16)_0%,rgba(148,163,184,0.08)_42%,rgba(255,255,255,0.02)_100%)]" />
+              <div className="absolute inset-y-0 left-[1px] w-[94px] bg-white/10 blur-[0.5px] dark:bg-slate-200/5" />
+            </div>
+          ))}
+        </div>
+        <div className="absolute inset-0 opacity-[0.7] bg-[radial-gradient(circle_at_top,rgba(255,255,255,0.34),rgba(255,255,255,0)_32%)] dark:opacity-[0.22] dark:bg-[radial-gradient(circle_at_top,rgba(148,163,184,0.16),rgba(255,255,255,0)_32%)]" />
+        <div className="absolute inset-0 opacity-[0.7] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0)_22%,rgba(255,255,255,0.18)_54%,rgba(255,255,255,0.58)_76%,rgba(255,255,255,0.96)_100%)] dark:opacity-[0.18] dark:bg-[radial-gradient(ellipse_at_center,rgba(15,23,42,0)_22%,rgba(15,23,42,0.08)_54%,rgba(15,23,42,0.28)_76%,rgba(15,23,42,0.56)_100%)]" />
         <div className="absolute inset-x-0 bottom-0 h-[220px] bg-gradient-to-b from-background/0 via-background/75 to-background" />
       </div>
 
@@ -178,18 +192,16 @@ export default function Banner() {
           className="w-full max-w-[1100px] text-[32px] font-black leading-[1.15] text-white sm:text-5xl md:text-6xl lg:text-[72px] lg:leading-[1.2]"
         >
           <span className="hidden whitespace-nowrap lg:block">
-            Verify Global <span>IMEI</span>
+            Verify Global <span className="text-[#BEFB6D]">IMEI</span>
           </span>
           <span className="hidden whitespace-nowrap lg:block">
-            <span className="text-brand-lime-soft">Intelligence</span>{" "}
+            <span className="text-[#BEFB6D]">Intelligence</span>{" "}
             <span>in Real-Time</span>
           </span>
           <span className="block lg:hidden">
-            Verify Global <span className="text-brand-lime-soft">IMEI</span>
+            Verify Global <span className="text-[#BEFB6D]">IMEI</span>
           </span>
-          <span className="block text-brand-lime-soft lg:hidden">
-            Intelligence
-          </span>
+          <span className="block text-[#BEFB6D] lg:hidden">Intelligence</span>
           <span className="block lg:hidden">in Real-Time</span>
         </motion.h1>
 
