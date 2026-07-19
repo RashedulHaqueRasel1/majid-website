@@ -260,7 +260,9 @@ export interface CheckoutInvoicePDFProps {
   shopkeeper?: any;
   customer?: any;
   paymentMethod: string;
+  subtotalBeforeDiscount?: number;
   subtotal: number;
+  discount?: number;
   discountAmount?: number;
   discountPercentage?: number;
   discountLabel?: string;
@@ -289,7 +291,9 @@ export default function CheckoutInvoicePDF({
   shopkeeper,
   customer,
   paymentMethod,
+  subtotalBeforeDiscount,
   subtotal,
+  discount,
   discountAmount = 0,
   discountPercentage,
   discountLabel,
@@ -397,8 +401,12 @@ export default function CheckoutInvoicePDF({
 
           {cartItems.map((cartItem, index) => {
             const item = cartItem.itemId;
-            const price = cartItem.price || item?.expectedPrice || 0;
-            const lineTotal = price * cartItem.quantity;
+            const price =
+              cartItem.sellingPrice ||
+              cartItem.price ||
+              item?.expectedPrice ||
+              0;
+            const lineTotal = cartItem.lineTotal || price * cartItem.quantity;
 
             return (
               <View
@@ -432,6 +440,20 @@ export default function CheckoutInvoicePDF({
           <View style={styles.totals}>
             <View style={styles.totalLine}>
               <Text>Subtotal</Text>
+              <Text>{formatCurrency(subtotalBeforeDiscount ?? subtotal)}</Text>
+            </View>
+            {!!discount && discount > 0 && (
+              <View style={styles.totalLine}>
+                <Text>Total Discount</Text>
+                <Text>-{formatCurrency(discount)}</Text>
+              </View>
+            )}
+            {!!discount && discount > 0 && (
+              <View style={styles.totalLine}>
+                <Text>Discounted Subtotal</Text>
+                <Text>{formatCurrency(subtotal)}</Text>
+              </View>
+            )}
               <Text>{formatCurrency(subtotal, currency)}</Text>
             </View>
             {discountAmount > 0 ? (

@@ -19,6 +19,19 @@
   --color-surface: var(--surface);
   --color-surface-foreground: var(--surface-foreground);
   --color-surface-muted: var(--surface-muted);
+  --color-hero-canvas: var(--hero-canvas);
+  --color-hero-panel: var(--hero-panel);
+  --color-hero-surface: var(--hero-surface);
+  --color-hero-surface-muted: var(--hero-surface-muted);
+  --color-hero-border: var(--hero-border);
+  --color-hero-accent: var(--hero-accent);
+  --color-hero-accent-end: var(--hero-accent-end);
+  --color-hero-accent-soft: var(--hero-accent-soft);
+  --color-hero-accent-foreground: var(--hero-accent-foreground);
+  --color-hero-emphasis: var(--hero-emphasis);
+  --color-hero-ring: var(--hero-ring);
+  --color-hero-glow-lime: var(--hero-glow-lime);
+  --color-hero-glow-blue: var(--hero-glow-blue);
 
   --color-secondary: var(--secondary);
   --color-secondary-foreground: var(--secondary-foreground);
@@ -76,6 +89,20 @@
   --surface: #f8fafc;
   --surface-foreground: #0f172a;
   --surface-muted: #f1f5f9;
+  --hero-canvas: #f8fafc;
+  --hero-panel: rgb(255 255 255 / 88%);
+  --hero-surface: #ffffff;
+  --hero-surface-muted: #f1f5f9;
+  --hero-border: #cbd5e1;
+  --hero-accent: #84cc16;
+  --hero-accent-end: #22c55e;
+  --hero-accent-soft: #ecfccb;
+  --hero-accent-foreground: #0f172a;
+  --hero-emphasis: #3f6212;
+  --hero-ring: rgb(101 163 13 / 38%);
+  --hero-glow-lime: rgb(132 204 22 / 16%);
+  --hero-glow-blue: rgb(37 99 235 / 13%);
+  --hero-grid: rgb(15 23 42 / 7%);
 
   --secondary: #f1f5f9;
   --secondary-foreground: #0f172a;
@@ -126,6 +153,20 @@
   --surface: #111827;
   --surface-foreground: #f8fafc;
   --surface-muted: #1e293b;
+  --hero-canvas: #0b1120;
+  --hero-panel: rgb(15 23 42 / 88%);
+  --hero-surface: #111827;
+  --hero-surface-muted: #1e293b;
+  --hero-border: #334155;
+  --hero-accent: #a3e635;
+  --hero-accent-end: #34d399;
+  --hero-accent-soft: rgb(163 230 53 / 12%);
+  --hero-accent-foreground: #0f172a;
+  --hero-emphasis: #bef264;
+  --hero-ring: rgb(163 230 53 / 42%);
+  --hero-glow-lime: rgb(132 204 22 / 12%);
+  --hero-glow-blue: rgb(59 130 246 / 14%);
+  --hero-grid: rgb(148 163 184 / 8%);
 
   --secondary: #1e293b;
   --secondary-foreground: #f8fafc;
@@ -186,7 +227,124 @@
   }
 }
 
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    scroll-behavior: auto !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
 @layer utilities {
+  .hero-grid {
+    background-image:
+      linear-gradient(to right, var(--hero-grid) 1px, transparent 1px),
+      linear-gradient(to bottom, var(--hero-grid) 1px, transparent 1px);
+    background-size: 48px 48px;
+    mask-image: radial-gradient(
+      ellipse 74% 62% at 50% 38%,
+      black 0%,
+      rgb(0 0 0 / 72%) 54%,
+      transparent 88%
+    );
+  }
+
+  .hero-console-wave {
+    animation: hero-console-wave-arrive 900ms cubic-bezier(0.22, 1, 0.36, 1)
+      350ms both;
+    background-image: radial-gradient(
+      circle,
+      color-mix(in srgb, var(--hero-accent) 46%, transparent) 1px,
+      transparent 1.35px
+    );
+    background-size: 7px 7px;
+    clip-path: polygon(
+      0 70%,
+      8% 42%,
+      18% 60%,
+      30% 28%,
+      43% 58%,
+      55% 36%,
+      67% 66%,
+      78% 38%,
+      90% 58%,
+      100% 44%,
+      100% 100%,
+      0 100%
+    );
+    mask-image: linear-gradient(to bottom, transparent, black 28%, transparent);
+    transform-origin: center bottom;
+  }
+
+  .hero-input-scan {
+    background: linear-gradient(
+      90deg,
+      transparent,
+      color-mix(in srgb, var(--hero-accent) 20%, transparent),
+      color-mix(in srgb, var(--hero-accent-end) 34%, transparent),
+      transparent
+    );
+    filter: blur(2px);
+    opacity: 0;
+    transform: translateX(-150%);
+  }
+
+  .hero-input-field:focus-within .hero-input-scan {
+    animation: hero-input-scan 1100ms cubic-bezier(0.22, 1, 0.36, 1);
+  }
+
+  .hero-scanner-radar {
+    opacity: 0;
+    transform: scale(0.72);
+  }
+
+  .hero-scanner-button:hover .hero-scanner-radar,
+  .hero-scanner-button:focus-visible .hero-scanner-radar {
+    animation: hero-scanner-radar 700ms ease-out;
+  }
+
+  @keyframes hero-console-wave-arrive {
+    from {
+      opacity: 0;
+      transform: translateY(10px) scaleX(0.88);
+    }
+    to {
+      opacity: 0.7;
+      transform: translateY(0) scaleX(1);
+    }
+  }
+
+  @keyframes hero-input-scan {
+    0% {
+      opacity: 0;
+      transform: translateX(-150%);
+    }
+    24% {
+      opacity: 1;
+    }
+    76% {
+      opacity: 0.8;
+    }
+    100% {
+      opacity: 0;
+      transform: translateX(650%);
+    }
+  }
+
+  @keyframes hero-scanner-radar {
+    0% {
+      opacity: 0.7;
+      transform: scale(0.72);
+    }
+    100% {
+      opacity: 0;
+      transform: scale(1.28);
+    }
+  }
+
   .container {
     max-width: 1536px;
     padding-inline: 1.5rem;

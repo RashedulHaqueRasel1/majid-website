@@ -62,22 +62,23 @@ export default function Navbar() {
           : "border-b border-transparent bg-transparent backdrop-blur-none"
       }`}
     >
-      <div className="mx-auto flex h-full w-full max-w-[1520px] items-center justify-between px-4 sm:px-6 lg:px-0">
+      <div className="mx-auto flex h-full w-full max-w-[1520px] items-center justify-between px-3 sm:px-6 lg:px-0">
         {/* Logo */}
         <Link href="/">
-          <div className="relative h-8 w-[150px] shrink-0 sm:w-[128px] md:h-[50px] md:w-[200px] cursor-pointer">
+          <div className="relative h-8 w-[124px] shrink-0 min-[360px]:w-[142px] sm:w-[160px] md:h-[50px] md:w-[200px] cursor-pointer">
             <Image
               src="/images/logo.png"
               alt="Logo"
               fill
-              quality={100}
+              loading="eager"
+              sizes="(max-width: 359px) 124px, (max-width: 639px) 142px, (max-width: 767px) 160px, 200px"
               className="object-contain "
             />
           </div>
         </Link>
 
         {/* Action buttons and Theme Toggle */}
-        <div className="flex min-w-0 items-center gap-1.5 sm:gap-2 md:gap-4">
+        <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-4">
           {status === "authenticated" && (
             <Badge variant={"outline"}>
               <span>Credits: {profileData?.data?.balance.toFixed(2)}</span>
@@ -105,7 +106,7 @@ export default function Navbar() {
               }
             >
               {status !== "authenticated" && (
-                <div className="flex h-10 min-w-[104px] cursor-pointer items-center justify-center rounded-full bg-primary px-4 text-sm font-extrabold text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:opacity-90 md:h-12 md:min-w-[147px] md:px-8 md:text-base">
+                <div className="flex h-10 min-w-[94px] cursor-pointer items-center justify-center rounded-full bg-primary px-3 text-xs font-extrabold text-primary-foreground shadow-[0_2px_4px_rgba(136,144,194,0.2),0_5px_15px_rgba(37,44,97,0.15)] transition-all hover:opacity-90 min-[360px]:min-w-[104px] min-[360px]:px-4 min-[360px]:text-sm md:h-12 md:min-w-[147px] md:px-8 md:text-base">
                   {"Get Started"}
                 </div>
               )}
