@@ -14,6 +14,7 @@ import {
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   useCreateInvoiceUser,
   useMyInvoiceGet,
@@ -264,6 +265,7 @@ export const pdfStyles = StyleSheet.create({
 export default function DeliveryInvoice() {
   const { data: inventoryData, isLoading, isError } = useMyInventory();
   const { data: profileData } = useMyProfile();
+  const { currency, formatCurrency } = useCurrency();
   const { mutate: createInvoice, isPending } = useCreateInvoice();
   const [searchQuery, setSearchQuery] = useState("");
   const seesion = useSession();
@@ -421,6 +423,7 @@ export default function DeliveryInvoice() {
           customerInfoLabel="Deliver To"
           shopkeeperInfoLabel="Deliver From"
           invoiceDate={invoiceDate}
+          currency={currency}
         />
       );
 
@@ -863,7 +866,7 @@ export default function DeliveryInvoice() {
                   Sub-Total Amount
                 </span>
                 <span className="text-lg font-black text-slate-800 dark:text-slate-200">
-                  ${totalPrice.toLocaleString()}
+                  {formatCurrency(totalPrice)}
                 </span>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl">
@@ -873,7 +876,7 @@ export default function DeliveryInvoice() {
                 <span
                   className={`text-lg font-black ${dueAmount === 0 ? "text-green-600" : "text-red-500"}`}
                 >
-                  ${dueAmount.toLocaleString()}
+                  {formatCurrency(dueAmount)}
                 </span>
               </div>
             </div>
@@ -1009,7 +1012,7 @@ export default function DeliveryInvoice() {
                       </td>
 
                       <td className="px-8 py-6 text-right font-black text-lg">
-                        ${device.price}
+                        {formatCurrency(device.price || 0)}
                       </td>
                     </tr>
                   );
@@ -1030,7 +1033,7 @@ export default function DeliveryInvoice() {
                 Total Amount Due
               </p>
               <p className="text-3xl font-black text-foreground tracking-tighter">
-                ${totalPrice.toLocaleString()}
+                {formatCurrency(totalPrice)}
               </p>
             </div>
           </div>

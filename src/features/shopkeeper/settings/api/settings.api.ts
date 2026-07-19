@@ -26,3 +26,11 @@ export const getMyRepairProblem = async (
   );
   return response.data;
 };
+
+export const detectCurrency = async (): Promise<{
+  success: boolean;
+  data: { currency: string; symbol: string };
+}> => {
+  const response = await api.get("/location/currency");
+  return response.data;
+};

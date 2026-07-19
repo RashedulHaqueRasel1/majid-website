@@ -27,12 +27,14 @@ type SupplierFormModalProps = {
   isOpen: boolean;
   onClose: () => void;
   supplier?: Supplier | null;
+  onCreated?: (supplier: Supplier) => void;
 };
 
 export function SupplierFormModal({
   isOpen,
   onClose,
   supplier,
+  onCreated,
 }: SupplierFormModalProps) {
   const createSupplierMutation = useCreateSupplier();
   const updateSupplierMutation = useUpdateSupplier();
@@ -104,8 +106,11 @@ export function SupplierFormModal({
     }
 
     await createSupplierMutation.mutateAsync(payload, {
-      onSuccess: () => {
+      onSuccess: (response) => {
         toast.success("Supplier added successfully");
+        if (response.data) {
+          onCreated?.(response.data);
+        }
         onClose();
       },
       onError: (error: unknown) => {

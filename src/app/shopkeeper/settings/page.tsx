@@ -1,4 +1,4 @@
-import Settings from "@/features/shopkeeper/settings/component/Settings";
+import { redirect } from "next/navigation";
 
 export const metadata = {
   title: "Account Settings | Shopkeeper Dashboard",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function SettingsPage() {
-  return <Settings />;
+  redirect("/shopkeeper/settings/profile");
 }

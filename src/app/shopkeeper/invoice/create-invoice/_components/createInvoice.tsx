@@ -21,6 +21,7 @@ import {
 import { useSession } from "next-auth/react";
 import { toast } from "sonner";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   useCreateInvoiceUser,
   useMyInvoiceGet,
@@ -280,208 +281,211 @@ export const InvoicePDF = ({
   customerInfoLabel,
   invoiceDate,
   shopkeeperInfoLabel,
-}: any) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.page}>
-      {/* Decorative Top Bar */}
-      <View style={pdfStyles.headerBar} />
+  currency = "USD",
+}: any) => {
+  const pdfFormatCurrency = (value: number) => {
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: (currency || "USD").toUpperCase(),
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+    } catch {
+      return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  };
+  return (
+    <Document>
+      <Page size="A4" style={pdfStyles.page}>
+        {/* Decorative Top Bar */}
+        <View style={pdfStyles.headerBar} />
 
-      {/* Brand Header */}
-      <View style={pdfStyles.topSection}>
-        {shopkeeper?.image?.url ? (
-          // eslint-disable-next-line jsx-a11y/alt-text
-          <Image src={shopkeeper.image.url} style={pdfStyles.logo} />
-        ) : (
-          <Text
-            style={[
-              pdfStyles.invoiceTitle,
-              { textAlign: "left", fontSize: 20 },
-            ]}
-          >
-            {shopkeeper?.shopName || "STORE"}
-          </Text>
-        )}
-        <View style={pdfStyles.invoiceMeta}>
-          <Text style={pdfStyles.invoiceTitle}>
-            {InvoiceName ? InvoiceName : "INVOICE"}
-          </Text>
-          <Text style={pdfStyles.dateText}>
-            Date:{" "}
-            {(invoiceDate
-              ? new Date(invoiceDate)
-              : new Date()
-            ).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </Text>
-          <Text style={pdfStyles.dateText}>
-            Time:{" "}
-            {(invoiceDate
-              ? new Date(invoiceDate)
-              : new Date()
-            ).toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
-          </Text>
-        </View>
-      </View>
-
-      {/* Information Cards */}
-      <View style={pdfStyles.infoContainer}>
-        {/* Customer Card */}
-        <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.infoLabel}>
-            {customerInfoLabel || "Client Details"}
-          </Text>
-          <Text style={pdfStyles.customerName}>
-            {`${customer?.firstName || "Valued"} ${customer?.lastName || "Customer"}`}
-          </Text>
-          <Text style={pdfStyles.infoText}>
-            Email: {customer?.email || "N/A"}
-          </Text>
-          <Text style={pdfStyles.infoText}>
-            Phone: {customer?.phone || "N/A"}
-          </Text>
-          <Text style={pdfStyles.infoText}>
-            Address: {customer?.address || "N/A"}
-          </Text>
-          <Text
-            style={[
-              pdfStyles.infoText,
-              { fontSize: 7.5, color: "#94a3b8", marginTop: 4 },
-            ]}
-          >
-            ID: {customer?.customerId || "N/A"}
-          </Text>
-
-          <Text style={pdfStyles.paymentMethod}>
-            PAYMENT METHOD: {paymentType ? paymentType.toUpperCase() : "N/A"}
-            {paymentType === "card" && card ? ` •••• ${card}` : ""}
-          </Text>
-        </View>
-
-        {/* Store Card */}
-        <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.infoLabelBlue}>
-            {shopkeeperInfoLabel || "Store Information"}
-          </Text>
-          <Text style={pdfStyles.customerName}>
-            {shopkeeper?.shopName || "Gadget Galaxy"}
-          </Text>
-          <Text style={pdfStyles.infoText}>
-            {shopkeeper?.shopAddress || "N/A"}
-          </Text>
-          <Text style={pdfStyles.infoText}>
-            Email: {shopkeeper?.email || "N/A"}
-          </Text>
-          <Text style={pdfStyles.infoText}>
-            Phone: {shopkeeper?.phone || "N/A"}
-          </Text>
-        </View>
-      </View>
-
-      {/* Modern Product Table */}
-      <View style={pdfStyles.tableHeader}>
-        <Text style={pdfStyles.colProduct}>Item Description</Text>
-        <Text style={pdfStyles.colId}>IMEI / Model ID</Text>
-        <Text style={pdfStyles.colPrice}>Amount</Text>
-      </View>
-
-      {items?.map((item: any) => (
-        <View key={item.id} style={pdfStyles.tableRow}>
-          <View style={pdfStyles.colProduct}>
-            {item.image && (
-              // eslint-disable-next-line jsx-a11y/alt-text
-              <Image src={item.image} style={pdfStyles.productImg} />
-            )}
-            <View>
-              <Text style={pdfStyles.productText}>{item.name}</Text>
-              <Text style={pdfStyles.productSub}>
-                Brand New • Official Local Warranty
-              </Text>
-            </View>
-          </View>
-          <Text style={pdfStyles.colId}>{item.imeiNumber || "N/A"}</Text>
-          <Text style={pdfStyles.colPrice}>
-            ${item.price ? item.price.toFixed(2) : "0.00"}
-          </Text>
-        </View>
-      ))}
-
-      {/* Calculations & Status section */}
-      <View style={pdfStyles.totalSection}>
-        <View style={pdfStyles.totalBox}>
-          <View style={pdfStyles.summaryRow}>
-            <Text style={pdfStyles.summaryLabel}>Subtotal</Text>
-            <Text style={pdfStyles.summaryValue}>
-              $
-              {total
-                ? total.toLocaleString(undefined, { minimumFractionDigits: 2 })
-                : "0.00"}
-            </Text>
-          </View>
-          <View style={pdfStyles.summaryRow}>
-            <Text style={pdfStyles.summaryLabel}>Amount Paid</Text>
-            <Text style={pdfStyles.summaryValue}>
-              $
-              {alreadyPaid
-                ? alreadyPaid.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })
-                : "0.00"}
-            </Text>
-          </View>
-
-          <View style={pdfStyles.divider} />
-
-          <View style={pdfStyles.balanceRow}>
-            <Text style={pdfStyles.balanceLabel}>Balance Due</Text>
+        {/* Brand Header */}
+        <View style={pdfStyles.topSection}>
+          {shopkeeper?.image?.url ? (
+            // eslint-disable-next-line jsx-a11y/alt-text
+            <Image src={shopkeeper.image.url} style={pdfStyles.logo} />
+          ) : (
             <Text
               style={[
-                pdfStyles.balanceValue,
-                { color: dueAmount <= 0 ? "#22c55e" : "#ef4444" },
+                pdfStyles.invoiceTitle,
+                { textAlign: "left", fontSize: 20 },
               ]}
             >
-              $
-              {dueAmount
-                ? dueAmount.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })
-                : "0.00"}
+              {shopkeeper?.shopName || "STORE"}
+            </Text>
+          )}
+          <View style={pdfStyles.invoiceMeta}>
+            <Text style={pdfStyles.invoiceTitle}>
+              {InvoiceName ? InvoiceName : "INVOICE"}
+            </Text>
+            <Text style={pdfStyles.dateText}>
+              Date:{" "}
+              {(invoiceDate
+                ? new Date(invoiceDate)
+                : new Date()
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </Text>
+            <Text style={pdfStyles.dateText}>
+              Time:{" "}
+              {(invoiceDate
+                ? new Date(invoiceDate)
+                : new Date()
+              ).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })}
+            </Text>
+          </View>
+        </View>
+
+        {/* Information Cards */}
+        <View style={pdfStyles.infoContainer}>
+          {/* Customer Card */}
+          <View style={pdfStyles.infoBox}>
+            <Text style={pdfStyles.infoLabel}>
+              {customerInfoLabel || "Client Details"}
+            </Text>
+            <Text style={pdfStyles.customerName}>
+              {`${customer?.firstName || "Valued"} ${customer?.lastName || "Customer"}`}
+            </Text>
+            <Text style={pdfStyles.infoText}>
+              Email: {customer?.email || "N/A"}
+            </Text>
+            <Text style={pdfStyles.infoText}>
+              Phone: {customer?.phone || "N/A"}
+            </Text>
+            <Text style={pdfStyles.infoText}>
+              Address: {customer?.address || "N/A"}
+            </Text>
+            <Text
+              style={[
+                pdfStyles.infoText,
+                { fontSize: 7.5, color: "#94a3b8", marginTop: 4 },
+              ]}
+            >
+              ID: {customer?.customerId || "N/A"}
+            </Text>
+
+            <Text style={pdfStyles.paymentMethod}>
+              PAYMENT METHOD: {paymentType ? paymentType.toUpperCase() : "N/A"}
+              {paymentType === "card" && card ? ` •••• ${card}` : ""}
             </Text>
           </View>
 
-          {dueAmount <= 0 ? (
-            <Text style={pdfStyles.statusBadgePaid}>FULLY PAID</Text>
-          ) : (
-            <Text style={pdfStyles.statusBadgeDue}>
-              DUE: $
-              {dueAmount.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}
+          {/* Store Card */}
+          <View style={pdfStyles.infoBox}>
+            <Text style={pdfStyles.infoLabelBlue}>
+              {shopkeeperInfoLabel || "Store Information"}
             </Text>
-          )}
+            <Text style={pdfStyles.customerName}>
+              {shopkeeper?.shopName || "Gadget Galaxy"}
+            </Text>
+            <Text style={pdfStyles.infoText}>
+              {shopkeeper?.shopAddress || "N/A"}
+            </Text>
+            <Text style={pdfStyles.infoText}>
+              Email: {shopkeeper?.email || "N/A"}
+            </Text>
+            <Text style={pdfStyles.infoText}>
+              Phone: {shopkeeper?.phone || "N/A"}
+            </Text>
+          </View>
         </View>
-      </View>
 
-      {/* Minimalist Footer */}
-      <Text style={pdfStyles.footer}>
-        Thank you for choosing Gadget Galaxy! We appreciate your business.{" "}
-        {"\n"}
-        This is an electronically generated invoice, official signature is not
-        required.
-      </Text>
-    </Page>
-  </Document>
-);
+        {/* Modern Product Table */}
+        <View style={pdfStyles.tableHeader}>
+          <Text style={pdfStyles.colProduct}>Item Description</Text>
+          <Text style={pdfStyles.colId}>IMEI / Model ID</Text>
+          <Text style={pdfStyles.colPrice}>Amount</Text>
+        </View>
+
+        {items?.map((item: any) => (
+          <View key={item.id} style={pdfStyles.tableRow}>
+            <View style={pdfStyles.colProduct}>
+              {item.image && (
+                // eslint-disable-next-line jsx-a11y/alt-text
+                <Image src={item.image} style={pdfStyles.productImg} />
+              )}
+              <View>
+                <Text style={pdfStyles.productText}>{item.name}</Text>
+                <Text style={pdfStyles.productSub}>
+                  Brand New • Official Local Warranty
+                </Text>
+              </View>
+            </View>
+            <Text style={pdfStyles.colId}>{item.imeiNumber || "N/A"}</Text>
+            <Text style={pdfStyles.colPrice}>
+              {pdfFormatCurrency(item.price || 0)}
+            </Text>
+          </View>
+        ))}
+
+        {/* Calculations & Status section */}
+        <View style={pdfStyles.totalSection}>
+          <View style={pdfStyles.totalBox}>
+            <View style={pdfStyles.summaryRow}>
+              <Text style={pdfStyles.summaryLabel}>Subtotal</Text>
+              <Text style={pdfStyles.summaryValue}>
+                {pdfFormatCurrency(total || 0)}
+              </Text>
+            </View>
+            <View style={pdfStyles.summaryRow}>
+              <Text style={pdfStyles.summaryLabel}>Amount Paid</Text>
+              <Text style={pdfStyles.summaryValue}>
+                {pdfFormatCurrency(alreadyPaid || 0)}
+              </Text>
+            </View>
+
+            <View style={pdfStyles.divider} />
+
+            <View style={pdfStyles.balanceRow}>
+              <Text style={pdfStyles.balanceLabel}>Balance Due</Text>
+              <Text
+                style={[
+                  pdfStyles.balanceValue,
+                  { color: dueAmount <= 0 ? "#22c55e" : "#ef4444" },
+                ]}
+              >
+                {pdfFormatCurrency(dueAmount || 0)}
+              </Text>
+            </View>
+
+            {dueAmount <= 0 ? (
+              <Text style={pdfStyles.statusBadgePaid}>FULLY PAID</Text>
+            ) : (
+              <Text style={pdfStyles.statusBadgeDue}>
+                DUE: $
+                {dueAmount.toLocaleString(undefined, {
+                  minimumFractionDigits: 2,
+                })}
+              </Text>
+            )}
+          </View>
+        </View>
+
+        {/* Minimalist Footer */}
+        <Text style={pdfStyles.footer}>
+          Thank you for choosing Gadget Galaxy! We appreciate your business.{" "}
+          {"\n"}
+          This is an electronically generated invoice, official signature is not
+          required.
+        </Text>
+      </Page>
+    </Document>
+  );
+};
 
 export default function CreateInvoice() {
   const { data: inventoryData, isLoading, isError } = useMyInventory();
   const { data: profileData } = useMyProfile();
+  const { currency, formatCurrency } = useCurrency();
   const { mutate: createInvoice, isPending } = useCreateInvoice();
   const [searchQuery, setSearchQuery] = useState("");
   const seesion = useSession();
@@ -636,6 +640,7 @@ export default function CreateInvoice() {
           dueAmount={dueAmount}
           paymentType={paymentType}
           invoiceDate={invoiceDate}
+          currency={currency}
         />
       );
 
@@ -1073,7 +1078,7 @@ export default function CreateInvoice() {
                   Sub-Total Amount
                 </span>
                 <span className="text-lg font-black text-slate-800 dark:text-slate-200">
-                  ${totalPrice.toLocaleString()}
+                  {formatCurrency(totalPrice)}
                 </span>
               </div>
               <div className="bg-slate-50 dark:bg-slate-900 p-4 rounded-xl">
@@ -1083,7 +1088,7 @@ export default function CreateInvoice() {
                 <span
                   className={`text-lg font-black ${dueAmount === 0 ? "text-green-600" : "text-red-500"}`}
                 >
-                  ${dueAmount.toLocaleString()}
+                  {formatCurrency(dueAmount)}
                 </span>
               </div>
             </div>
@@ -1219,7 +1224,7 @@ export default function CreateInvoice() {
                       </td>
 
                       <td className="px-8 py-6 text-right font-black text-lg">
-                        ${device.price}
+                        {formatCurrency(device.price || 0)}
                       </td>
                     </tr>
                   );
@@ -1240,7 +1245,7 @@ export default function CreateInvoice() {
                 Total Amount Due
               </p>
               <p className="text-3xl font-black text-foreground tracking-tighter">
-                ${totalPrice.toLocaleString()}
+                {formatCurrency(totalPrice)}
               </p>
             </div>
           </div>

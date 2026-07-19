@@ -2,6 +2,7 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
   getMyInventory,
   getInventoryByCategory,
+  getInventoryBySupplier,
   getCategories,
   createCategory,
   updateCategory,
@@ -38,6 +39,8 @@ export const INVENTORY_KEYS = {
   myInventory: () => [...INVENTORY_KEYS.all, "my-inventory"] as const,
   byCategory: (categoryId: string) =>
     [...INVENTORY_KEYS.all, "category", categoryId] as const,
+  bySupplier: (supplierId: string) =>
+    [...INVENTORY_KEYS.all, "supplier", supplierId] as const,
   shopkeeperCart: (shopkeeperId: string) =>
     [...INVENTORY_KEYS.all, "shopkeeper-cart", shopkeeperId] as const,
 };
@@ -58,6 +61,14 @@ export function useInventoryByCategory(categoryId?: string) {
     queryKey: INVENTORY_KEYS.byCategory(categoryId || ""),
     queryFn: () => getInventoryByCategory(categoryId || ""),
     enabled: !!categoryId,
+  });
+}
+
+export function useInventoryBySupplier(supplierId?: string) {
+  return useQuery({
+    queryKey: INVENTORY_KEYS.bySupplier(supplierId || ""),
+    queryFn: () => getInventoryBySupplier(supplierId || ""),
+    enabled: !!supplierId,
   });
 }
 
@@ -168,6 +179,9 @@ export function useCreateInvoice() {
       customerInfo?: string;
       itemsIds?: string[];
       dueAmount?: number;
+      discountName?: string;
+      discountPercentage?: number;
+      discountAmount?: number;
     }) => createInvoice(input),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: INVENTORY_KEYS.all });

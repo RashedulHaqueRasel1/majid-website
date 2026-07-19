@@ -44,7 +44,7 @@ export default function ShopkeeperLayout({
     <div className="flex min-h-screen bg-surface text-foreground">
       {/* Desktop Sidebar — authenticated only */}
       {isAuthenticated && (
-        <div className="hidden lg:block">
+        <div className="hidden lg:block overflow-visible">
           <Sidebar
             collapsed={isSidebarCollapsed}
             onToggleCollapse={() => setIsSidebarCollapsed((value) => !value)}
@@ -67,7 +67,7 @@ export default function ShopkeeperLayout({
       {/* Main Content */}
       <div className="flex-1 flex flex-col min-w-0">
         <Header setOpenSidebar={setOpenSidebar} />
-        <main className="min-w-0 flex-1 overflow-x-hidden overflow-y-auto bg-background">
+        <main className="min-w-0 flex-1 overflow-y-auto bg-background">
           {children}
         </main>
       </div>

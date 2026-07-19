@@ -24,6 +24,7 @@ import {
 import { toast } from "sonner";
 import { SupplierFormModal } from "./modals/SupplierFormModal";
 import { useDeleteSupplier, useSuppliers } from "../hooks/useSuppliers";
+import SupplierItemsModal from "./modals/SupplierItemsModal";
 import type { Supplier } from "../types";
 
 type ActiveFilter = "active" | "inactive" | "all";
@@ -34,6 +35,9 @@ export default function Suppliers() {
   const [activeFilter, setActiveFilter] = useState<ActiveFilter>("active");
   const [isFormOpen, setIsFormOpen] = useState(false);
   const [editingSupplier, setEditingSupplier] = useState<Supplier | null>(null);
+  const [selectedSupplier, setSelectedSupplier] = useState<Supplier | null>(
+    null,
+  );
   const deleteSupplierMutation = useDeleteSupplier();
 
   const supplierParams = useMemo(
@@ -182,7 +186,8 @@ export default function Suppliers() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ delay: index * 0.05 }}
-              className="group relative overflow-hidden rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md dark:border-slate-700 dark:bg-card"
+              className="group relative overflow-hidden rounded-[28px] border border-slate-100 bg-white p-6 shadow-sm transition-all hover:-translate-y-1 hover:shadow-md dark:border-slate-700 dark:bg-card cursor-pointer"
+              onClick={() => setSelectedSupplier(supplier)}
             >
               <div className="mb-4 flex items-start justify-between">
                 <div className="flex min-w-0 items-center gap-4">
@@ -208,32 +213,34 @@ export default function Suppliers() {
                   </div>
                 </div>
 
-                <DropdownMenu>
-                  <DropdownMenuTrigger asChild>
-                    <button className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-50 hover:text-foreground dark:hover:bg-slate-800">
-                      <MoreVertical size={16} />
-                    </button>
-                  </DropdownMenuTrigger>
-                  <DropdownMenuContent
-                    align="end"
-                    className="rounded-xl border-slate-100 p-2 shadow-xl"
-                  >
-                    <DropdownMenuItem
-                      onClick={() => handleEdit(supplier)}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg p-3 text-xs font-bold"
+                <div onClick={(e) => e.stopPropagation()}>
+                  <DropdownMenu>
+                    <DropdownMenuTrigger asChild>
+                      <button className="cursor-pointer rounded-lg p-1.5 text-slate-400 transition hover:bg-slate-50 hover:text-foreground dark:hover:bg-slate-800">
+                        <MoreVertical size={16} />
+                      </button>
+                    </DropdownMenuTrigger>
+                    <DropdownMenuContent
+                      align="end"
+                      className="rounded-xl border-slate-100 p-2 shadow-xl"
                     >
-                      <Edit2 size={14} />
-                      Edit Supplier
-                    </DropdownMenuItem>
-                    <DropdownMenuItem
-                      onClick={() => handleDelete(supplier)}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg p-3 text-xs font-bold text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
-                    >
-                      <Trash2 size={14} />
-                      Deactivate
-                    </DropdownMenuItem>
-                  </DropdownMenuContent>
-                </DropdownMenu>
+                      <DropdownMenuItem
+                        onClick={() => handleEdit(supplier)}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg p-3 text-xs font-bold"
+                      >
+                        <Edit2 size={14} />
+                        Edit Supplier
+                      </DropdownMenuItem>
+                      <DropdownMenuItem
+                        onClick={() => handleDelete(supplier)}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg p-3 text-xs font-bold text-red-500 hover:bg-red-50 hover:text-red-600 dark:hover:bg-red-950/20"
+                      >
+                        <Trash2 size={14} />
+                        Deactivate
+                      </DropdownMenuItem>
+                    </DropdownMenuContent>
+                  </DropdownMenu>
+                </div>
               </div>
 
               <div className="mt-5 space-y-3">
@@ -316,6 +323,12 @@ export default function Suppliers() {
           setEditingSupplier(null);
         }}
         supplier={editingSupplier}
+      />
+
+      <SupplierItemsModal
+        isOpen={!!selectedSupplier}
+        onClose={() => setSelectedSupplier(null)}
+        supplier={selectedSupplier}
       />
     </div>
   );

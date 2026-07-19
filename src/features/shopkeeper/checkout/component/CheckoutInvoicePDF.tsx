@@ -263,12 +263,26 @@ export interface CheckoutInvoicePDFProps {
   subtotalBeforeDiscount?: number;
   subtotal: number;
   discount?: number;
+  discountAmount?: number;
+  discountPercentage?: number;
+  discountLabel?: string;
   tax: number;
   total: number;
+  currency?: string;
 }
 
-const formatCurrency = (value: number) =>
-  `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+const formatCurrency = (value: number, currencyCode: string = "USD") => {
+  try {
+    return new Intl.NumberFormat("en-US", {
+      style: "currency",
+      currency: currencyCode.toUpperCase(),
+      minimumFractionDigits: 2,
+      maximumFractionDigits: 2,
+    }).format(value);
+  } catch {
+    return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+  }
+};
 
 export default function CheckoutInvoicePDF({
   cartItems,
@@ -280,8 +294,12 @@ export default function CheckoutInvoicePDF({
   subtotalBeforeDiscount,
   subtotal,
   discount,
+  discountAmount = 0,
+  discountPercentage,
+  discountLabel,
   tax,
   total,
+  currency = "USD",
 }: CheckoutInvoicePDFProps) {
   const invoiceDate = new Date();
   const dueDate = new Date(invoiceDate);
@@ -412,7 +430,7 @@ export default function CheckoutInvoicePDF({
                   <Text>{cartItem.quantity}</Text>
                 </View>
                 <View style={styles.colPrice}>
-                  <Text>{formatCurrency(lineTotal)}</Text>
+                  <Text>{formatCurrency(lineTotal, currency)}</Text>
                 </View>
               </View>
             );
@@ -436,13 +454,25 @@ export default function CheckoutInvoicePDF({
                 <Text>{formatCurrency(subtotal)}</Text>
               </View>
             )}
+              <Text>{formatCurrency(subtotal, currency)}</Text>
+            </View>
+            {discountAmount > 0 ? (
+              <View style={styles.totalLine}>
+                <Text>
+                  Discount{" "}
+                  {discountPercentage ? `(${discountPercentage}%)` : ""}
+                  {discountLabel ? ` • ${discountLabel}` : ""}
+                </Text>
+                <Text>-{formatCurrency(discountAmount, currency)}</Text>
+              </View>
+            ) : null}
             <View style={styles.totalLine}>
               <Text>Tax (8.5%)</Text>
-              <Text>{formatCurrency(tax)}</Text>
+              <Text>{formatCurrency(tax, currency)}</Text>
             </View>
             <View style={styles.amountDue}>
               <Text>Total Paid:</Text>
-              <Text>{formatCurrency(total)}</Text>
+              <Text>{formatCurrency(total, currency)}</Text>
             </View>
           </View>
 

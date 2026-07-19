@@ -19,6 +19,8 @@ import {
   useUpdateRepairQuoteStatus,
 } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
+import { getCurrencySymbol } from "@/lib/currency";
 import jsPDF from "jspdf";
 import autoTable from "jspdf-autotable";
 import QRCode from "qrcode";
@@ -61,6 +63,7 @@ const timelineSteps = [
 export default function RepairHistoryDetails({ id }: { id: string }) {
   const { data: detailsData, isLoading } = useRepairRequestDetails(id);
   const updateQuote = useUpdateRepairQuoteStatus();
+  const { currency, formatCurrency } = useCurrency();
 
   const [showOfferModal, setShowOfferModal] = useState(false);
   const [counterOfferId, setCounterOfferId] = useState<string | null>(null);
@@ -323,7 +326,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
         format(new Date(n.date), "MMM dd, yyyy"),
         n.message,
         `${n.estimatedDays} Days`,
-        `$${(n.cost ?? 0).toFixed(2)}`,
+        `${getCurrencySymbol(currency)}${(n.cost ?? 0).toFixed(2)}`,
       ]) || [];
 
     autoTable(doc, {
@@ -351,7 +354,12 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
     doc.text("Total Amount Due:", 140, finalY);
     doc.setFontSize(16);
     doc.setTextColor(15, 23, 42);
-    doc.text(`$${totalCost.toFixed(2)}`, 196, finalY, { align: "right" });
+    doc.text(
+      `${getCurrencySymbol(currency)}${totalCost.toFixed(2)}`,
+      196,
+      finalY,
+      { align: "right" },
+    );
 
     // QR Code Generation (Left Side)
     try {
@@ -593,8 +601,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                                         <div className="flex items-center gap-3">
                                           {note.cost && (
                                             <span className="text-sm font-black text-foreground">
-                                              {"$"}
-                                              {note.cost.toFixed(2)}
+                                              {formatCurrency(note.cost)}
                                             </span>
                                           )}
                                           {note.estimatedDays && (
@@ -723,7 +730,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                   <div className="mb-6">
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-black text-foreground">
-                        ${latestQuote.cost?.toFixed(2)}
+                        {formatCurrency(latestQuote.cost ?? 0)}
                       </span>
                       <span className="text-sm font-bold text-muted-foreground">
                         quote total
@@ -785,7 +792,7 @@ export default function RepairHistoryDetails({ id }: { id: string }) {
                     </div>
                     <div className="flex items-baseline gap-1">
                       <span className="text-2xl font-black text-foreground">
-                        ${latestQuote.cost?.toFixed(2)}
+                        {formatCurrency(latestQuote.cost ?? 0)}
                       </span>
                     </div>
                     <p className="mt-2 text-sm font-medium text-muted-foreground">

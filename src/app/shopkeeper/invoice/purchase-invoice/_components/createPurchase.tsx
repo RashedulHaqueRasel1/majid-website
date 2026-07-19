@@ -48,6 +48,7 @@ import {
 import { Textarea } from "@/components/ui/textarea";
 import { Card, CardContent } from "@/components/ui/card";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 import {
   useCreateInvoice,
   useCreateInventory,
@@ -237,119 +238,137 @@ const PurchaseReceiptPDF = ({
   shopkeeper,
   total,
   invoiceDate,
-}: any) => (
-  <Document>
-    <Page size="A4" style={pdfStyles.page}>
-      <View style={pdfStyles.headerBar} />
-      <View style={pdfStyles.header}>
-        {shopkeeper?.image?.url ? (
-          <Image src={shopkeeper.image.url} style={pdfStyles.logo} />
-        ) : (
-          <Text style={[pdfStyles.title, { fontSize: 18 }]}>
-            {shopkeeper?.shopName || "STORE"}
-          </Text>
-        )}
-        <View style={pdfStyles.receiptMeta}>
-          <Text style={pdfStyles.title}>PURCHASE RECEIPT</Text>
-          <Text style={pdfStyles.dateText}>
-            Date:{" "}
-            {(invoiceDate
-              ? new Date(invoiceDate)
-              : new Date()
-            ).toLocaleDateString("en-US", {
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
-          </Text>
-          <Text style={pdfStyles.dateText}>
-            Time:{" "}
-            {(invoiceDate
-              ? new Date(invoiceDate)
-              : new Date()
-            ).toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-              hour12: true,
-            })}
-          </Text>
-        </View>
-      </View>
+  currency = "USD",
+}: any) => {
+  const pdfFormatCurrency = (value: number) => {
+    try {
+      return new Intl.NumberFormat("en-US", {
+        style: "currency",
+        currency: (currency || "USD").toUpperCase(),
+        minimumFractionDigits: 2,
+        maximumFractionDigits: 2,
+      }).format(value);
+    } catch {
+      return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+    }
+  };
 
-      <View style={[pdfStyles.section, pdfStyles.infoRow]}>
-        <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.infoBoxTitle}>Customer Details</Text>
-          <Text style={pdfStyles.label}>Name</Text>
-          <Text style={pdfStyles.value}>
-            {customer?.firstName} {customer?.lastName}
-          </Text>
-          <Text style={pdfStyles.label}>Phone</Text>
-          <Text style={pdfStyles.value}>{customer?.phone}</Text>
-          <Text style={pdfStyles.label}>Govt ID / NID</Text>
-          <Text style={pdfStyles.value}>{customer?.idNumber}</Text>
-        </View>
-        <View style={pdfStyles.infoBox}>
-          <Text style={pdfStyles.infoBoxTitle}>Shop Information</Text>
-          <Text style={[pdfStyles.value, { fontSize: 11 }]}>
-            {shopkeeper?.shopName}
-          </Text>
-          <Text style={pdfStyles.storeValue}>{shopkeeper?.shopAddress}</Text>
-          <Text style={pdfStyles.storeValue}>{shopkeeper?.phone}</Text>
-        </View>
-      </View>
-
-      <View style={pdfStyles.section}>
-        <Text style={pdfStyles.sectionTitle}>Purchased Devices</Text>
-        <View style={pdfStyles.tableHeader}>
-          <Text style={pdfStyles.colProduct}>Product Specifications</Text>
-          <Text style={pdfStyles.colQty}>Qty</Text>
-          <Text style={pdfStyles.colSerials}>IMEI / Serials</Text>
-          <Text style={pdfStyles.colPrice}>Price</Text>
-        </View>
-        {items?.map((item: any, index: number) => (
-          <View key={index} style={pdfStyles.row}>
-            <View style={pdfStyles.colProduct}>
-              <Text style={pdfStyles.productName}>{item.name}</Text>
-              <Text style={pdfStyles.modelText}>
-                {item.storage} • {item.color}
-              </Text>
-            </View>
-            <Text style={pdfStyles.colQty}>{item.quantity}</Text>
-            <View style={pdfStyles.colSerials}>
-              {item.serials.map((serial: string, idx: number) => (
-                <Text key={idx} style={pdfStyles.serialText}>
-                  • {serial}
-                </Text>
-              ))}
-            </View>
-            <Text style={pdfStyles.colPrice}>
-              $
-              {(
-                Number(item.expectedPrice || 0) * Number(item.quantity || 1)
-              ).toFixed(2)}
+  return (
+    <Document>
+      <Page size="A4" style={pdfStyles.page}>
+        <View style={pdfStyles.headerBar} />
+        <View style={pdfStyles.header}>
+          {shopkeeper?.image?.url ? (
+            <Image src={shopkeeper.image.url} style={pdfStyles.logo} />
+          ) : (
+            <Text style={[pdfStyles.title, { fontSize: 18 }]}>
+              {shopkeeper?.shopName || "STORE"}
+            </Text>
+          )}
+          <View style={pdfStyles.receiptMeta}>
+            <Text style={pdfStyles.title}>PURCHASE RECEIPT</Text>
+            <Text style={pdfStyles.dateText}>
+              Date:{" "}
+              {(invoiceDate
+                ? new Date(invoiceDate)
+                : new Date()
+              ).toLocaleDateString("en-US", {
+                year: "numeric",
+                month: "long",
+                day: "numeric",
+              })}
+            </Text>
+            <Text style={pdfStyles.dateText}>
+              Time:{" "}
+              {(invoiceDate
+                ? new Date(invoiceDate)
+                : new Date()
+              ).toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+                hour12: true,
+              })}
             </Text>
           </View>
-        ))}
-      </View>
+        </View>
 
-      <View style={pdfStyles.totalSection}>
-        <View style={pdfStyles.totalBox}>
-          <View style={pdfStyles.totalRow}>
-            <Text style={pdfStyles.totalLabel}>Total Value</Text>
-            <Text style={pdfStyles.totalValue}>${total.toFixed(2)}</Text>
+        <View style={[pdfStyles.section, pdfStyles.infoRow]}>
+          <View style={pdfStyles.infoBox}>
+            <Text style={pdfStyles.infoBoxTitle}>Customer Details</Text>
+            <Text style={pdfStyles.label}>Name</Text>
+            <Text style={pdfStyles.value}>
+              {customer?.firstName} {customer?.lastName}
+            </Text>
+            <Text style={pdfStyles.label}>Phone</Text>
+            <Text style={pdfStyles.value}>{customer?.phone}</Text>
+            <Text style={pdfStyles.label}>Govt ID / NID</Text>
+            <Text style={pdfStyles.value}>{customer?.idNumber}</Text>
+          </View>
+          <View style={pdfStyles.infoBox}>
+            <Text style={pdfStyles.infoBoxTitle}>Shop Information</Text>
+            <Text style={[pdfStyles.value, { fontSize: 11 }]}>
+              {shopkeeper?.shopName}
+            </Text>
+            <Text style={pdfStyles.storeValue}>{shopkeeper?.shopAddress}</Text>
+            <Text style={pdfStyles.storeValue}>{shopkeeper?.phone}</Text>
           </View>
         </View>
-      </View>
-      <Text style={pdfStyles.footer}>
-        Verified IMEI and serial numbers are attached with customer
-        identification proof.
-      </Text>
-    </Page>
-  </Document>
-);
+
+        <View style={pdfStyles.section}>
+          <Text style={pdfStyles.sectionTitle}>Purchased Devices</Text>
+          <View style={pdfStyles.tableHeader}>
+            <Text style={pdfStyles.colProduct}>Product Specifications</Text>
+            <Text style={pdfStyles.colQty}>Qty</Text>
+            <Text style={pdfStyles.colSerials}>IMEI / Serials</Text>
+            <Text style={pdfStyles.colPrice}>Price</Text>
+          </View>
+          {items?.map((item: any, index: number) => (
+            <View key={index} style={pdfStyles.row}>
+              <View style={pdfStyles.colProduct}>
+                <Text style={pdfStyles.productName}>{item.name}</Text>
+                <Text style={pdfStyles.modelText}>
+                  {item.storage} • {item.color}
+                </Text>
+              </View>
+              <Text style={pdfStyles.colQty}>{item.quantity}</Text>
+              <View style={pdfStyles.colSerials}>
+                {item.serials.map((serial: string, idx: number) => (
+                  <Text key={idx} style={pdfStyles.serialText}>
+                    • {serial}
+                  </Text>
+                ))}
+              </View>
+              <Text style={pdfStyles.colPrice}>
+                {pdfFormatCurrency(
+                  Number(item.expectedPrice || 0) * Number(item.quantity || 1),
+                )}
+              </Text>
+            </View>
+          ))}
+        </View>
+
+        <View style={pdfStyles.totalSection}>
+          <View style={pdfStyles.totalBox}>
+            <View style={pdfStyles.totalRow}>
+              <Text style={pdfStyles.totalLabel}>Total Value</Text>
+              <Text style={pdfStyles.totalValue}>
+                {pdfFormatCurrency(total)}
+              </Text>
+            </View>
+          </View>
+        </View>
+        <Text style={pdfStyles.footer}>
+          Verified IMEI and serial numbers are attached with customer
+          identification proof.
+        </Text>
+      </Page>
+    </Document>
+  );
+};
 
 export default function CreatePurchaseReceipt() {
   const { data: profileData } = useMyProfile();
+  const { currency, formatCurrency } = useCurrency();
   const { data: categoriesData } = useCategories();
   const session = useSession();
   const shopkeeperId = session?.data?.user?.id;
@@ -823,6 +842,7 @@ export default function CreatePurchaseReceipt() {
         shopkeeper={profileData?.data}
         total={total}
         invoiceDate={invoiceDate}
+        currency={currency}
       />
     );
     const blob = await pdf(doc).toBlob();
@@ -1381,7 +1401,7 @@ export default function CreatePurchaseReceipt() {
                             Item Calculation Subtotal:
                           </span>
                           <span className="text-lg font-black text-primary font-mono">
-                            ${currentItemRowTotal.toFixed(2)}
+                            {formatCurrency(currentItemRowTotal)}
                           </span>
                         </div>
 
@@ -1605,7 +1625,7 @@ export default function CreatePurchaseReceipt() {
                     Grand Total:
                   </span>
                   <span className="text-2xl font-black text-primary font-mono">
-                    ${total.toFixed(2)}
+                    {formatCurrency(total)}
                   </span>
                 </div>
 

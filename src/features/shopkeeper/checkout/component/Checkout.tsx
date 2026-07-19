@@ -5,7 +5,7 @@ import React, { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
-import { useQueryClient } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import {
   Wrench,
   Search,
@@ -48,6 +48,7 @@ import {
 } from "../../inventory/hooks/useInventory";
 import { useGetMyRepairRequests } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // API instance
 import { api } from "@/lib/api";
@@ -77,6 +78,9 @@ export default function Checkout() {
   // Data fetching queries
   const { data: profileData } = useMyProfile();
   const { data: categoriesData } = useCategories();
+  const { currency, formatCurrency } = useCurrency();
+  const { data: categoriesData, isLoading: isCategoriesLoading } =
+    useCategories();
   const { data: inventoryData, isLoading: isInventoryLoading } =
     useMyInventory();
   const { data: cartData, isLoading: isCartLoading } =
@@ -105,6 +109,11 @@ export default function Checkout() {
   const [isNewCustomerModalOpen, setIsNewCustomerModalOpen] = useState(false);
   const [customerSearchQuery, setCustomerSearchQuery] = useState("");
   const [isPlacingOrder, setIsPlacingOrder] = useState(false);
+  const [customerDiscount, setCustomerDiscount] = useState<{
+    id?: string;
+    discountName?: string;
+    percentage: number;
+  } | null>(null);
   const [onlineOrderDetails, setOnlineOrderDetails] = useState({
     marketplace: "",
     orderNumber: "",
@@ -173,6 +182,20 @@ export default function Checkout() {
     () => customersResponse?.data || [],
     [customersResponse],
   );
+
+  const selectedCustomerId =
+    selectedCustomer?._id || selectedCustomer?.id || "";
+
+  const { data: customerDiscountsResponse } = useQuery({
+    queryKey: ["customer-discounts", selectedCustomerId],
+    queryFn: async () => {
+      const response = await api.get(
+        `/customer-discounts/customer/${selectedCustomerId}`,
+      );
+      return response.data;
+    },
+    enabled: !!selectedCustomerId,
+  });
 
   // Filters for Browse Inventory
   const filteredInventory = useMemo(() => {
@@ -274,6 +297,64 @@ export default function Checkout() {
 
   const tax = useMemo(() => subtotal * 0.085, [subtotal]); // 8.5% tax
   const totalPayment = useMemo(() => subtotal + tax, [subtotal, tax]);
+  const selectedCustomerDiscount = useMemo(() => {
+    const discounts = customerDiscountsResponse?.data || [];
+
+    if (!Array.isArray(discounts)) return null;
+
+    const activeDiscounts = discounts.filter((discount: any) => {
+      if (discount.status !== "active") return false;
+      if ((discount.usageLimit ?? 1) <= 0) return false;
+
+      const validFrom = discount.validFrom
+        ? new Date(discount.validFrom)
+        : null;
+      const validUntil = discount.until ? new Date(discount.until) : null;
+      const now = new Date();
+
+      if (validFrom && validFrom > now) return false;
+      if (validUntil && validUntil < now) return false;
+
+      return true;
+    });
+
+    if (!activeDiscounts.length) return null;
+
+    return activeDiscounts.reduce((best: any, current: any) => {
+      if (!best || Number(current.percentage) > Number(best.percentage)) {
+        return current;
+      }
+      return best;
+    }, null);
+  }, [customerDiscountsResponse]);
+
+  useEffect(() => {
+    if (!selectedCustomerDiscount) {
+      setCustomerDiscount(null);
+      return;
+    }
+
+    setCustomerDiscount({
+      id: selectedCustomerDiscount._id,
+      discountName: selectedCustomerDiscount.discountName,
+      percentage: Number(selectedCustomerDiscount.percentage || 0),
+    });
+  }, [selectedCustomerDiscount]);
+
+  const discountAmount = useMemo(() => {
+    if (!customerDiscount?.percentage) return 0;
+    return subtotal * (customerDiscount.percentage / 100);
+  }, [customerDiscount, subtotal]);
+
+  const discountedSubtotal = useMemo(() => {
+    return Math.max(subtotal - discountAmount, 0);
+  }, [subtotal, discountAmount]);
+
+  const tax = useMemo(() => discountedSubtotal * 0.085, [discountedSubtotal]); // 8.5% tax
+  const totalPayment = useMemo(
+    () => discountedSubtotal + tax,
+    [discountedSubtotal, tax],
+  );
   const totalCartCount = useMemo(
     () =>
       orderCartItems.reduce(
@@ -710,8 +791,12 @@ export default function Checkout() {
           subtotalBeforeDiscount={subtotalBeforeDiscount}
           subtotal={subtotal}
           discount={totalDiscount}
+          discountAmount={discountAmount}
+          discountPercentage={customerDiscount?.percentage}
+          discountLabel={customerDiscount?.discountName}
           tax={tax}
           total={totalPayment}
+          currency={currency}
         />
       );
 
@@ -734,6 +819,9 @@ export default function Checkout() {
         customerInfo: customerInfoPayload,
         itemsIds,
         dueAmount: 0, // fully paid
+        discountName: customerDiscount?.discountName,
+        discountPercentage: customerDiscount?.percentage,
+        discountAmount,
       });
 
       // Download file locally
@@ -1060,7 +1148,7 @@ export default function Checkout() {
                     {/* Price and Add Row */}
                     <div className="flex items-center justify-between mt-4">
                       <p className="text-[15px] font-black text-slate-900">
-                        ${item.expectedPrice.toFixed(2)}
+                        {formatCurrency(item.expectedPrice)}
                       </p>
 
                       {/* Quantity select & Add */}
@@ -1379,6 +1467,8 @@ export default function Checkout() {
                       </p>
                       <p className="mt-1 text-sm font-black text-slate-900 line-through decoration-slate-300">
                         ${originalPrice.toFixed(2)}
+                      <p className="text-xs font-black text-slate-950 mt-1">
+                        {formatCurrency(price)}
                       </p>
                     </div>
 
@@ -1582,8 +1672,8 @@ export default function Checkout() {
                             {item?.itemName || "Custom Item"}
                           </p>
                           <p className="text-[10px] font-bold text-slate-500">
-                            Qty {cartItem.quantity} • $
-                            {Number(item?.expectedPrice || 0).toFixed(2)}
+                            Qty {cartItem.quantity} •{" "}
+                            {formatCurrency(Number(item?.expectedPrice || 0))}
                           </p>
                         </div>
                       </label>
@@ -1705,14 +1795,28 @@ export default function Checkout() {
           <div className="flex justify-between">
             <span>Discounted Subtotal</span>
             <span className="text-slate-900">${subtotal.toFixed(2)}</span>
+            <span className="text-slate-900">{formatCurrency(subtotal)}</span>
           </div>
+          {customerDiscount?.percentage ? (
+            <div className="flex justify-between text-emerald-600">
+              <span>
+                Discount ({customerDiscount.percentage}%){" "}
+                {customerDiscount.discountName
+                  ? `• ${customerDiscount.discountName}`
+                  : ""}
+              </span>
+              <span>-{formatCurrency(discountAmount)}</span>
+            </div>
+          ) : null}
           <div className="flex justify-between">
             <span>Tax (8.5%)</span>
-            <span className="text-slate-900">${tax.toFixed(2)}</span>
+            <span className="text-slate-900">{formatCurrency(tax)}</span>
           </div>
           <div className="flex justify-between text-base font-black text-slate-900 border-t border-slate-200/60 pt-2 mt-2">
             <span>Total Payment</span>
-            <span className="text-[#84CC16]">${totalPayment.toFixed(2)}</span>
+            <span className="text-[#84CC16]">
+              {formatCurrency(totalPayment)}
+            </span>
           </div>
         </div>
 

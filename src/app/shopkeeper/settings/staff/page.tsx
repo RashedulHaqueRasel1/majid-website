@@ -1,4 +1,4 @@
-import { redirect } from "next/navigation";
+import StaffManagement from "@/features/shopkeeper/staff/component/StaffManagement";
 
 export const metadata = {
   title: "Staff Management | Shopkeeper Dashboard",
@@ -6,5 +6,5 @@ export const metadata = {
 };
 
 export default function StaffPage() {
-  redirect("/shopkeeper/settings/staff");
+  return <StaffManagement />;
 }
