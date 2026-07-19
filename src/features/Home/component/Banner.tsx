@@ -2,30 +2,24 @@
 
 import {
   Search,
-  ChevronDown,
-  QrCode,
-  LogIn,
-  X,
-  Info,
-  Check,
-  Star,
   SatelliteDish,
   ShieldHalf,
   Globe,
   Cloudy,
   LockKeyhole,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { useState, useEffect, useMemo } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
 import { getServicesApi } from "@/features/shopkeeper/scanDevice/api/scanDevice.api";
-import {
+import type {
   IMEIService,
   ServiceCategory,
 } from "@/features/shopkeeper/scanDevice/types/scanDevice.types";
 import { ScannerModal } from "@/components/shared/website/ScannerModal";
 import { GuestLoginModal } from "@/components/shared/website/GuestLoginModal";
+import { HeroVerificationConsole } from "./banner/HeroVerificationConsole";
 
 export default function Banner() {
   const [imei, setImei] = useState("");
@@ -34,23 +28,24 @@ export default function Banner() {
   const [serviceCategories, setServiceCategories] = useState<ServiceCategory[]>(
     [],
   );
-  const [services, setServices] = useState<IMEIService[]>([]);
   const [selectedService, setSelectedService] = useState<IMEIService | null>(
     null,
   );
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
   const [isScannerOpen, setIsScannerOpen] = useState(false);
+  const [isServicesLoading, setIsServicesLoading] = useState(true);
   const { status } = useSession();
   const router = useRouter();
 
   useEffect(() => {
     const fetchServices = async () => {
+      setIsServicesLoading(true);
+
       try {
         const response = await getServicesApi();
         if (response.success && response.data) {
           setServiceCategories(response.data);
           const allServices = response.data.flatMap((cat) => cat.services);
-          setServices(allServices);
 
           // Auto-select first free service for guest users
           if (status !== "authenticated") {
@@ -62,6 +57,8 @@ export default function Banner() {
         }
       } catch (err) {
         console.error("Failed to fetch services:", err);
+      } finally {
+        setIsServicesLoading(false);
       }
     };
     fetchServices();
@@ -94,20 +91,6 @@ export default function Banner() {
       ? [favouriteCategory, ...sortedOtherCategories]
       : sortedOtherCategories;
   }, [serviceCategories, status]);
-
-  // Filter categories and services based on search term
-  const filteredCategories = orderedCategories
-    .map((cat) => ({
-      ...cat,
-      services: cat.services.filter((svc) =>
-        svc.name.toLowerCase().includes(searchTerm.toLowerCase()),
-      ),
-    }))
-    .filter((cat) => cat.services.length > 0);
-
-  const handleScanClick = () => {
-    setIsScannerOpen(true);
-  };
 
   const handleSearch = () => {
     if (!imei) return;
@@ -165,12 +148,12 @@ export default function Banner() {
     >
       {/* Background */}
       <div className="absolute inset-0 z-0 bg-background">
-        <div className="absolute left-1/2 top-[42%] h-[320px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.7] bg-[linear-gradient(90deg,rgba(183,255,72,0.96)_0%,rgba(138,226,116,0.82)_34%,rgba(102,200,194,0.56)_50%,rgba(62,146,255,0.84)_68%,rgba(31,105,235,0.96)_100%)] blur-[58px] md:h-[560px] md:w-[1120px] md:blur-[88px] lg:h-[720px] lg:w-[1280px] lg:blur-[108px]" />
-        <div className="absolute left-1/2 top-[42%] h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.7] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.8)_0%,rgba(231,255,236,0.44)_28%,rgba(199,234,255,0.2)_52%,rgba(255,255,255,0)_78%)] blur-[22px] dark:hidden md:h-[480px] md:w-[920px] md:blur-[34px] lg:h-[560px] lg:w-[1060px] lg:blur-[42px]" />
-        <div className="absolute left-1/2 top-[42%] hidden h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.46] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.18)_0%,rgba(103,232,249,0.14)_26%,rgba(59,130,246,0.12)_48%,rgba(255,255,255,0)_78%)] blur-[24px] dark:block md:h-[480px] md:w-[920px] md:blur-[36px] lg:h-[560px] lg:w-[1060px] lg:blur-[44px]" />
+        <div className="absolute left-1/2 top-[42%] h-[320px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[1] bg-[linear-gradient(90deg,rgba(183,255,72,0.96)_0%,rgba(138,226,116,0.82)_24%,rgba(102,200,194,0.56)_50%,rgba(62,146,255,0.84)_68%,rgba(31,105,235,0.96)_100%)] blur-[58px] md:h-[560px] md:w-[1120px] md:blur-[88px] lg:h-[720px] lg:w-[1280px] lg:blur-[108px]" />
+        <div className="absolute left-1/2 top-[42%] h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.46] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.8)_0%,rgba(231,255,236,0.44)_28%,rgba(199,234,255,0.2)_52%,rgba(255,255,255,0)_78%)] blur-[22px] dark:hidden md:h-[480px] md:w-[920px] md:blur-[34px] lg:h-[560px] lg:w-[1060px] lg:blur-[42px]" />
+        <div className="absolute left-1/2 top-[42%] hidden h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[1] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.18)_0%,rgba(103,232,249,0.14)_26%,rgba(59,130,246,0.12)_48%,rgba(255,255,255,0)_78%)] blur-[24px] dark:block md:h-[480px] md:w-[920px] md:blur-[36px] lg:h-[560px] lg:w-[1060px] lg:blur-[44px]" />
         <div className="absolute left-1/2 top-[42%] h-[340px] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/8 opacity-[0.7] [mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] backdrop-blur-[18px] dark:hidden md:h-[520px] md:w-[980px] lg:h-[610px] lg:w-[1160px]" />
-        <div className="absolute left-1/2 top-[42%] hidden h-[340px] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900/20 opacity-[0.55] [mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] backdrop-blur-[18px] dark:block md:h-[520px] md:w-[980px] lg:h-[610px] lg:w-[1160px]" />
-        <div className="absolute left-1/2 top-[42%] hidden h-[760px] w-[1540px] -translate-x-1/2 -translate-y-1/2 items-start opacity-[0.36] [mask-image:radial-gradient(ellipse_63%_38%_at_50%_42%,black_0%,black_58%,rgba(0,0,0,0.65)_72%,transparent_100%)] lg:flex">
+        <div className="absolute left-1/2 top-[42%] hidden h-[340px] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-slate-900/0 opacity-[0.55] [mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] backdrop-blur-[18px] dark:block md:h-[520px] md:w-[980px] lg:h-[610px] lg:w-[1160px]" />
+        <div className="absolute left-1/2 top-[42%] hidden h-[760px] w-[1540px] -translate-x-1/2 -translate-y-1/2 items-start opacity-[.5] [mask-image:radial-gradient(ellipse_63%_38%_at_50%_42%,black_0%,black_58%,rgba(0,0,0,0.65)_72%,transparent_100%)] lg:flex">
           {heroBackgroundColumns.map((_, index) => (
             <div key={index} className="relative h-[1200px] w-24 shrink-0">
               <div className="absolute inset-0 bg-[linear-gradient(90deg,rgba(255,255,255,0.42)_0%,rgba(255,255,255,0.14)_42%,rgba(255,255,255,0.04)_100%)] dark:bg-[linear-gradient(90deg,rgba(255,255,255,0.16)_0%,rgba(148,163,184,0.08)_42%,rgba(255,255,255,0.02)_100%)]" />
@@ -192,10 +175,10 @@ export default function Banner() {
           className="w-full max-w-[1100px] text-[32px] font-black leading-[1.15] text-white sm:text-5xl md:text-6xl lg:text-[72px] lg:leading-[1.2]"
         >
           <span className="hidden whitespace-nowrap lg:block">
-            Verify Global <span className="text-[#BEFB6D]">IMEI</span>
+            Verify Global <span className="text-primary">IMEI</span>
           </span>
           <span className="hidden whitespace-nowrap lg:block">
-            <span className="text-[#BEFB6D]">Intelligence</span>{" "}
+            <span className="text-primary">Intelligence</span>{" "}
             <span>in Real-Time</span>
           </span>
           <span className="block lg:hidden">
@@ -216,247 +199,42 @@ export default function Banner() {
           device transactions and inventory management.
         </motion.p>
 
-        {/* Search Bar Wrapper */}
+        {/* Verification console */}
         <motion.div
           initial={{ opacity: 0, scale: 0.95 }}
           animate={{ opacity: 1, scale: 1 }}
           transition={{ delay: 0.4 }}
-          className="relative mt-10 w-full max-w-[672px] pt-4 md:pt-6"
+          className="relative z-40 mt-10 w-full max-w-5xl" // Increased z-index to z-40 so dropdown overlaps tags
         >
-          {/* Decorative Rings - Hidden on very small screens to avoid overflow layout bugs */}
-          <div className="pointer-events-none absolute inset-x-[-8px] md:inset-x-[-16px] bottom-[-8px] md:bottom-[-16px] top-2 rounded-[32px] md:rounded-[200px] border border-white/30 md:border-2" />
-          <div className="pointer-events-none absolute inset-x-[-16px] md:inset-x-[-32px] bottom-[-16px] md:bottom-[-32px] top-[-4px] md:top-[-8px] rounded-[40px] md:rounded-[216px] border border-white/10 md:border-2 hidden sm:block" />
-
-          {/* Main Search Input Box */}
-          <div className="relative z-10 flex min-h-[64px] md:min-h-[68px] items-center gap-3 md:gap-4 rounded-[24px] md:rounded-full bg-background py-2 pl-4 pr-2 md:pl-6 shadow-[0_20px_40px_rgba(0,0,0,0.4)] max-md:flex-col max-md:p-3 border border-border">
-            <div className="flex min-w-0 flex-1 items-center gap-2 md:gap-3 w-full">
-              <Search className="h-5 w-5 md:h-6 md:w-6 shrink-0 text-muted-foreground" />
-
-              <textarea
-                value={imei}
-                onChange={(e) => setImei(e.target.value)}
-                onKeyDown={(e) => {
-                  if (e.key === "Enter" && (e.ctrlKey || e.metaKey)) {
-                    e.preventDefault();
-                    handleSearch();
-                  }
-                }}
-                placeholder="Enter IMEI or Serial Number..."
-                rows={1}
-                className="min-w-0 flex-1 bg-transparent py-1.5 text-sm md:text-base font-medium text-foreground outline-none placeholder:text-muted-foreground resize-none overflow-y-auto custom-scrollbar leading-normal h-[36px] md:h-[44px] max-h-[80px]"
-              />
-
-              <button
-                onClick={handleScanClick}
-                title="Scan IMEI"
-                className="flex h-9 w-9 md:h-10 md:w-10 shrink-0 cursor-pointer items-center justify-center rounded-xl transition-all hover:bg-primary/10 hover:text-primary group"
-              >
-                <QrCode className="h-5 w-5 md:h-6 md:w-6 text-muted-foreground group-hover:text-primary transition-colors" />
-              </button>
-            </div>
-
-            {/* Dropdown Container */}
-            <div className="relative shrink-0 w-full md:w-auto">
-              <button
-                onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-                className="flex h-[48px] md:h-[52px] cursor-pointer items-center justify-center gap-2 rounded-xl md:rounded-full bg-primary/80 px-5 md:px-8 text-primary-foreground shadow-md transition-all hover:bg-primary w-full"
-              >
-                <span className="whitespace-nowrap text-sm md:text-base font-extrabold truncate max-w-[200px] md:max-w-none">
-                  {selectedService ? selectedService.name : "Choose Service"}
-                </span>
-                <ChevronDown
-                  className={`h-4 w-4 md:h-5 md:w-5 shrink-0 transition-transform duration-300 ${isDropdownOpen ? "rotate-180" : ""}`}
-                  strokeWidth={3}
-                />
-              </button>
-
-              <AnimatePresence>
-                {isDropdownOpen && (
-                  <motion.div
-                    initial={{ opacity: 0, y: 15, scale: 0.98 }}
-                    animate={{ opacity: 1, y: 0, scale: 1 }}
-                    exit={{ opacity: 0, y: 15, scale: 0.98 }}
-                    className="absolute right-0 top-full z-[100] mt-3 w-[min(450px,calc(100vw-32px))] overflow-hidden rounded-[24px] md:rounded-[32px] border border-border bg-card/95 shadow-[0_30px_70px_rgba(0,0,0,0.2)] backdrop-blur-xl"
-                  >
-                    {/* Search inside Dropdown */}
-                    <div className="p-3 md:p-4 border-b border-border bg-muted/50">
-                      <div className="relative">
-                        <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-muted-foreground" />
-                        <input
-                          type="text"
-                          placeholder="Search for a service..."
-                          value={searchTerm}
-                          onChange={(e) => setSearchTerm(e.target.value)}
-                          className="w-full pl-11 pr-4 py-2.5 bg-background border border-border rounded-xl md:rounded-2xl outline-none focus:border-primary transition-all text-xs md:text-sm font-bold text-foreground"
-                          autoFocus
-                        />
-                      </div>
-                    </div>
-
-                    {/* Dropdown Items List */}
-                    <div className="max-h-[320px] md:max-h-[450px] overflow-y-auto custom-scrollbar p-2 md:p-3">
-                      {filteredCategories.length > 0 ? (
-                        filteredCategories.map((cat) => {
-                          const isFavourite =
-                            cat.category.toLowerCase() === "fevourite";
-
-                          return (
-                            <div
-                              key={cat.category}
-                              className={`mb-4 last:mb-1 ${isFavourite ? "bg-amber-50/20 rounded-2xl" : ""}`}
-                            >
-                              <h3 className="px-3 mb-2 text-[10px] font-black uppercase tracking-[0.15em] text-muted-foreground/60 flex items-center gap-2">
-                                <div className="h-px flex-1 bg-border/50" />
-                                {isFavourite && (
-                                  <Star
-                                    size={12}
-                                    className="text-amber-500 fill-amber-500"
-                                  />
-                                )}
-                                <span
-                                  className={
-                                    isFavourite ? "text-amber-500" : ""
-                                  }
-                                >
-                                  {cat.category}
-                                </span>
-                                {isFavourite && (
-                                  <span className="text-[8px] font-bold text-amber-600 bg-amber-200/50 px-1.5 py-0.5 rounded-full🇳">
-                                    Featured
-                                  </span>
-                                )}
-                                <div className="h-px flex-1 bg-border/50" />
-                              </h3>
-                              <div className="space-y-1">
-                                {cat.services.map((svc) => {
-                                  const isApple =
-                                    cat.category
-                                      .toLowerCase()
-                                      .includes("apple") ||
-                                    svc.name.toLowerCase().includes("apple") ||
-                                    svc.name.toLowerCase().includes("iphone");
-                                  const isSamsung =
-                                    cat.category
-                                      .toLowerCase()
-                                      .includes("samsung") ||
-                                    svc.name.toLowerCase().includes("samsung");
-                                  const isSelected =
-                                    selectedService?._id === svc._id;
-                                  const isFavouriteService = isFavourite;
-
-                                  return (
-                                    <button
-                                      key={svc._id}
-                                      onClick={() => {
-                                        setSelectedService(svc);
-                                        setIsDropdownOpen(false);
-                                        setSearchTerm("");
-                                      }}
-                                      className={`w-full flex items-center gap-3 p-3 rounded-[16px] md:rounded-[20px] transition-all group ${
-                                        isSelected
-                                          ? "bg-primary text-primary-foreground shadow-lg shadow-lime-500/30"
-                                          : isFavouriteService
-                                            ? "hover:bg-amber-50/50 border border-transparent hover:border-amber-200"
-                                            : "hover:bg-muted border border-transparent hover:border-border"
-                                      }`}
-                                    >
-                                      <div
-                                        className={`w-10 h-10 md:w-12 md:h-12 rounded-xl flex items-center justify-center shrink-0 transition-colors ${
-                                          isSelected
-                                            ? "bg-white/20"
-                                            : isFavouriteService
-                                              ? "bg-amber-100 text-amber-600"
-                                              : isApple
-                                                ? "bg-muted text-muted-foreground"
-                                                : isSamsung
-                                                  ? "bg-blue-500/10 text-blue-500"
-                                                  : "bg-green-500/10 text-green-500"
-                                        }`}
-                                      >
-                                        {isFavouriteService ? (
-                                          <Star
-                                            size={18}
-                                            className="fill-amber-500 md:w-[22px] md:h-[22px]"
-                                          />
-                                        ) : (
-                                          <Info
-                                            size={18}
-                                            className="md:w-[22px] md:h-[22px]"
-                                          />
-                                        )}
-                                      </div>
-                                      <div className="flex flex-col items-start flex-1 min-w-0">
-                                        <span
-                                          className={`text-xs md:text-[14px] font-black truncate w-full text-left ${
-                                            isSelected
-                                              ? "text-white"
-                                              : "text-foreground"
-                                          }`}
-                                        >
-                                          {svc.name}
-                                        </span>
-                                        <div className="flex items-center gap-2 mt-0.5">
-                                          <span
-                                            className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest ${isSelected ? "text-white/70" : "text-muted-foreground"}`}
-                                          >
-                                            ID: {svc.serviceId || "N/A"}
-                                          </span>
-                                          <div className="w-1 h-1 rounded-full bg-current opacity-30" />
-                                          <span
-                                            className={`text-xs font-black ${isSelected ? "text-white" : "text-primary"}`}
-                                          >
-                                            {svc.priceLabel}
-                                          </span>
-                                        </div>
-                                      </div>
-                                      {isSelected && (
-                                        <motion.div
-                                          layoutId="selected-check"
-                                          className="shrink-0"
-                                        >
-                                          <Check size={18} strokeWidth={4} />
-                                        </motion.div>
-                                      )}
-                                    </button>
-                                  );
-                                })}
-                              </div>
-                            </div>
-                          );
-                        })
-                      ) : (
-                        <div className="p-8 text-center space-y-2">
-                          <div className="w-12 h-12 bg-muted rounded-full flex items-center justify-center mx-auto text-muted-foreground/60">
-                            <Search size={24} />
-                          </div>
-                          <p className="text-muted-foreground font-bold text-xs md:text-sm">
-                            No services found for &quot;{searchTerm}&quot;
-                          </p>
-                        </div>
-                      )}
-                    </div>
-
-                    <div className="p-3 md:p-4 bg-muted border-t border-border flex items-center justify-between">
-                      <span className="text-[10px] md:text-[11px] font-bold text-muted-foreground uppercase tracking-widest">
-                        {services.length} Services available
-                      </span>
-                      <button className="text-[10px] md:text-[11px] font-black text-primary uppercase tracking-widest hover:underline">
-                        View All
-                      </button>
-                    </div>
-                  </motion.div>
-                )}
-              </AnimatePresence>
-            </div>
-          </div>
+          <HeroVerificationConsole
+            categories={orderedCategories}
+            ctaLabel={
+              status !== "authenticated"
+                ? "Free Check"
+                : selectedService
+                  ? "Enter"
+                  : "Free Checks"
+            }
+            imei={imei}
+            isPickerOpen={isDropdownOpen}
+            isServicesLoading={isServicesLoading}
+            onImeiChange={setImei}
+            onPickerOpenChange={setIsDropdownOpen}
+            onScan={() => setIsScannerOpen(true)}
+            onSearchTermChange={setSearchTerm}
+            onSelectService={setSelectedService}
+            onSubmit={handleSearch}
+            searchTerm={searchTerm}
+            selectedService={selectedService}
+          />
         </motion.div>
 
-        {/* Tags/Categories Section (Unchanged as requested, perfectly optimized) */}
+        {/* Tags/Categories Section - Enhanced Designs & Layout */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 w-full max-w-6xl overflow-hidden"
+          className="relative z-10 mt-12 w-full max-w-6xl overflow-hidden" // Lowered z-index to z-10
         >
           <div className="flex w-full items-center justify-start gap-4 overflow-x-auto pb-4 px-4 scrollbar-none md:justify-center md:px-0 snap-x snap-mandatory">
             {quickChecks
@@ -467,62 +245,43 @@ export default function Banner() {
                 return (
                   <motion.button
                     key={i}
-                    whileHover={{ y: -5, scale: 1.02 }}
-                    whileTap={{ scale: 0.98 }}
+                    whileHover={{ y: -4 }}
+                    whileTap={{ scale: 0.97 }}
                     onClick={() => {
                       setSearchTerm(tag.keyword);
                       setIsDropdownOpen(true);
                     }}
                     className="
-                      group relative flex cursor-pointer flex-col items-center justify-center gap-2 rounded-2xl
-                      border border-white/20 bg-white/10 backdrop-blur-xl
-                      shadow-[inset_0_1px_0_rgba(255,255,255,0.15)] 
-                      transition-all duration-300 hover:bg-white/10 hover:shadow-[0_8px_25px_rgba(132,204,22,0.2)]
+                      group relative flex cursor-pointer flex-col items-center justify-center gap-2.5 rounded-2xl
+                      border border-white/10 bg-slate-50/5 backdrop-blur-md dark:bg-slate-900/20
+                      transition-all duration-300 ease-out
+                      hover:border-primary/40 hover:bg-primary/5 hover:shadow-[0_10px_30px_-10px_rgba(132,204,22,0.4)]
                       snap-center shrink-0 text-center
-                      w-[140px] h-[124px] p-4
-                      max-md:w-[105px] max-md:h-[100px] max-md:p-2.5
+                      w-[130px] h-[120px] p-4
+                      max-md:w-[110px] max-md:h-[100px] max-md:p-2.5
                     "
                   >
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-white/10 via-transparent to-white/5 opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
-                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-r from-primary/0 via-primary/30 to-primary/0 opacity-0 blur-xl transition-opacity duration-300 group-hover:opacity-100" />
+                    {/* Subtle Background Gradient on Hover */}
+                    <div className="absolute inset-0 rounded-2xl bg-gradient-to-br from-primary/10 to-transparent opacity-0 transition-opacity duration-300 group-hover:opacity-100" />
 
-                    <div
-                      className="relative z-10 flex items-center justify-center rounded-xl bg-gradient-to-br from-primary/10 to-primary/5 shadow-lg transition-all duration-300 group-hover:from-primary/10 group-hover:to-primary/15 group-hover:shadow-primary/15
-                      h-12 w-12 max-md:h-9 max-md:w-9 shrink-0 mx-auto"
-                    >
-                      <Icon className="text-primary h-[22px] w-[22px] max-md:h-[18px] max-md:w-[18px]" />
+                    {/* Icon Box */}
+                    <div className="relative z-10 flex items-center justify-center rounded-xl bg-white/10 border border-white/10 p-2.5 transition-all duration-300 group-hover:scale-110 group-hover:bg-primary/20 group-hover:border-primary/40 max-md:p-2">
+                      <Icon className="h-8 w-8 text-primary transition-colors duration-300 group-hover:text-[#BEFB6D]" />
                     </div>
 
-                    <div className="relative z-10 flex items-center justify-center w-full min-w-0 flex-1">
-                      <span className="text-sm font-extrabold text-black/50 dark:text-white leading-tight break-words max-md:text-[11px] line-clamp-2">
+                    {/* Label */}
+                    <div className="relative z-10 flex items-center justify-center w-full min-w-0">
+                      <span className="text-[13px] font-bold text-slate-600 dark:text-slate-300 leading-tight break-words transition-colors duration-300 group-hover:text-slate-900 dark:group-hover:text-white max-md:text-[11px] line-clamp-2">
                         {tag.label}
                       </span>
                     </div>
 
-                    <div className="absolute bottom-2 left-1/2 h-0.5 w-0 -translate-x-1/2 rounded-full bg-primary transition-all duration-300 group-hover:w-8 hidden md:block" />
+                    {/* Animated Bottom Accent Bar */}
+                    <div className="absolute bottom-0 left-1/2 h-[3px] w-0 -translate-x-1/2 rounded-t-full bg-primary transition-all duration-300 ease-out group-hover:w-12" />
                   </motion.button>
                 );
               })}
           </div>
-        </motion.div>
-
-        {/* Submit Button Action */}
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          transition={{ delay: 0.8 }}
-          className="mt-6 w-full flex justify-center"
-        >
-          <button
-            onClick={handleSearch}
-            className="h-12 w-full max-w-[240px] sm:w-auto cursor-pointer rounded-full bg-primary/80 px-8 text-base font-extrabold leading-none text-primary-foreground shadow-md transition-all hover:bg-primary active:scale-95"
-          >
-            {status !== "authenticated"
-              ? "Free Check"
-              : selectedService
-                ? "Enter"
-                : "Free Checks"}
-          </button>
         </motion.div>
 
         {/* Guest info badge */}
@@ -533,7 +292,7 @@ export default function Banner() {
             transition={{ delay: 1 }}
             className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-white/10 border border-white/20 backdrop-blur-sm"
           >
-            <span className="text-[11px] font-bold text-white/80">
+            <span className="text-[11px] font-bold text-slate-600 dark:text-white/80">
               ✅ 2 free reports available — no account needed
             </span>
           </motion.div>
