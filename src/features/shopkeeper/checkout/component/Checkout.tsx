@@ -1,7 +1,7 @@
 /* eslint-disable @typescript-eslint/no-explicit-any */
 "use client";
 
-import React, { useEffect, useState, useMemo, useRef } from "react";
+import React, { useState, useMemo, useRef } from "react";
 import Image from "next/image";
 import { useRouter } from "next/navigation";
 import { useSession } from "next-auth/react";
@@ -18,19 +18,18 @@ import {
   ChevronRight,
   Check,
   X,
-  ArrowLeft,
   Loader2,
-  Sparkles,
-  CheckCircle2,
-  ChevronDown,
-  Mail,
-  Phone,
-  MapPin,
   UserPlus,
   AlertCircle,
   FileText,
+  PencilLine,
+  Tag,
+  Sparkles,
+  Smartphone,
+  X as CloseIcon,
+  CheckCircle2,
 } from "lucide-react";
-import { motion, AnimatePresence } from "framer-motion";
+import { motion } from "framer-motion";
 import { toast } from "sonner";
 import { pdf } from "@react-pdf/renderer";
 import QRCode from "qrcode";
@@ -60,6 +59,7 @@ import ReturnInvoiceModal from "./ReturnInvoiceModal";
 // UI Components
 import {
   Dialog,
+  DialogClose,
   DialogContent,
   DialogHeader,
   DialogTitle,
@@ -76,8 +76,7 @@ export default function Checkout() {
 
   // Data fetching queries
   const { data: profileData } = useMyProfile();
-  const { data: categoriesData, isLoading: isCategoriesLoading } =
-    useCategories();
+  const { data: categoriesData } = useCategories();
   const { data: inventoryData, isLoading: isInventoryLoading } =
     useMyInventory();
   const { data: cartData, isLoading: isCartLoading } =
@@ -115,10 +114,7 @@ export default function Checkout() {
     from: "",
     deliveryTo: "",
     paymentMethod: "cash-on-delivery" as
-      | "cash-on-delivery"
-      | "cash"
-      | "online"
-      | "card",
+      "cash-on-delivery" | "cash" | "online" | "card",
     selectedCartItemIds: [] as string[],
   });
 
@@ -136,6 +132,16 @@ export default function Checkout() {
     phone: "",
     address: "",
   });
+  const [manualPrices, setManualPrices] = useState<Record<string, string>>({});
+  const [pulledRepairItem, setPulledRepairItem] = useState<any | null>(null);
+  const [dismissedRecommendationKey, setDismissedRecommendationKey] = useState<
+    string | null
+  >(null);
+  const [selectedRecommendationState, setSelectedRecommendationState] =
+    useState<{
+      key: string;
+      ids: string[];
+    }>({ key: "", ids: [] });
 
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -156,35 +162,6 @@ export default function Checkout() {
     () => cartItems.map((item: any) => item._id).filter(Boolean),
     [cartItems],
   );
-
-  useEffect(() => {
-    setDeliveryDetails((prev) => {
-      const existingSelectedIds = prev.selectedCartItemIds.filter((id) =>
-        cartItemIds.includes(id),
-      );
-      const newCartItemIds = cartItemIds.filter(
-        (id) => !prev.selectedCartItemIds.includes(id),
-      );
-      const nextSelectedCartItemIds = [
-        ...existingSelectedIds,
-        ...newCartItemIds,
-      ];
-
-      if (
-        nextSelectedCartItemIds.length === prev.selectedCartItemIds.length &&
-        nextSelectedCartItemIds.every(
-          (id, index) => id === prev.selectedCartItemIds[index],
-        )
-      ) {
-        return prev;
-      }
-
-      return {
-        ...prev,
-        selectedCartItemIds: nextSelectedCartItemIds,
-      };
-    });
-  }, [cartItemIds]);
 
   const repairRequests = useMemo(() => {
     return (repairRequestsData?.data || []).filter(
@@ -246,26 +223,178 @@ export default function Checkout() {
   }, [customers, customerSearchQuery]);
 
   // ─── Calculations ──────────────────────────────────────────────────────────
+  const selectedDeliveryItemIds = useMemo(() => {
+    const existingSelectedIds = deliveryDetails.selectedCartItemIds.filter(
+      (id) => cartItemIds.includes(id),
+    );
+    const newCartItemIds = cartItemIds.filter(
+      (id) => !existingSelectedIds.includes(id),
+    );
+
+    return [...existingSelectedIds, ...newCartItemIds];
+  }, [cartItemIds, deliveryDetails.selectedCartItemIds]);
+
   const orderCartItems = useMemo(() => {
-    if (checkoutMode !== "delivery") return cartItems;
+    if (checkoutMode !== "delivery") {
+      return pulledRepairItem ? [pulledRepairItem, ...cartItems] : cartItems;
+    }
 
     return cartItems.filter((item: any) =>
-      deliveryDetails.selectedCartItemIds.includes(item._id),
+      selectedDeliveryItemIds.includes(item._id),
     );
-  }, [cartItems, checkoutMode, deliveryDetails.selectedCartItemIds]);
+  }, [cartItems, checkoutMode, pulledRepairItem, selectedDeliveryItemIds]);
 
   const subtotal = useMemo(() => {
     return orderCartItems.reduce((sum, item) => {
-      const price = item.itemId?.expectedPrice || 0;
+      const originalPrice = Number(item.itemId?.expectedPrice || 0);
+      const manualValue = manualPrices[item._id];
+      const parsedManual = Number(manualValue);
+      const effectivePrice =
+        manualValue !== undefined &&
+        manualValue !== "" &&
+        Number.isFinite(parsedManual) &&
+        parsedManual >= 0
+          ? parsedManual
+          : originalPrice;
+
+      return sum + effectivePrice * item.quantity;
+    }, 0);
+  }, [manualPrices, orderCartItems]);
+
+  const subtotalBeforeDiscount = useMemo(() => {
+    return orderCartItems.reduce((sum, item) => {
+      const price = Number(item.itemId?.expectedPrice || 0);
       return sum + price * item.quantity;
     }, 0);
   }, [orderCartItems]);
 
+  const totalDiscount = useMemo(() => {
+    return Math.max(0, subtotalBeforeDiscount - subtotal);
+  }, [subtotalBeforeDiscount, subtotal]);
+
   const tax = useMemo(() => subtotal * 0.085, [subtotal]); // 8.5% tax
   const totalPayment = useMemo(() => subtotal + tax, [subtotal, tax]);
   const totalCartCount = useMemo(
-    () => cartItems.reduce((sum, item) => sum + item.quantity, 0),
-    [cartItems],
+    () =>
+      orderCartItems.reduce(
+        (sum, item: any) => sum + Number(item.quantity || 0),
+        0,
+      ),
+    [orderCartItems],
+  );
+
+  const recommendationContext = useMemo(() => {
+    const combinedText = orderCartItems
+      .map((cartItem: any) =>
+        [
+          cartItem?.itemId?.itemName,
+          cartItem?.itemId?.brand,
+          cartItem?.itemId?.categoryId?.name,
+          cartItem?.customer?.deviceModel,
+        ]
+          .filter(Boolean)
+          .join(" "),
+      )
+      .join(" ")
+      .toLowerCase();
+
+    if (
+      /(iphone|ipad|samsung|galaxy|phone|mobile|motorola|pixel|xiaomi|redmi|repair)/.test(
+        combinedText,
+      )
+    ) {
+      return {
+        detectedCategory: "Phone",
+        keywords: ["screen protector", "case", "charger"],
+      };
+    }
+
+    if (
+      /(laptop|macbook|notebook|thinkpad|dell xps|hp elitebook)/.test(
+        combinedText,
+      )
+    ) {
+      return {
+        detectedCategory: "Laptop",
+        keywords: ["bag", "mouse", "charger"],
+      };
+    }
+
+    return null;
+  }, [orderCartItems]);
+
+  const recommendedAddOns = useMemo(() => {
+    if (!recommendationContext) {
+      return [];
+    }
+
+    const selectedIds = new Set<string>();
+
+    return recommendationContext.keywords
+      .map((keyword) => {
+        const match = inventoryItems.find((item: any) => {
+          if (selectedIds.has(item._id)) {
+            return false;
+          }
+
+          const haystack = [
+            item?.itemName,
+            item?.brand,
+            item?.categoryId?.name,
+            item?.productDetails,
+          ]
+            .filter(Boolean)
+            .join(" ")
+            .toLowerCase();
+
+          return haystack.includes(keyword);
+        });
+
+        if (match?._id) {
+          selectedIds.add(match._id);
+          return {
+            id: match._id,
+            keyword,
+            item: match,
+          };
+        }
+
+        return null;
+      })
+      .filter(Boolean) as Array<{
+      id: string;
+      keyword: string;
+      item: any;
+    }>;
+  }, [inventoryItems, recommendationContext]);
+
+  const recommendationKey = useMemo(() => {
+    if (!recommendationContext || recommendedAddOns.length === 0) {
+      return "";
+    }
+
+    return `${recommendationContext.detectedCategory}:${recommendedAddOns
+      .map((addon) => addon.id)
+      .join(",")}:${orderCartItems.map((item: any) => item._id).join(",")}`;
+  }, [orderCartItems, recommendedAddOns, recommendationContext]);
+
+  const selectedRecommendationIds =
+    selectedRecommendationState.key === recommendationKey
+      ? selectedRecommendationState.ids
+      : recommendedAddOns.map((addon) => addon.id);
+
+  const isRecommendationOpen =
+    Boolean(recommendationKey) &&
+    recommendationKey !== dismissedRecommendationKey &&
+    recommendedAddOns.length > 0;
+
+  const selectedRecommendationItems = recommendedAddOns.filter((addon) =>
+    selectedRecommendationIds.includes(addon.id),
+  );
+
+  const selectedRecommendationTotal = selectedRecommendationItems.reduce(
+    (sum, addon) => sum + Number(addon.item?.expectedPrice || 0),
+    0,
   );
 
   // ─── Cart Action Handlers ──────────────────────────────────────────────────
@@ -312,7 +441,7 @@ export default function Checkout() {
       try {
         await deleteCartItem(cartItemId);
         toast.success("Item removed from cart");
-      } catch (err) {
+      } catch {
         toast.error("Failed to remove item");
       }
       return;
@@ -328,29 +457,49 @@ export default function Checkout() {
       queryClient.invalidateQueries({
         queryKey: INVENTORY_KEYS.shopkeeperCart(shopkeeperId),
       });
-    } catch (err) {
+    } catch {
       toast.error("Failed to adjust quantity");
     }
   };
 
   const handleDeleteCartItem = async (cartItemId: string) => {
+    if (cartItemId === pulledRepairItem?._id) {
+      setPulledRepairItem(null);
+      setManualPrices((prev) => {
+        const next = { ...prev };
+        delete next[cartItemId];
+        return next;
+      });
+      toast.success("Pulled repair item removed");
+      return;
+    }
+
     try {
       await deleteCartItem(cartItemId);
+      setManualPrices((prev) => {
+        const next = { ...prev };
+        delete next[cartItemId];
+        return next;
+      });
       toast.success("Item removed from cart");
-    } catch (err) {
+    } catch {
       toast.error("Failed to remove item");
     }
   };
 
   const handleClearOrder = async () => {
-    if (cartItems.length === 0) return;
+    if (orderCartItems.length === 0) return;
     if (!confirm("Are you sure you want to clear the current order?")) return;
 
     try {
-      await deleteAllCartItems();
+      if (cartItems.length > 0) {
+        await deleteAllCartItems();
+      }
       setSelectedCustomer(null);
+      setManualPrices({});
+      setPulledRepairItem(null);
       toast.success("Order details cleared");
-    } catch (err) {
+    } catch {
       toast.error("Failed to clear order");
     }
   };
@@ -383,14 +532,13 @@ export default function Checkout() {
         });
         toast.success("Customer registered successfully");
       }
-    } catch (err) {
+    } catch {
       toast.error("Failed to register customer");
     }
   };
 
   // ─── Ready for Collection Handler ──────────────────────────────────────────
   const handlePullRepairOrder = (req: any) => {
-    // Set customer
     const requestCustomer = {
       firstName: req.firstName || "Customer",
       lastName: req.lastName || "",
@@ -398,25 +546,35 @@ export default function Checkout() {
       phone: req.phoneNumber || "",
       address: req.description || "",
     };
+
     setSelectedCustomer(requestCustomer);
     setCheckoutMode("repair");
+    setPulledRepairItem({
+      _id: `repair:${req._id}`,
+      quantity: 1,
+      type: "repair",
+      repairRequestId: req._id,
+      customer: requestCustomer,
+      itemId: {
+        _id: `repair:${req._id}`,
+        itemName: `${req.deviceModel || "Device"} Repair`,
+        brand: "Repair Service",
+        currentState: "new",
+        expectedPrice: Number(req.price || 0),
+        imeiNumber: req.IMEINumber || "N/A",
+        image: req.images?.[0] ? { url: req.images[0].url } : undefined,
+      },
+    });
 
-    // Add service to checkout list
-    // Find if we have a service item in our inventory
-    const serviceItem = inventoryItems.find(
-      (item: any) =>
-        item.itemName?.toLowerCase().includes("repair") ||
-        item.categoryId?.name?.toLowerCase() === "repairing",
+    setManualPrices((prev) => {
+      const next = { ...prev };
+      delete next[`repair:${req._id}`];
+      return next;
+    });
+
+    toast.success(
+      `Pulled Order #${req._id.slice(-8).toUpperCase()} into checkout`,
     );
-
-    if (serviceItem) {
-      handleAddToCart(serviceItem._id, 1);
-      toast.success(`Pulled Order #${req._id.slice(-8)} into checkout`);
-    } else {
-      toast.info(
-        `Pulled Customer ${req.firstName} into checkout. Add items manually.`,
-      );
-    }
   };
 
   // ─── Place Order (Receipt Generation & Completion) ─────────────────────────
@@ -426,7 +584,7 @@ export default function Checkout() {
       return;
     }
 
-    if (cartItems.length === 0) {
+    if (orderCartItems.length === 0) {
       toast.error("Cannot place order. Cart is empty!");
       return;
     }
@@ -461,6 +619,26 @@ export default function Checkout() {
 
     try {
       setIsPlacingOrder(true);
+      const pricedOrderCartItems = orderCartItems.map((cartItem: any) => {
+        const originalPrice = Number(cartItem.itemId?.expectedPrice || 0);
+        const manualValue = manualPrices[cartItem._id];
+        const parsedManual = Number(manualValue);
+        const sellingPrice =
+          manualValue !== undefined &&
+          manualValue !== "" &&
+          Number.isFinite(parsedManual) &&
+          parsedManual >= 0
+            ? parsedManual
+            : originalPrice;
+
+        return {
+          ...cartItem,
+          sellingPrice,
+          originalPrice,
+          lineTotal: sellingPrice * cartItem.quantity,
+          lineOriginalTotal: originalPrice * cartItem.quantity,
+        };
+      });
       const invoiceNumber = `REC-${Date.now().toString().slice(-6)}`;
       const onlineOrderMeta =
         checkoutMode === "online"
@@ -523,13 +701,15 @@ export default function Checkout() {
       // Generate invoice PDF Blob
       const doc = (
         <CheckoutInvoicePDF
-          cartItems={orderCartItems}
+          cartItems={pricedOrderCartItems}
           invoiceNumber={invoiceNumber}
           qrCodeDataUrl={qrCodeDataUrl}
           shopkeeper={profileData?.data}
           customer={selectedCustomer}
           paymentMethod={paymentMethod}
+          subtotalBeforeDiscount={subtotalBeforeDiscount}
           subtotal={subtotal}
+          discount={totalDiscount}
           tax={tax}
           total={totalPayment}
         />
@@ -544,7 +724,9 @@ export default function Checkout() {
       // Call createInvoice API
       const itemsIds = orderCartItems
         .map((c: any) => c.itemId?._id)
-        .filter(Boolean);
+        .filter(
+          (id: string) => Boolean(id) && !String(id).startsWith("repair:"),
+        );
       await createInvoice({
         shopkeeperId,
         type: invoiceType,
@@ -578,6 +760,8 @@ export default function Checkout() {
         orderNumber: "",
         paymentMethod: "online",
       });
+      setManualPrices({});
+      setPulledRepairItem(null);
       setDeliveryDetails((prev) => ({
         ...prev,
         from: "",
@@ -587,8 +771,8 @@ export default function Checkout() {
       }));
 
       toast.success("Order Placed Successfully! Receipt Downloaded.");
-    } catch (err) {
-      console.error(err);
+    } catch (_err) {
+      console.error(_err);
       toast.error("Failed to process checkout transaction.");
     } finally {
       setIsPlacingOrder(false);
@@ -630,10 +814,82 @@ export default function Checkout() {
     toast.info("Showing repair services from inventory!");
   };
 
+  const handlePriceInputChange = (cartItemId: string, value: string) => {
+    if (value === "") {
+      setManualPrices((prev) => ({ ...prev, [cartItemId]: "" }));
+      return;
+    }
+
+    if (!/^\d*\.?\d{0,2}$/.test(value)) {
+      return;
+    }
+
+    setManualPrices((prev) => ({ ...prev, [cartItemId]: value }));
+  };
+
+  const handleToggleRecommendation = (id: string) => {
+    setSelectedRecommendationState((prev) => {
+      const baseIds =
+        prev.key === recommendationKey
+          ? prev.ids
+          : recommendedAddOns.map((addon) => addon.id);
+
+      const nextIds = baseIds.includes(id)
+        ? baseIds.filter((existingId) => existingId !== id)
+        : [...baseIds, id];
+
+      return {
+        key: recommendationKey,
+        ids: nextIds,
+      };
+    });
+  };
+
+  const handleDismissRecommendations = () => {
+    setDismissedRecommendationKey(recommendationKey);
+  };
+
+  const handleAddSelectedRecommendations = async () => {
+    const itemsToAdd = selectedRecommendationItems;
+
+    if (itemsToAdd.length === 0) {
+      toast.error("Select at least one recommended add-on");
+      return;
+    }
+
+    try {
+      for (const addon of itemsToAdd) {
+        await handleAddToCart(addon.id, 1);
+      }
+
+      setDismissedRecommendationKey(recommendationKey);
+      toast.success("Recommended add-ons added to checkout");
+    } catch (error) {
+      console.error(error);
+      toast.error("Failed to add recommended items");
+    }
+  };
+
   return (
     <div className="flex flex-col xl:flex-row gap-6 p-6 max-w-[1600px] mx-auto font-poppins min-h-[calc(100vh-80px)] bg-[#FAF9F6] text-slate-800">
       {/* ─── LEFT PANEL (Inventory & Repair Requests) ─── */}
       <div className="flex-1 space-y-6 min-w-0">
+        <div className="bg-white border border-slate-100 rounded-[28px] p-6 shadow-sm">
+          <div className="flex items-start gap-4">
+            <div className="flex h-14 w-14 items-center justify-center rounded-2xl border border-slate-200 bg-slate-50 text-slate-700 shadow-sm">
+              <ShoppingCart size={22} />
+            </div>
+            <div>
+              <h1 className="text-3xl font-black tracking-tight text-slate-950">
+                Checkout
+              </h1>
+              <p className="mt-1 text-sm font-medium text-slate-500">
+                Review items, adjust prices if needed and collect payment.
+              </p>
+            </div>
+          </div>
+        </div>
+
         {/* Repair Orders Ready for Collection */}
         {repairRequests.length > 0 && (
           <div className="bg-white border border-slate-100 rounded-[28px] p-6 shadow-sm">
@@ -858,6 +1114,57 @@ export default function Checkout() {
             </div>
           )}
         </div>
+
+        <div className="rounded-[28px] border border-red-200 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+              <FileText size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                Developer Notes
+              </p>
+              <h3 className="text-lg font-black text-slate-950">
+                Manual discount flow
+              </h3>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 text-sm font-medium text-slate-600 md:grid-cols-2">
+            <p>Manual discount works by editing the item price directly.</p>
+            <p>Discount percentage updates automatically when price changes.</p>
+            <p>Each item shows both discount percent and amount saved.</p>
+            <p>Total discount is shown separately before final payment.</p>
+          </div>
+        </div>
+
+        <div className="rounded-[28px] border border-red-200/70 bg-white p-6 shadow-sm">
+          <div className="flex items-center gap-3">
+            <div className="flex h-10 w-10 items-center justify-center rounded-2xl bg-red-50 text-red-500">
+              <Sparkles size={18} />
+            </div>
+            <div>
+              <p className="text-xs font-black uppercase tracking-[0.18em] text-slate-500">
+                Recommendation Setup Examples
+              </p>
+              <h3 className="text-lg font-black text-slate-950">
+                Category-based add-on reminder
+              </h3>
+            </div>
+          </div>
+
+          <div className="mt-5 grid gap-3 text-sm font-medium text-slate-600 lg:grid-cols-[1.1fr_0.9fr]">
+            <div className="space-y-2">
+              <p>Phones -&gt; screen protectors, phone cases, chargers</p>
+              <p>Laptops -&gt; laptop bags, chargers, mouse</p>
+              <p>Repaired devices -&gt; screen protectors, phone cases</p>
+            </div>
+            <div className="rounded-2xl border border-red-100 bg-red-50/40 p-4 text-sm">
+              The system matches the checkout item category and shows relevant
+              add-ons automatically before charging.
+            </div>
+          </div>
+        </div>
       </div>
 
       {/* ─── RIGHT PANEL (Order Details Sidebar) ─── */}
@@ -874,7 +1181,7 @@ export default function Checkout() {
           </div>
           <button
             onClick={handleClearOrder}
-            disabled={cartItems.length === 0}
+            disabled={orderCartItems.length === 0}
             className="text-xs font-black text-red-500 hover:text-red-600 disabled:opacity-30 disabled:pointer-events-none transition-colors"
           >
             Clear Order
@@ -923,7 +1230,7 @@ export default function Checkout() {
               </div>
               <div className="min-w-0">
                 <p className="text-xs font-black text-slate-500 uppercase tracking-widest mb-0.5">
-                  Customer
+                  Customer {selectedCustomer ? "(Auto-filled)" : ""}
                 </p>
                 {selectedCustomer ? (
                   <p className="text-sm font-black text-slate-950 truncate">
@@ -944,6 +1251,7 @@ export default function Checkout() {
                   onClick={(e) => {
                     e.stopPropagation();
                     setSelectedCustomer(null);
+                    setPulledRepairItem(null);
                   }}
                   className="w-5 h-5 rounded-full bg-slate-200 hover:bg-slate-355 text-slate-500 flex items-center justify-center X"
                 >
@@ -969,84 +1277,183 @@ export default function Checkout() {
                 />
               ))}
             </div>
-          ) : cartItems.length > 0 ? (
-            cartItems.map((cartItem: any) => {
+          ) : orderCartItems.length > 0 ? (
+            orderCartItems.map((cartItem: any) => {
               const item = cartItem.itemId;
-              const price = item?.expectedPrice || 0;
-              const lineTotal = price * cartItem.quantity;
+              const originalPrice = Number(item?.expectedPrice || 0);
+              const manualValue = manualPrices[cartItem._id];
+              const parsedManual = Number(manualValue);
+              const sellingPrice =
+                manualValue !== undefined &&
+                manualValue !== "" &&
+                Number.isFinite(parsedManual) &&
+                parsedManual >= 0
+                  ? parsedManual
+                  : originalPrice;
+              const discountAmount = Math.max(0, originalPrice - sellingPrice);
+              const discountPercent =
+                originalPrice > 0 ? (discountAmount / originalPrice) * 100 : 0;
+              const hasDiscount = discountAmount > 0.001;
+
               return (
                 <div
                   key={cartItem._id}
-                  className="flex items-center justify-between p-3.5 bg-white border border-slate-100 rounded-2xl hover:shadow-sm transition-all"
+                  className="rounded-2xl border border-slate-100 bg-white p-4 hover:shadow-sm transition-all"
                 >
-                  {/* Item Image and Title */}
-                  <div className="flex items-center gap-3 min-w-0 flex-1">
-                    <div className="relative w-11 h-11 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
-                      {item?.image?.url ? (
-                        <Image
-                          src={item.image.url}
-                          alt={item.itemName}
-                          fill
-                          className="object-cover"
-                        />
-                      ) : (
-                        <Package size={16} className="text-slate-400" />
-                      )}
+                  <div className="flex items-start justify-between gap-3">
+                    <div className="flex items-center gap-3 min-w-0 flex-1">
+                      <div className="relative w-11 h-11 bg-slate-50 border border-slate-200 rounded-xl overflow-hidden shrink-0 flex items-center justify-center">
+                        {item?.image?.url ? (
+                          <Image
+                            src={item.image.url}
+                            alt={item.itemName}
+                            fill
+                            className="object-cover"
+                          />
+                        ) : (
+                          <Package size={16} className="text-slate-400" />
+                        )}
+                      </div>
+                      <div className="min-w-0">
+                        <p className="text-xs font-black text-slate-900 truncate leading-snug">
+                          {item?.itemName || "Custom Item"}
+                        </p>
+                        <p className="text-[10px] font-bold text-slate-400 truncate">
+                          {cartItem.type === "repair"
+                            ? "Repair Service"
+                            : item?.brand || "Brand"}{" "}
+                          - {item?.currentState || "New"}
+                        </p>
+                      </div>
                     </div>
-                    <div className="min-w-0">
-                      <p className="text-xs font-black text-slate-900 truncate leading-snug">
-                        {item?.itemName || "Custom Item"}
-                      </p>
-                      <p className="text-[10px] font-bold text-slate-400 truncate">
-                        {item?.brand || "Brand"} - {item?.currentState || "New"}
-                      </p>
-                      <p className="text-xs font-black text-slate-950 mt-1">
-                        ${price.toFixed(2)}
-                      </p>
+
+                    <div className="flex flex-col items-end gap-2 ml-4">
+                      <button
+                        onClick={() => handleDeleteCartItem(cartItem._id)}
+                        className="p-1 text-slate-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
+                        aria-label="Remove item"
+                      >
+                        <Trash2 size={13} />
+                      </button>
+
+                      <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-200">
+                        <button
+                          disabled={cartItem.type === "repair"}
+                          onClick={() =>
+                            handleUpdateCartQty(
+                              cartItem._id,
+                              item?._id,
+                              cartItem.quantity,
+                              -1,
+                            )
+                          }
+                          className="w-5.5 h-5.5 flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                        >
+                          <Minus size={11} />
+                        </button>
+                        <span className="w-6 text-center text-xs font-black">
+                          {cartItem.quantity}
+                        </span>
+                        <button
+                          disabled={cartItem.type === "repair"}
+                          onClick={() =>
+                            handleUpdateCartQty(
+                              cartItem._id,
+                              item?._id,
+                              cartItem.quantity,
+                              1,
+                            )
+                          }
+                          className="w-5.5 h-5.5 flex items-center justify-center text-slate-500 hover:text-slate-800 disabled:opacity-40"
+                        >
+                          <Plus size={11} />
+                        </button>
+                      </div>
                     </div>
                   </div>
 
-                  {/* Quantity adjustment & Remove */}
-                  <div className="flex flex-col items-end gap-2 ml-4">
-                    <button
-                      onClick={() => handleDeleteCartItem(cartItem._id)}
-                      className="p-1 text-slate-400 hover:text-red-500 rounded-full hover:bg-red-50 transition-colors"
-                      aria-label="Remove item"
-                    >
-                      <Trash2 size={13} />
-                    </button>
-
-                    <div className="flex items-center bg-slate-50 rounded-lg p-0.5 border border-slate-200">
-                      <button
-                        onClick={() =>
-                          handleUpdateCartQty(
-                            cartItem._id,
-                            item?._id,
-                            cartItem.quantity,
-                            -1,
-                          )
-                        }
-                        className="w-5.5 h-5.5 flex items-center justify-center text-slate-500 hover:text-slate-800"
-                      >
-                        <Minus size={11} />
-                      </button>
-                      <span className="w-6 text-center text-xs font-black">
-                        {cartItem.quantity}
-                      </span>
-                      <button
-                        onClick={() =>
-                          handleUpdateCartQty(
-                            cartItem._id,
-                            item?._id,
-                            cartItem.quantity,
-                            1,
-                          )
-                        }
-                        className="w-5.5 h-5.5 flex items-center justify-center text-slate-500 hover:text-slate-800"
-                      >
-                        <Plus size={11} />
-                      </button>
+                  <div className="mt-4 grid grid-cols-2 gap-3">
+                    <div className="rounded-xl bg-slate-50 px-3 py-2">
+                      <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                        Original Price
+                      </p>
+                      <p className="mt-1 text-sm font-black text-slate-900 line-through decoration-slate-300">
+                        ${originalPrice.toFixed(2)}
+                      </p>
                     </div>
+
+                    <div className="rounded-xl border border-slate-200 bg-white px-3 py-2">
+                      <div className="flex items-center gap-1.5">
+                        <PencilLine size={12} className="text-slate-400" />
+                        <p className="text-[10px] font-black uppercase tracking-wider text-slate-400">
+                          Selling Price
+                        </p>
+                      </div>
+                      <div className="mt-1 flex items-center gap-2">
+                        <span className="text-sm font-black text-slate-900">
+                          $
+                        </span>
+                        <input
+                          type="text"
+                          inputMode="decimal"
+                          value={manualValue ?? sellingPrice.toFixed(2)}
+                          onChange={(e) =>
+                            handlePriceInputChange(cartItem._id, e.target.value)
+                          }
+                          onBlur={(e) => {
+                            const nextValue = e.target.value.trim();
+                            if (nextValue === "") {
+                              setManualPrices((prev) => {
+                                const next = { ...prev };
+                                delete next[cartItem._id];
+                                return next;
+                              });
+                              return;
+                            }
+
+                            const numericValue = Number(nextValue);
+                            if (
+                              !Number.isFinite(numericValue) ||
+                              numericValue < 0
+                            ) {
+                              setManualPrices((prev) => ({
+                                ...prev,
+                                [cartItem._id]: originalPrice.toFixed(2),
+                              }));
+                              return;
+                            }
+
+                            setManualPrices((prev) => ({
+                              ...prev,
+                              [cartItem._id]: numericValue.toFixed(2),
+                            }));
+                          }}
+                          className="w-full bg-transparent text-sm font-black text-slate-900 outline-none"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {hasDiscount && (
+                    <div className="mt-3 flex items-center justify-between rounded-xl border border-[#FCA5A5] bg-[#FFF7F7] px-3 py-2">
+                      <div className="flex items-center gap-2 text-[#65A30D]">
+                        <Tag size={14} />
+                        <span className="text-xs font-black">Discount</span>
+                      </div>
+                      <span className="text-xs font-black text-[#65A30D]">
+                        {discountPercent.toFixed(
+                          discountPercent % 1 === 0 ? 0 : 2,
+                        )}
+                        % (-${(discountAmount * cartItem.quantity).toFixed(2)})
+                      </span>
+                    </div>
+                  )}
+
+                  <div className="mt-3 flex justify-end">
+                    <p className="text-sm font-black text-slate-900">
+                      Line Total: $
+                      {(sellingPrice * cartItem.quantity).toFixed(2)}
+                    </p>
                   </div>
                 </div>
               );
@@ -1066,10 +1473,10 @@ export default function Checkout() {
         <div className="grid grid-cols-2 gap-3 mt-6 border-t border-slate-100 pt-5">
           <button
             onClick={handleAddServiceClick}
-            className="flex items-center justify-center gap-1.5 py-3 border border-slate-200 rounded-2xl text-xs font-black text-slate-700 hover:border-[#84CC16] hover:bg-lime-50/20 transition-all active:scale-[0.98]"
+            className="flex items-center justify-center gap-1.5 py-3 border border-[#CDE7B0] bg-[#F8FFF0] rounded-2xl text-xs font-black text-[#65A30D] hover:border-[#84CC16] hover:bg-lime-50/40 transition-all active:scale-[0.98]"
           >
             <Plus size={14} className="text-[#84CC16]" strokeWidth={3} />
-            Add Service
+            Add more items
           </button>
           <button
             onClick={handleAddProductClick}
@@ -1134,8 +1541,7 @@ export default function Checkout() {
                   Items Being Delivered
                 </label>
                 <span className="text-[10px] font-black text-slate-400">
-                  {deliveryDetails.selectedCartItemIds.length}/
-                  {cartItems.length}
+                  {selectedDeliveryItemIds.length}/{cartItems.length}
                 </span>
               </div>
 
@@ -1143,10 +1549,9 @@ export default function Checkout() {
                 {cartItems.length > 0 ? (
                   cartItems.map((cartItem: any) => {
                     const item = cartItem.itemId;
-                    const checked =
-                      deliveryDetails.selectedCartItemIds.includes(
-                        cartItem._id,
-                      );
+                    const checked = selectedDeliveryItemIds.includes(
+                      cartItem._id,
+                    );
 
                     return (
                       <label
@@ -1202,10 +1607,7 @@ export default function Checkout() {
                   setDeliveryDetails((prev) => ({
                     ...prev,
                     paymentMethod: event.target.value as
-                      | "cash-on-delivery"
-                      | "cash"
-                      | "online"
-                      | "card",
+                      "cash-on-delivery" | "cash" | "online" | "card",
                   }))
                 }
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-800 outline-none focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
@@ -1275,9 +1677,7 @@ export default function Checkout() {
                   setOnlineOrderDetails((prev) => ({
                     ...prev,
                     paymentMethod: event.target.value as
-                      | "cash"
-                      | "online"
-                      | "card",
+                      "cash" | "online" | "card",
                   }))
                 }
                 className="h-10 w-full rounded-xl border border-slate-200 bg-white px-3 text-xs font-black text-slate-800 outline-none focus:border-[#84CC16] focus:ring-2 focus:ring-[#84CC16]/20"
@@ -1294,6 +1694,16 @@ export default function Checkout() {
         <div className="bg-slate-50 border border-slate-150 rounded-2xl p-4 space-y-2 mt-4 text-xs font-bold text-slate-600">
           <div className="flex justify-between">
             <span>Subtotal</span>
+            <span className="text-slate-900">
+              ${subtotalBeforeDiscount.toFixed(2)}
+            </span>
+          </div>
+          <div className="flex justify-between text-red-500">
+            <span>Total Discount</span>
+            <span>-${totalDiscount.toFixed(2)}</span>
+          </div>
+          <div className="flex justify-between">
+            <span>Discounted Subtotal</span>
             <span className="text-slate-900">${subtotal.toFixed(2)}</span>
           </div>
           <div className="flex justify-between">
@@ -1309,7 +1719,7 @@ export default function Checkout() {
         {/* Place Order Button */}
         <button
           onClick={handlePlaceOrder}
-          disabled={cartItems.length === 0 || isPlacingOrder}
+          disabled={orderCartItems.length === 0 || isPlacingOrder}
           className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#84CC16] text-white text-sm font-black shadow-lg shadow-lime-500/20 transition-all hover:bg-[#75b213] active:scale-[0.98] disabled:opacity-40 disabled:pointer-events-none mt-4 w-full"
         >
           {isPlacingOrder ? (
@@ -1324,6 +1734,149 @@ export default function Checkout() {
       </div>
 
       {/* ─── CUSTOMER SELECTOR DIALOG ─── */}
+      <Dialog
+        open={isRecommendationOpen}
+        onOpenChange={(open) => {
+          if (!open) {
+            handleDismissRecommendations();
+          }
+        }}
+      >
+        <DialogContent
+          className="w-[min(1320px,calc(100vw-2rem))] max-w-[1320px] rounded-[32px] border border-red-600 bg-white p-0 shadow-2xl"
+          showCloseButton={false}
+        >
+          <div className="p-6 md:p-7">
+            <DialogHeader className="flex-row items-start justify-between gap-4 text-left">
+              <div>
+                <div className="flex items-center gap-2">
+                  <div className="flex h-9 w-9 items-center justify-center rounded-2xl bg-[#EEF9D7] text-[#84CC16]">
+                    <Sparkles size={18} />
+                  </div>
+                  <div>
+                    <DialogTitle className="text-[30px] font-black tracking-tight text-slate-950">
+                      Recommended Add-ons
+                    </DialogTitle>
+                    <DialogDescription className="mt-1 text-sm font-medium text-slate-500">
+                      Suggested accessories based on items in this checkout.
+                      Please offer these to the customer before charging.
+                    </DialogDescription>
+                  </div>
+                </div>
+              </div>
+
+              <DialogClose asChild>
+                <button
+                  type="button"
+                  onClick={handleDismissRecommendations}
+                  className="flex h-10 w-10 items-center justify-center rounded-full border border-slate-200 text-slate-500 transition-colors hover:bg-slate-50 hover:text-slate-800"
+                >
+                  <CloseIcon size={18} />
+                </button>
+              </DialogClose>
+            </DialogHeader>
+
+            <div className="mt-5 rounded-2xl border border-[#E5F0C7] bg-[#FAFDF2] px-4 py-3">
+              <div className="flex items-center gap-2 text-sm font-bold text-slate-600">
+                <Smartphone size={16} className="text-slate-500" />
+                Detected category:
+                <span className="text-[#84CC16]">
+                  {recommendationContext?.detectedCategory}
+                </span>
+              </div>
+            </div>
+
+            <div className="mt-5 grid gap-4 sm:grid-cols-2 lg:grid-cols-3">
+              {recommendedAddOns.map((addon) => {
+                const isSelected = selectedRecommendationIds.includes(addon.id);
+
+                return (
+                  <div
+                    key={addon.id}
+                    className={`flex h-full min-h-[350px] flex-col rounded-[28px] border p-4 transition-all ${
+                      isSelected
+                        ? "border-[#B8DF78] bg-[#FBFEF5] shadow-sm"
+                        : "border-slate-200 bg-white"
+                    }`}
+                  >
+                    <div className="relative">
+                      <div className="relative flex h-36 w-full items-center justify-center overflow-hidden rounded-2xl border border-slate-100 bg-slate-50">
+                        {addon.item?.image?.url ? (
+                          <Image
+                            src={addon.item.image.url}
+                            alt={addon.item.itemName}
+                            fill
+                            className="object-contain p-3"
+                          />
+                        ) : (
+                          <Package className="h-8 w-8 text-slate-300" />
+                        )}
+                      </div>
+                      <button
+                        type="button"
+                        onClick={() => handleToggleRecommendation(addon.id)}
+                        className={`absolute right-3 top-3 flex h-7 w-7 shrink-0 items-center justify-center rounded-md border shadow-sm ${
+                          isSelected
+                            ? "border-[#84CC16] bg-[#84CC16] text-white"
+                            : "border-slate-200 bg-white text-transparent"
+                        }`}
+                      >
+                        <CheckCircle2 size={14} />
+                      </button>
+                    </div>
+
+                    <div className="mt-4 flex flex-1 flex-col">
+                      <p className="min-h-[84px] text-[17px] font-black leading-[1.35] text-slate-950 [display:-webkit-box] [-webkit-box-orient:vertical] [-webkit-line-clamp:3] overflow-hidden">
+                        {addon.item?.itemName || addon.keyword}
+                      </p>
+                      <p className="mt-1 text-sm font-semibold text-slate-400">
+                        {addon.item?.brand ||
+                          addon.item?.categoryId?.name ||
+                          "Accessory"}
+                      </p>
+                      <p className="mt-3 text-2xl font-black text-slate-950">
+                        ${Number(addon.item?.expectedPrice || 0).toFixed(2)}
+                      </p>
+                      <div className="mt-auto pt-4">
+                        <button
+                          type="button"
+                          onClick={() => handleToggleRecommendation(addon.id)}
+                          className={`flex w-full items-center justify-center rounded-2xl border px-4 py-2.5 text-sm font-black transition-all ${
+                            isSelected
+                              ? "border-[#DDECB9] bg-white text-[#84CC16]"
+                              : "border-slate-200 bg-slate-50 text-slate-600"
+                          }`}
+                        >
+                          {isSelected ? "Added" : "Add"}
+                        </button>
+                      </div>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+
+            <div className="mt-6 grid gap-3 border-t border-slate-100 pt-5 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={handleDismissRecommendations}
+                className="h-12 rounded-2xl border border-slate-200 bg-white px-5 text-sm font-black text-slate-700 transition-colors hover:bg-slate-50"
+              >
+                Dismiss
+              </button>
+              <button
+                type="button"
+                onClick={handleAddSelectedRecommendations}
+                className="h-12 rounded-2xl bg-[#84CC16] px-5 text-sm font-black text-white shadow-lg shadow-lime-500/20 transition-colors hover:bg-[#74b313]"
+              >
+                Add Selected ({selectedRecommendationItems.length}) - $
+                {selectedRecommendationTotal.toFixed(2)}
+              </button>
+            </div>
+          </div>
+        </DialogContent>
+      </Dialog>
+
       <Dialog
         open={isCustomerSelectorOpen}
         onOpenChange={setIsCustomerSelectorOpen}
