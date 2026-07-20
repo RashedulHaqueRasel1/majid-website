@@ -57,6 +57,7 @@ import {
 } from "../../inventory/hooks/useInventory";
 import type { Customer, InvoiceHistoryItem } from "../../inventory/types";
 import { CustomerFormModal } from "./modals/CustomerFormModal";
+import { useCurrency } from "@/hooks/useCurrency";
 
 type CustomerInvoice = InvoiceHistoryItem & {
   customerInfo?: Partial<Customer> | string | null;
@@ -200,12 +201,6 @@ const createDefaultDiscountForm = (): DiscountForm => {
   };
 };
 
-const formatCurrency = (value?: number) =>
-  `$${(value || 0).toLocaleString(undefined, {
-    minimumFractionDigits: 0,
-    maximumFractionDigits: 2,
-  })}`;
-
 const formatDate = (date?: string) => {
   if (!date) return "N/A";
 
@@ -222,6 +217,7 @@ const getInitial = (customer: Customer) =>
   "C";
 
 export default function Customer() {
+  const { formatCurrency } = useCurrency();
   const { data: session } = useSession();
   const queryClient = useQueryClient();
   const shopkeeperId = (session?.user as { id?: string })?.id;
@@ -1472,7 +1468,7 @@ export default function Customer() {
                     Already Paid
                   </span>
                   <p className="mt-1 text-base font-black text-[#84CC16]">
-                    {formatCurrency(selectedCustomer.alreadyPaid)}
+                    {formatCurrency(selectedCustomer.alreadyPaid || 0)}
                   </p>
                 </div>
                 <div className="rounded-2xl border border-slate-100 p-4 dark:border-slate-700 md:col-span-2 xl:col-span-3">

@@ -248,6 +248,7 @@ export interface Shopkeeper {
   role: string;
   shopName: string;
   phone: string;
+  currency?: string;
 }
 
 export interface InvoiceHistoryItem {

@@ -461,10 +461,7 @@ export const InvoicePDF = ({
               <Text style={pdfStyles.statusBadgePaid}>FULLY PAID</Text>
             ) : (
               <Text style={pdfStyles.statusBadgeDue}>
-                DUE: $
-                {dueAmount.toLocaleString(undefined, {
-                  minimumFractionDigits: 2,
-                })}
+                DUE: {pdfFormatCurrency(dueAmount || 0)}
               </Text>
             )}
           </View>

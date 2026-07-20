@@ -28,6 +28,7 @@ import {
   YAxis,
 } from "recharts";
 import { useDashboardOverview } from "../hooks/useDashboardOverview";
+import { useCurrency } from "@/hooks/useCurrency";
 import type {
   CashManagementResponse,
   DashboardFilter,
@@ -83,13 +84,6 @@ const metricStyles = {
   },
 };
 
-const formatCurrency = (value = 0) =>
-  new Intl.NumberFormat("en-GB", {
-    style: "currency",
-    currency: "GBP",
-    maximumFractionDigits: 0,
-  }).format(value);
-
 const formatNumber = (value = 0) =>
   new Intl.NumberFormat("en-GB", { maximumFractionDigits: 0 }).format(value);
 
@@ -123,6 +117,7 @@ const periodLabel: Record<DashboardFilter, string> = {
 export default function DashboardOverview() {
   const [period, setPeriod] = useState<DashboardFilter>("monthly");
   const [startingCash, setStartingCash] = useState("");
+  const { formatCurrency } = useCurrency();
   const { data: session, status } = useSession();
   const shopkeeperId = (session?.user as { id?: string })?.id;
 
@@ -275,12 +270,16 @@ export default function DashboardOverview() {
               <div className="grid grid-cols-1 gap-4">
                 <StartingCashCard
                   value={cashManagement?.startingDayCash || 0}
+                  formatCurrency={formatCurrency}
                   startingCash={startingCash}
                   onStartingCashChange={setStartingCash}
                   onSubmit={handleStartingCashSubmit}
                   isSaving={isSavingCashManagement}
                 />
-                <BankedCard cashManagement={cashManagement} />
+                <BankedCard
+                  cashManagement={cashManagement}
+                  formatCurrency={formatCurrency}
+                />
               </div>
             </div>
 
@@ -318,7 +317,11 @@ export default function DashboardOverview() {
                 </div>
               </div>
 
-              <SalesTrend stats={stats} period={period} />
+              <SalesTrend
+                stats={stats}
+                period={period}
+                formatCurrency={formatCurrency}
+              />
             </div>
           </div>
         )}
@@ -395,12 +398,14 @@ function StatCard({
 
 function StartingCashCard({
   value,
+  formatCurrency,
   startingCash,
   onStartingCashChange,
   onSubmit,
   isSaving,
 }: {
   value: number;
+  formatCurrency: (amount: number, fromCurrency?: string) => string;
   startingCash: string;
   onStartingCashChange: (value: string) => void;
   onSubmit: (event: React.FormEvent<HTMLFormElement>) => void;
@@ -454,8 +459,10 @@ function StartingCashCard({
 
 function BankedCard({
   cashManagement,
+  formatCurrency,
 }: {
   cashManagement?: CashManagementResponse | null;
+  formatCurrency: (amount: number, fromCurrency?: string) => string;
 }) {
   return (
     <div className="bg-white dark:bg-slate-900 rounded-3xl border border-slate-100 dark:border-slate-800/80 shadow-sm hover:shadow-md transition-all p-5 flex flex-col justify-between">
@@ -712,6 +719,8 @@ function ScoreBreakdown({
 }
 
 const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
+  const { formatCurrency } = useCurrency();
+
   if (active && payload && payload.length) {
     const point = payload[0].payload;
     return (
@@ -729,10 +738,13 @@ const CustomTooltip = ({ active, payload }: CustomTooltipProps) => {
 function SalesTrend({
   stats,
   period,
+  formatCurrency,
 }: {
   stats?: DashboardStatsResponse;
   period: DashboardFilter;
+  formatCurrency: (amount: number, fromCurrency?: string) => string;
 }) {
+  const { convertAmount } = useCurrency();
   const current = stats?.totalSales || 0;
   const previous = previousFromGrowth(current, stats?.salesGrowth || 0);
   const data: SalesTrendPoint[] = [
@@ -740,12 +752,12 @@ function SalesTrend({
       name: "Previous",
       date: `Previous ${periodLabel[period].toLowerCase()} period`,
       current: 0,
-      previous,
+      previous: convertAmount(previous),
     },
     {
       name: "Current",
       date: `Current ${periodLabel[period].toLowerCase()} period`,
-      current,
+      current: convertAmount(current),
       previous: 0,
     },
   ];

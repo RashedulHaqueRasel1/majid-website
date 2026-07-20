@@ -14,6 +14,7 @@ import {
 } from "lucide-react";
 import Image from "next/image";
 import type { InventoryItem } from "../../types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InventoryDetailsModalProps {
   item: InventoryItem | null;
@@ -24,6 +25,7 @@ export function InventoryDetailsModal({
   item,
   onClose,
 }: InventoryDetailsModalProps) {
+  const { formatCurrency } = useCurrency();
   if (!item) return null;
 
   return (
@@ -76,9 +78,8 @@ export function InventoryDetailsModal({
             </p>
             <div className="flex items-baseline gap-1">
               <span className="text-3xl font-black text-[#0F172A]">
-                ${item.expectedPrice.toLocaleString()}
+                {formatCurrency(item.expectedPrice)}
               </span>
-              <span className="text-xs font-bold text-slate-400">USD</span>
             </div>
           </div>
         </div>
@@ -132,7 +133,7 @@ export function InventoryDetailsModal({
                   Selling
                 </span>
                 <span className="text-xs font-black text-[#84CC16]">
-                  ${item.expectedPrice.toLocaleString()}
+                  {formatCurrency(item.expectedPrice)}
                 </span>
               </div>
               <div className="p-4 bg-slate-50 rounded-2xl border border-slate-100 text-center">

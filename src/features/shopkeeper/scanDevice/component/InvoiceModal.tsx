@@ -20,6 +20,7 @@ import { useState, useEffect } from "react";
 import { IMEIResult } from "../../scanDevice/types/scanDevice.types";
 import axiosInstance from "@/lib/instance/axios-instance";
 import { useSession } from "next-auth/react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InvoiceModalProps {
   isOpen: boolean;
@@ -36,6 +37,7 @@ export interface InvoiceFormData {
   customerAddress: string;
   customerPhone: string;
   price: number;
+  currency?: string;
   paymentMethod: "cash" | "bank" | "tradein";
   bankDetails?: {
     accountName: string;
@@ -66,6 +68,7 @@ export const InvoiceModal = ({
   defaultPrice,
 }: InvoiceModalProps) => {
   const { data: session } = useSession();
+  const { currency, formatCurrency } = useCurrency();
   const marketValue = scanResult?.marketValue?.amount || defaultPrice || 599;
   const deviceName = scanResult?.deviceName || "Unknown Device";
 
@@ -87,18 +90,20 @@ export const InvoiceModal = ({
   // Reset form when modal opens with new scanResult
   useEffect(() => {
     if (isOpen && scanResult) {
-      setFormData({
-        customerName: "",
-        customerEmail: "",
-        customerAddress: "",
-        customerPhone: "",
-        price: scanResult?.marketValue?.amount || defaultPrice || 599,
-        paymentMethod: "cash",
-      });
-      setTradeInValue(0);
-      setBankAccountNumber("");
-      setFieldErrors([]);
-      setCustomerError(null);
+      setTimeout(() => {
+        setFormData({
+          customerName: "",
+          customerEmail: "",
+          customerAddress: "",
+          customerPhone: "",
+          price: scanResult?.marketValue?.amount || defaultPrice || 599,
+          paymentMethod: "cash",
+        });
+        setTradeInValue(0);
+        setBankAccountNumber("");
+        setFieldErrors([]);
+        setCustomerError(null);
+      }, 0);
     }
   }, [isOpen, scanResult, defaultPrice]);
 
@@ -636,7 +641,7 @@ export const InvoiceModal = ({
                     </div>
                     <div>
                       <label className="text-xs text-amber-700">
-                        Trade-In Value ($)
+                        Trade-In Value ({currency})
                       </label>
                       <input
                         type="number"
@@ -654,12 +659,13 @@ export const InvoiceModal = ({
                       >
                         <p className="text-sm font-semibold">
                           {isReceiving
-                            ? `💰 Customer receives: $${remainingAmount}`
-                            : `💵 Customer pays: $${remainingAmount}`}
+                            ? `Customer receives: ${formatCurrency(remainingAmount)}`
+                            : `Customer pays: ${formatCurrency(remainingAmount)}`}
                         </p>
                         <p className="text-xs text-gray-600 mt-1">
-                          Device Price: ${formData.price} - Trade-In: $
-                          {tradeInValue} = ${remainingAmount}{" "}
+                          Device Price: {formatCurrency(formData.price)} -
+                          Trade-In: {formatCurrency(tradeInValue)} ={" "}
+                          {formatCurrency(remainingAmount)}{" "}
                           {isReceiving ? "(refund)" : "(to pay)"}
                         </p>
                       </div>

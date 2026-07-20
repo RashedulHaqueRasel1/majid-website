@@ -26,7 +26,6 @@ import {
 } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { Button } from "@/components/ui/button";
 import { useCurrency } from "@/hooks/useCurrency";
-import { getCurrencySymbol } from "@/lib/currency";
 import RepairOfferModal from "@/features/customer/repairHistory/component/RepairOfferModal";
 import jsPDF from "jspdf";
 import QRCode from "qrcode";
@@ -192,7 +191,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
       ["Address", shopkeeper?.shopAddress || "N/A"],
       ["Email", shopkeeper?.email || "N/A"],
       ["Phone", shopkeeper?.phone || shopkeeper?.whatsappNumber || "N/A"],
-      ["Price", `£${price.toFixed(2)}`],
+      ["Price", formatCurrency(price)],
     ];
 
     let rowY = 44;
@@ -689,7 +688,7 @@ export default function RepairRequestDetails({ id }: { id: string }) {
                                   {note.cost && (
                                     <span className="text-sm font-black text-foreground">
                                       {"$"}
-                                      {note.cost.toFixed(2)}
+                                      {formatCurrency(note.cost)}
                                     </span>
                                   )}
                                   {note.estimatedDays && (

@@ -5,6 +5,7 @@ import { ModeToggle } from "../website/ModeToggle";
 import { CreditCard, Menu } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface Props {
   setOpenSidebar: React.Dispatch<React.SetStateAction<boolean>>;
@@ -12,6 +13,7 @@ interface Props {
 
 export default function Header({ setOpenSidebar }: Props) {
   const { data: profileData } = useMyProfile();
+  const { formatCurrency } = useCurrency();
 
   return (
     <header className="h-20 bg-background/80 backdrop-blur-md border-b border-border px-4 lg:px-8 flex items-center justify-between sticky top-0 z-30">
@@ -45,7 +47,7 @@ export default function Header({ setOpenSidebar }: Props) {
               </span> */}
 
             <span className="text-[18px] font-black text-foreground tracking-tight">
-              {profileData?.data?.balance?.toFixed(2) || "0.00"}
+              {formatCurrency(profileData?.data?.balance || 0)}
             </span>
           </div>
         </div>

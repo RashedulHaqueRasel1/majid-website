@@ -26,6 +26,7 @@ import {
 } from "@/features/shopkeeper/inventory/hooks/useInventory";
 import { useSession } from "next-auth/react";
 import type { Customer } from "../../../inventory/types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface CustomerFormValues {
   firstName: string;
@@ -48,6 +49,7 @@ export function CustomerFormModal({
   onClose,
   customer,
 }: CustomerFormModalProps) {
+  const { currency } = useCurrency();
   const { data: session } = useSession();
   const shopkeeperId = (session?.user as { id?: string })?.id || "";
   const userId = (session?.user as { id?: string })?.id || "";
@@ -292,7 +294,7 @@ export function CustomerFormModal({
           {/* Already Paid */}
           <div className="space-y-1.5">
             <Label className="text-[10px] font-black uppercase tracking-widest text-slate-400">
-              Already Paid Amount ($)
+              Already Paid Amount ({currency})
             </Label>
             <div className="relative">
               <DollarSign className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-slate-400" />

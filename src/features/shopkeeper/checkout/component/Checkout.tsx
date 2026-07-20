@@ -67,11 +67,13 @@ import {
 } from "@/components/ui/dialog";
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Checkout() {
   const router = useRouter();
   const queryClient = useQueryClient();
   const { data: session } = useSession();
+  const { currencySymbol, formatCurrency } = useCurrency();
   const shopkeeperId = (session?.user as { id?: string })?.id;
 
   // Data fetching queries
@@ -383,10 +385,7 @@ export default function Checkout() {
       ? selectedRecommendationState.ids
       : recommendedAddOns.map((addon) => addon.id);
 
-  const isRecommendationOpen =
-    Boolean(recommendationKey) &&
-    recommendationKey !== dismissedRecommendationKey &&
-    recommendedAddOns.length > 0;
+  const isRecommendationOpen = false;
 
   const selectedRecommendationItems = recommendedAddOns.filter((addon) =>
     selectedRecommendationIds.includes(addon.id),
@@ -1060,7 +1059,7 @@ export default function Checkout() {
                     {/* Price and Add Row */}
                     <div className="flex items-center justify-between mt-4">
                       <p className="text-[15px] font-black text-slate-900">
-                        ${item.expectedPrice.toFixed(2)}
+                        {formatCurrency(item.expectedPrice)}
                       </p>
 
                       {/* Quantity select & Add */}
@@ -1378,7 +1377,7 @@ export default function Checkout() {
                         Original Price
                       </p>
                       <p className="mt-1 text-sm font-black text-slate-900 line-through decoration-slate-300">
-                        ${originalPrice.toFixed(2)}
+                        {formatCurrency(originalPrice)}
                       </p>
                     </div>
 
@@ -1391,7 +1390,7 @@ export default function Checkout() {
                       </div>
                       <div className="mt-1 flex items-center gap-2">
                         <span className="text-sm font-black text-slate-900">
-                          $
+                          {currencySymbol}
                         </span>
                         <input
                           type="text"
@@ -1444,15 +1443,16 @@ export default function Checkout() {
                         {discountPercent.toFixed(
                           discountPercent % 1 === 0 ? 0 : 2,
                         )}
-                        % (-${(discountAmount * cartItem.quantity).toFixed(2)})
+                        % (-{formatCurrency(discountAmount * cartItem.quantity)}
+                        )
                       </span>
                     </div>
                   )}
 
                   <div className="mt-3 flex justify-end">
                     <p className="text-sm font-black text-slate-900">
-                      Line Total: $
-                      {(sellingPrice * cartItem.quantity).toFixed(2)}
+                      Line Total:{" "}
+                      {formatCurrency(sellingPrice * cartItem.quantity)}
                     </p>
                   </div>
                 </div>
@@ -1582,8 +1582,8 @@ export default function Checkout() {
                             {item?.itemName || "Custom Item"}
                           </p>
                           <p className="text-[10px] font-bold text-slate-500">
-                            Qty {cartItem.quantity} • $
-                            {Number(item?.expectedPrice || 0).toFixed(2)}
+                            Qty {cartItem.quantity} •{" "}
+                            {formatCurrency(Number(item?.expectedPrice || 0))}
                           </p>
                         </div>
                       </label>
@@ -1695,24 +1695,26 @@ export default function Checkout() {
           <div className="flex justify-between">
             <span>Subtotal</span>
             <span className="text-slate-900">
-              ${subtotalBeforeDiscount.toFixed(2)}
+              {formatCurrency(subtotalBeforeDiscount)}
             </span>
           </div>
           <div className="flex justify-between text-red-500">
             <span>Total Discount</span>
-            <span>-${totalDiscount.toFixed(2)}</span>
+            <span>-{formatCurrency(totalDiscount)}</span>
           </div>
           <div className="flex justify-between">
             <span>Discounted Subtotal</span>
-            <span className="text-slate-900">${subtotal.toFixed(2)}</span>
+            <span className="text-slate-900">{formatCurrency(subtotal)}</span>
           </div>
           <div className="flex justify-between">
             <span>Tax (8.5%)</span>
-            <span className="text-slate-900">${tax.toFixed(2)}</span>
+            <span className="text-slate-900">{formatCurrency(tax)}</span>
           </div>
           <div className="flex justify-between text-base font-black text-slate-900 border-t border-slate-200/60 pt-2 mt-2">
             <span>Total Payment</span>
-            <span className="text-[#84CC16]">${totalPayment.toFixed(2)}</span>
+            <span className="text-[#84CC16]">
+              {formatCurrency(totalPayment)}
+            </span>
           </div>
         </div>
 
@@ -1835,7 +1837,7 @@ export default function Checkout() {
                           "Accessory"}
                       </p>
                       <p className="mt-3 text-2xl font-black text-slate-950">
-                        ${Number(addon.item?.expectedPrice || 0).toFixed(2)}
+                        {formatCurrency(Number(addon.item?.expectedPrice || 0))}
                       </p>
                       <div className="mt-auto pt-4">
                         <button
@@ -1869,8 +1871,8 @@ export default function Checkout() {
                 onClick={handleAddSelectedRecommendations}
                 className="h-12 rounded-2xl bg-[#84CC16] px-5 text-sm font-black text-white shadow-lg shadow-lime-500/20 transition-colors hover:bg-[#74b313]"
               >
-                Add Selected ({selectedRecommendationItems.length}) - $
-                {selectedRecommendationTotal.toFixed(2)}
+                Add Selected ({selectedRecommendationItems.length}) -{" "}
+                {formatCurrency(selectedRecommendationTotal)}
               </button>
             </div>
           </div>

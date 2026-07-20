@@ -872,6 +872,8 @@ import { toast } from "sonner";
 import { useCreateInvoice } from "@/features/shopkeeper/inventory/hooks/useInventory";
 import { InvoiceHistoryItem } from "@/features/shopkeeper/inventory/types";
 import { pdfStyles } from "../create-invoice/_components/createInvoice";
+import { useCurrency } from "@/hooks/useCurrency";
+import { formatCurrency as baseFormatCurrency } from "@/lib/currency";
 
 interface InvoiceItem {
   _id: string;
@@ -930,6 +932,7 @@ const InvoicePDF = ({
   InvoiceName,
   isCustomRefund,
   refundReason,
+  currency = "USD",
 }: any) => (
   <Document>
     <Page size="A4" style={pdfStyles.page}>
@@ -1068,7 +1071,7 @@ const InvoicePDF = ({
               </View>
               <Text style={pdfStyles.colId}>{item.imeiNumber || "N/A"}</Text>
               <Text style={pdfStyles.colPrice}>
-                ${item.price ? item.price.toFixed(2) : "0.00"}
+                {baseFormatCurrency(item.price || 0, currency)}
               </Text>
             </View>
           ))
@@ -1086,7 +1089,7 @@ const InvoicePDF = ({
               </View>
               <Text style={pdfStyles.colId}>N/A</Text>
               <Text style={pdfStyles.colPrice}>
-                ${total ? total.toFixed(2) : "0.00"}
+                {baseFormatCurrency(total || 0, currency)}
               </Text>
             </View>
           )}
@@ -1097,21 +1100,13 @@ const InvoicePDF = ({
           <View style={pdfStyles.summaryRow}>
             <Text style={pdfStyles.summaryLabel}>Subtotal</Text>
             <Text style={pdfStyles.summaryValue}>
-              $
-              {total
-                ? total.toLocaleString(undefined, { minimumFractionDigits: 2 })
-                : "0.00"}
+              {baseFormatCurrency(total || 0, currency)}
             </Text>
           </View>
           <View style={pdfStyles.summaryRow}>
             <Text style={pdfStyles.summaryLabel}>Amount Paid</Text>
             <Text style={pdfStyles.summaryValue}>
-              $
-              {alreadyPaid
-                ? alreadyPaid.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })
-                : "0.00"}
+              {baseFormatCurrency(alreadyPaid || 0, currency)}
             </Text>
           </View>
 
@@ -1125,12 +1120,7 @@ const InvoicePDF = ({
                 { color: dueAmount <= 0 ? "#22c55e" : "#ef4444" },
               ]}
             >
-              $
-              {dueAmount
-                ? dueAmount.toLocaleString(undefined, {
-                    minimumFractionDigits: 2,
-                  })
-                : "0.00"}
+              {baseFormatCurrency(dueAmount || 0, currency)}
             </Text>
           </View>
 
@@ -1138,10 +1128,7 @@ const InvoicePDF = ({
             <Text style={pdfStyles.statusBadgePaid}>FULLY PAID</Text>
           ) : (
             <Text style={pdfStyles.statusBadgeDue}>
-              DUE: $
-              {dueAmount.toLocaleString(undefined, {
-                minimumFractionDigits: 2,
-              })}
+              DUE: {baseFormatCurrency(dueAmount || 0, currency)}
             </Text>
           )}
         </View>
@@ -1161,6 +1148,7 @@ const InvoicePDF = ({
 const InvoiceHistoryPage = () => {
   const session = useSession();
   const id = session.data?.user?.id;
+  const { currency, formatCurrency } = useCurrency();
 
   const {
     data: response,
@@ -1288,6 +1276,7 @@ const InvoiceHistoryPage = () => {
           paymentType={selectedInvoice.customerInfo?.paymentType || "cash"}
           isCustomRefund={isCustomRefund}
           refundReason={refundReason.trim()}
+          currency={currency}
         />
       );
 
@@ -1578,7 +1567,7 @@ const InvoiceHistoryPage = () => {
                           </div>
                         </div>
                         <p className="font-black text-lg">
-                          ${item.expectedPrice}
+                          {formatCurrency(item.expectedPrice)}
                         </p>
                       </div>
                     );
@@ -1592,7 +1581,7 @@ const InvoiceHistoryPage = () => {
                   htmlFor="custom-amount"
                   className="text-sm font-black uppercase tracking-wider text-orange-800"
                 >
-                  Custom Refund Amount (£)
+                  Custom Refund Amount ({currency})
                 </Label>
                 <Input
                   id="custom-amount"

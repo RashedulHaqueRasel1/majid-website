@@ -32,6 +32,7 @@ import {
   useCategories,
   useCreateInventory,
 } from "@/features/shopkeeper/inventory/hooks/useInventory";
+import { useCurrency } from "@/hooks/useCurrency";
 
 const emptyInventoryItem = {
   name: "",
@@ -48,6 +49,7 @@ export function InventoryItemsCard({
 }: {
   shopkeeperId?: string;
 }) {
+  const { formatCurrency } = useCurrency();
   const { data: categoriesData } = useCategories();
   const { mutateAsync: createInventory, isPending: isCreatingInventory } =
     useCreateInventory();
@@ -480,7 +482,7 @@ export function InventoryItemsCard({
                     Item Calculation Subtotal:
                   </span>
                   <span className="text-lg font-black text-primary font-mono">
-                    ${currentItemRowTotal.toFixed(2)}
+                    {formatCurrency(currentItemRowTotal)}
                   </span>
                 </div>
 
@@ -642,7 +644,7 @@ export function InventoryItemsCard({
               Inventory Add Total
             </p>
             <p className="text-2xl font-black text-primary font-mono">
-              ${total.toFixed(2)}
+              {formatCurrency(total)}
             </p>
           </div>
           <Button

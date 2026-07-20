@@ -20,9 +20,11 @@ import {
 import { motion, AnimatePresence } from "framer-motion";
 import { useMyPayments } from "../hooks/usePayments";
 import { Loader2 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function TaxSeason() {
   const { data: paymentsData, isLoading } = useMyPayments();
+  const { formatCurrency } = useCurrency();
 
   const payments = React.useMemo(() => {
     return (paymentsData?.data || []).map(
@@ -35,7 +37,7 @@ export default function TaxSeason() {
         subscriptionId: string;
       }) => ({
         id: `#${p._id.substring(0, 8).toUpperCase()}`,
-        amount: `$${p.amount.toFixed(2)}`,
+        amount: formatCurrency(p.amount),
         status:
           p.status === "completed" || p.paymentStatus === "paid"
             ? "PAID"
@@ -51,7 +53,7 @@ export default function TaxSeason() {
         raw: p,
       }),
     );
-  }, [paymentsData]);
+  }, [formatCurrency, paymentsData]);
 
   const [selectedPayment, setSelectedPayment] = React.useState<
     (typeof payments)[0] | null

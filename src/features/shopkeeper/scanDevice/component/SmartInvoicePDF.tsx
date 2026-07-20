@@ -4,6 +4,7 @@ import React from "react";
 import { BadgeCheck, ReceiptText, ShieldCheck, UserRound } from "lucide-react";
 import { IMEIResult } from "../types/scanDevice.types";
 import { InvoiceFormData } from "./InvoiceModal";
+import { formatCurrency as baseFormatCurrency } from "@/lib/currency";
 
 interface SmartInvoicePDFProps {
   data: IMEIResult;
@@ -26,8 +27,6 @@ type ProviderRow = {
 };
 
 export const INVOICE_PDF_WIDTH = 750;
-
-const currency = (amount: number) => `$${Number(amount || 0).toFixed(2)}`;
 
 const getText = (value: unknown, fallback = "N/A") => {
   if (typeof value === "string" && value.trim()) return value.trim();
@@ -114,6 +113,9 @@ export const SmartInvoicePDF = React.forwardRef<
   HTMLDivElement,
   SmartInvoicePDFProps
 >(({ data, id, invoiceData, shopkeeperDetails }, ref) => {
+  const currencyCode = invoiceData.currency || "USD";
+  const currency = (amount: number) =>
+    baseFormatCurrency(Number(amount || 0), currencyCode);
   const getValue = parseProviderData(data);
 
   const seller = shopkeeperDetails ?? {

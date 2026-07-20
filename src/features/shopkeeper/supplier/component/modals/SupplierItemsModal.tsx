@@ -12,6 +12,7 @@ import {
 } from "@/components/ui/dialog";
 import { useInventoryBySupplier } from "../../../inventory/hooks/useInventory";
 import type { Supplier } from "../../types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface SupplierItemsModalProps {
   isOpen: boolean;
@@ -19,21 +20,12 @@ interface SupplierItemsModalProps {
   supplier: Supplier | null;
 }
 
-function getCurrencySymbol(code: string): string {
-  const symbols: Record<string, string> = {
-    USD: "$",
-    GBP: "£",
-    EUR: "€",
-    BDT: "৳",
-  };
-  return symbols[code] || "$";
-}
-
 export default function SupplierItemsModal({
   isOpen,
   onClose,
   supplier,
 }: SupplierItemsModalProps) {
+  const { formatCurrency } = useCurrency();
   const { data: inventoryResponse, isLoading } = useInventoryBySupplier(
     supplier?._id || "",
   );
@@ -139,8 +131,7 @@ export default function SupplierItemsModal({
                   {/* Price & Qty */}
                   <div className="shrink-0 text-right">
                     <p className="text-sm font-black text-slate-900 dark:text-white">
-                      {getCurrencySymbol("USD")}
-                      {item.expectedPrice?.toFixed(2) ?? "0.00"}
+                      {formatCurrency(item.expectedPrice || 0)}
                     </p>
                     <p className="text-[10px] font-bold text-slate-400">
                       Qty: {item.quantity ?? 0}

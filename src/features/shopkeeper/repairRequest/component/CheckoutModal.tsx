@@ -11,6 +11,8 @@ import {
 } from "../../inventory/hooks/useInventory";
 import { useGetMyRepairRequests } from "@/features/customer/repairRequest/hooks/useRepairRequest";
 import { useSession } from "next-auth/react";
+import { formatCurrency as baseFormatCurrency } from "@/lib/currency";
+import { useCurrency } from "@/hooks/useCurrency";
 import { pdf } from "@react-pdf/renderer";
 import { Document, Page, StyleSheet, Text, View } from "@react-pdf/renderer";
 import { toast } from "sonner";
@@ -60,6 +62,7 @@ interface ShopkeeperProfile {
   shopAddress?: string;
   phone?: string;
   whatsappNumber?: string;
+  currency?: string;
 }
 
 interface CheckoutModalProps {
@@ -259,8 +262,6 @@ const invoicePdfStyles = StyleSheet.create({
   },
 });
 
-const currency = (value: number) => `£${Number(value || 0).toFixed(2)}`;
-
 const CheckoutInvoicePDF = ({
   cart,
   shopkeeper,
@@ -270,6 +271,9 @@ const CheckoutInvoicePDF = ({
   shopkeeper?: ShopkeeperProfile;
   totalPrice: number;
 }) => {
+  const currencyCode = shopkeeper?.currency || "USD";
+  const formatPdfCurrency = (value: number) =>
+    baseFormatCurrency(Number(value || 0), currencyCode);
   const customer = cart.find((item) => item.type === "repair")?.customer;
   const customerFields: Array<[string, string | undefined]> = customer
     ? [
@@ -353,12 +357,12 @@ const CheckoutInvoicePDF = ({
               </Text>
               <Text style={invoicePdfStyles.colQty}>{item.quantity}</Text>
               <Text style={invoicePdfStyles.colUnit}>
-                {currency(item.price)}
+                {formatPdfCurrency(item.price)}
               </Text>
               <Text
                 style={[invoicePdfStyles.colTotal, invoicePdfStyles.amount]}
               >
-                {currency(item.price * item.quantity)}
+                {formatPdfCurrency(item.price * item.quantity)}
               </Text>
             </View>
           ))}
@@ -369,7 +373,7 @@ const CheckoutInvoicePDF = ({
             <View style={invoicePdfStyles.totalRow}>
               <Text style={invoicePdfStyles.totalLabel}>Total Price</Text>
               <Text style={invoicePdfStyles.totalValue}>
-                {currency(totalPrice)}
+                {formatPdfCurrency(totalPrice)}
               </Text>
             </View>
           </View>
@@ -388,6 +392,7 @@ export default function CheckoutModal({
   open,
   onOpenChange,
 }: CheckoutModalProps) {
+  const { formatCurrency } = useCurrency();
   const [cart, setCart] = React.useState<CartItem[]>([]);
   const [repairSearch, setRepairSearch] = React.useState("");
   const [isRepairSearchOpen, setIsRepairSearchOpen] = React.useState(false);
@@ -661,7 +666,7 @@ export default function CheckoutModal({
                           </p>
                         )}
                         <p className="text-[#0f834f] font-bold text-sm">
-                          £{product.price}
+                          {formatCurrency(product.price)}
                         </p>
                       </div>
                     </div>
@@ -736,7 +741,7 @@ export default function CheckoutModal({
                             )}
                           </div>
                           <span className="shrink-0 text-xs font-bold text-[#0f834f]">
-                            £{repair.price.toFixed(2)}
+                            {formatCurrency(repair.price)}
                           </span>
                         </button>
                       ))
@@ -837,7 +842,7 @@ export default function CheckoutModal({
                             }`}
                           />
                           <p className="mt-0.5 text-[10px] font-semibold text-gray-400">
-                            £{(item.price * item.quantity).toFixed(2)}
+                            {formatCurrency(item.price * item.quantity)}
                           </p>
                         </div>
                         <button
@@ -860,7 +865,7 @@ export default function CheckoutModal({
                   Total Price
                 </span>
                 <span className="text-xl font-black text-[#0f834f]">
-                  £{totalPrice.toFixed(2)}
+                  {formatCurrency(totalPrice)}
                 </span>
               </div>
 
