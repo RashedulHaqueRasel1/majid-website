@@ -731,10 +731,10 @@ export default function Banner() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.6 }}
-          className="mt-12 w-full max-w-4xl"
+          className="mt-12 w-full max-w-4xl flex flex-col items-center gap-3 sm:gap-4"
         >
-          <span className="text-lg font-bold text-foreground">
-            QUICK CHECKS
+          <span className="text-base  font-bold text-foreground/50">
+            QUICK CHECKS:
           </span>
           <div className="flex w-full flex-wrap items-center justify-center gap-3 px-4">
             {quickChecks.map((tag, i) => {
@@ -790,7 +790,7 @@ export default function Banner() {
             className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 dark:bg-white/10 border border-white/30 backdrop-blur-sm"
           >
             <CheckCircle2
-              className="h-3.5 w-3.5 dark:text-primary shrink-0"
+              className="h-3.5 w-3.5 text-primary shrink-0"
               aria-hidden="true"
             />
             <span className="text-[11px] font-bold dark:text-white text-black/50">
