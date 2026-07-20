@@ -440,22 +440,22 @@ export default function CheckoutInvoicePDF({
           <View style={styles.totals}>
             <View style={styles.totalLine}>
               <Text>Subtotal</Text>
-              <Text>{formatCurrency(subtotalBeforeDiscount ?? subtotal)}</Text>
+              <Text>
+                {formatCurrency(subtotalBeforeDiscount ?? subtotal, currency)}
+              </Text>
             </View>
             {!!discount && discount > 0 && (
               <View style={styles.totalLine}>
                 <Text>Total Discount</Text>
-                <Text>-{formatCurrency(discount)}</Text>
+                <Text>-{formatCurrency(discount, currency)}</Text>
               </View>
             )}
             {!!discount && discount > 0 && (
               <View style={styles.totalLine}>
                 <Text>Discounted Subtotal</Text>
-                <Text>{formatCurrency(subtotal)}</Text>
+                <Text>{formatCurrency(subtotal, currency)}</Text>
               </View>
             )}
-              <Text>{formatCurrency(subtotal, currency)}</Text>
-            </View>
             {discountAmount > 0 ? (
               <View style={styles.totalLine}>
                 <Text>
