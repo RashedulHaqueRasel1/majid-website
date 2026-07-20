@@ -76,22 +76,18 @@ export function HeroVerificationConsole({
             <label htmlFor="hero-device-identifier" className="sr-only">
               Enter IMEI or Serial Number...
             </label>
-            <input
+            <textarea
               id="hero-device-identifier"
-              type="text"
               required
               autoComplete="off"
               spellCheck={false}
+              rows={2}
               value={imei}
               onChange={(event) => onImeiChange(event.target.value)}
-              onKeyDown={(event) => {
-                if (event.key === "Enter") {
-                  event.preventDefault();
-                  event.currentTarget.form?.requestSubmit();
-                }
-              }}
-              placeholder="Enter IMEI or Serial Number..."
-              className="relative z-10 h-14 min-w-0 flex-1 bg-transparent text-base font-medium text-foreground outline-none placeholder:text-muted-foreground lg:h-20 lg:text-center lg:text-xl"
+              placeholder={
+                "Enter IMEI or Serial Number...\nOne device per line"
+              }
+              className="relative z-10 min-h-14 max-h-24 min-w-0 flex-1 resize-none overflow-y-auto bg-transparent py-2 text-base font-medium leading-6 text-foreground outline-none placeholder:text-muted-foreground lg:min-h-20 lg:py-4 lg:text-center lg:text-xl"
             />
           </div>
 
@@ -120,7 +116,7 @@ export function HeroVerificationConsole({
           onClick={onScan}
           aria-label="Scan IMEI"
           title="Scan IMEI"
-          className="hero-scanner-button group absolute bottom-0 left-1/2 z-20 flex h-16 w-16 -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-hero-accent to-hero-accent-end text-hero-accent-foreground shadow-[0_14px_34px_rgba(34,197,94,0.35)] ring-8 ring-hero-panel outline-none transition-[filter,box-shadow,transform] duration-200 hover:brightness-105 hover:shadow-[0_18px_42px_rgba(34,197,94,0.42)] focus-visible:ring-[10px] focus-visible:ring-hero-ring motion-reduce:transition-none sm:h-20 sm:w-20 lg:h-20 lg:w-20"
+          className="hero-scanner-button group absolute bottom-0 left-1/2 z-20 flex md:h-14 h-10  md:w-14 w-10  -translate-x-1/2 translate-y-1/2 items-center justify-center rounded-full border border-white/70 bg-gradient-to-br from-hero-accent to-hero-accent-end text-hero-accent-foreground shadow-[0_14px_34px_rgba(34,197,94,0.35)] ring-8 ring-hero-panel outline-none transition-[filter,box-shadow,transform] duration-200 hover:brightness-105 hover:shadow-[0_18px_42px_rgba(34,197,94,0.42)] focus-visible:ring-[10px] focus-visible:ring-hero-ring motion-reduce:transition-none sm:h-20 sm:w-20 lg:h-20 lg:w-20"
         >
           <span
             aria-hidden="true"
@@ -128,7 +124,7 @@ export function HeroVerificationConsole({
           />
           <ScanLine
             aria-hidden="true"
-            className="relative z-10 h-7 w-7 transition-transform duration-200 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transform-none sm:h-9 sm:w-9"
+            className="relative z-10 md:h-7 h-5 md:w-7 w-5 transition-transform duration-200 group-hover:scale-105 group-focus-visible:scale-105 motion-reduce:transform-none sm:h-9 sm:w-9"
             strokeWidth={2.25}
           />
         </button>

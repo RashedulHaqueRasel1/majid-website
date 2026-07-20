@@ -74,7 +74,7 @@ describe("Banner verification flow", () => {
     });
   });
 
-  it("labels the identifier field and submits a guest free check with Enter", async () => {
+  it("allows multiple identifiers on separate lines without submitting on Enter", async () => {
     render(<Banner />);
 
     const identifier = screen.getByRole("textbox", {
@@ -90,8 +90,15 @@ describe("Banner verification flow", () => {
 
     fireEvent.keyDown(identifier, { key: "Enter", code: "Enter" });
 
+    expect(push).not.toHaveBeenCalled();
+
+    fireEvent.change(identifier, {
+      target: { value: "123456789012345\n987654321098765" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "Free Check" }));
+
     expect(push).toHaveBeenCalledWith(
-      "/shopkeeper/scan-device?imei=123456789012345&serviceId=6",
+      "/shopkeeper/scan-device?imei=123456789012345%0A987654321098765&serviceId=6",
     );
   });
 
