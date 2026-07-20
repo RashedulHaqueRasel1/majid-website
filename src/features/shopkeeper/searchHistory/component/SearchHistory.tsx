@@ -24,6 +24,7 @@ import { motion } from "framer-motion";
 import { useRouter } from "next/navigation";
 import { useSearchHistory } from "../hooks/useSearchHistory";
 import { SearchHistoryRecord } from "../types/search-history.types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 type StatusFilter = "all" | "clean" | "unknown" | "blocked" | "blacklisted";
 
@@ -34,16 +35,6 @@ const statusFilterOptions: { label: string; value: StatusFilter }[] = [
   { label: "Blocked", value: "blocked" },
   { label: "Blacklisted", value: "blacklisted" },
 ];
-
-const formatCurrency = (amount?: number, currency = "USD") => {
-  if (typeof amount !== "number") return "N/A";
-
-  return new Intl.NumberFormat(undefined, {
-    style: "currency",
-    currency,
-    maximumFractionDigits: 0,
-  }).format(amount);
-};
 
 const formatDate = (date: string) => {
   const parsedDate = new Date(date);
@@ -141,6 +132,7 @@ const buildPageItems = (currentPage: number, totalPages: number) => {
 
 export default function SearchHistory() {
   const router = useRouter();
+  const { formatCurrency } = useCurrency();
   const [page, setPage] = React.useState(1);
   const [limit, setLimit] = React.useState(10);
   const [searchTerm, setSearchTerm] = React.useState("");
@@ -394,6 +386,7 @@ export default function SearchHistory() {
                       key={record._id}
                       record={record}
                       index={index}
+                      formatCurrency={formatCurrency}
                       onClick={() => handleRowClick(record)}
                     />
                   ))
@@ -486,10 +479,12 @@ export default function SearchHistory() {
 function SearchHistoryRow({
   record,
   index,
+  formatCurrency,
   onClick,
 }: {
   record: SearchHistoryRecord;
   index: number;
+  formatCurrency: (amount: number, fromCurrency?: string) => string;
   onClick: () => void;
 }) {
   const riskStyle = getRiskStyle(record.riskMeter?.riskLevel);
@@ -569,10 +564,12 @@ function SearchHistoryRow({
       <td className="px-7 py-5">
         <div className="inline-flex items-center gap-2 text-sm font-black text-foreground">
           <DollarSign className="h-4 w-4 text-emerald-500" />
-          {formatCurrency(
-            record.marketValue?.amount,
-            record.marketValue?.currency,
-          )}
+          {typeof record.marketValue?.amount === "number"
+            ? formatCurrency(
+                record.marketValue.amount,
+                record.marketValue.currency,
+              )
+            : "N/A"}
         </div>
       </td>
 

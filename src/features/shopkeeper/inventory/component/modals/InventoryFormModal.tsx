@@ -99,6 +99,7 @@ import {
 } from "../../../supplier/hooks/useSuppliers";
 import { SupplierFormModal } from "../../../supplier/component/modals/SupplierFormModal";
 import { ScanResultModal } from "./ScanResultModal";
+import { useCurrency } from "@/hooks/useCurrency";
 
 // ─── Import CSV sub-component (used as the 3rd tab inside the modal) ──────────
 function ImportCsvModalContent({ onClose }: { onClose: () => void }) {
@@ -306,6 +307,57 @@ function ImportCsvModalContent({ onClose }: { onClose: () => void }) {
 }
 // ──────────────────────────────────────────────────────────────────────────────
 
+const BRANDS = [
+  "Apple",
+  "Samsung",
+  "Google",
+  "Huawei",
+  "Xiaomi",
+  "Oppo",
+  "Vivo",
+  "Sony",
+  "LG",
+  "Nokia",
+  "OnePlus",
+  "Other",
+];
+
+const STORAGE_OPTIONS = [
+  "16GB",
+  "32GB",
+  "64GB",
+  "128GB",
+  "256GB",
+  "512GB",
+  "1TB",
+  "Other",
+];
+
+const COLOR_OPTIONS = [
+  "Black",
+  "White",
+  "Silver",
+  "Gold",
+  "Space Gray",
+  "Blue",
+  "Red",
+  "Green",
+  "Other",
+];
+
+const SALE_METHODS = [
+  "In-store",
+  "eBay",
+  "Amazon",
+  "own website",
+  "WhatsApp",
+  "Facebook",
+  "Other",
+];
+
+const generateRandomInvoiceNumber = () =>
+  `#INV-${Math.floor(Math.random() * 100000)}`;
+
 interface InventoryFormModalProps {
   isOpen: boolean;
   onClose: () => void;
@@ -321,6 +373,7 @@ export function InventoryFormModal({
   forceType,
   categoryId,
 }: InventoryFormModalProps) {
+  const { currency } = useCurrency();
   const isEditMode = !!item;
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [imagePreview, setImagePreview] = useState<string | null>(null);
@@ -363,54 +416,6 @@ export function InventoryFormModal({
   });
   const suppliers = suppliersResponse?.data || [];
   const createSupplierMutation = useCreateSupplier();
-
-  const BRANDS = [
-    "Apple",
-    "Samsung",
-    "Google",
-    "Huawei",
-    "Xiaomi",
-    "Oppo",
-    "Vivo",
-    "Sony",
-    "LG",
-    "Nokia",
-    "OnePlus",
-    "Other",
-  ];
-
-  const STORAGE_OPTIONS = [
-    "16GB",
-    "32GB",
-    "64GB",
-    "128GB",
-    "256GB",
-    "512GB",
-    "1TB",
-    "Other",
-  ];
-
-  const COLOR_OPTIONS = [
-    "Black",
-    "White",
-    "Silver",
-    "Gold",
-    "Space Gray",
-    "Blue",
-    "Red",
-    "Green",
-    "Other",
-  ];
-
-  const SALE_METHODS = [
-    "In-store",
-    "eBay",
-    "Amazon",
-    "own website",
-    "WhatsApp",
-    "Facebook",
-    "Other",
-  ];
 
   // Bulk Upload States
   const [bulkItems, setBulkItems] = useState<BulkBarcodeItem[]>([
@@ -647,44 +652,46 @@ export function InventoryFormModal({
         categoryId: item.categoryId ?? categoryId ?? "",
       });
 
-      // Check if brand is custom
-      if (item.brand && !BRANDS.includes(item.brand)) {
-        setIsCustomBrand(true);
-      } else {
-        setIsCustomBrand(false);
-      }
+      setTimeout(() => {
+        // Check if brand is custom
+        if (item.brand && !BRANDS.includes(item.brand)) {
+          setIsCustomBrand(true);
+        } else {
+          setIsCustomBrand(false);
+        }
 
-      // Check if condition is custom
-      if (
-        item.currentState &&
-        item.currentState !== "new" &&
-        item.currentState !== "good condition"
-      ) {
-        setIsCustomCondition(true);
-      } else {
-        setIsCustomCondition(false);
-      }
+        // Check if condition is custom
+        if (
+          item.currentState &&
+          item.currentState !== "new" &&
+          item.currentState !== "good condition"
+        ) {
+          setIsCustomCondition(true);
+        } else {
+          setIsCustomCondition(false);
+        }
 
-      // Check if storage is custom
-      if (item.storage && !STORAGE_OPTIONS.includes(item.storage)) {
-        setIsCustomStorage(true);
-      } else {
-        setIsCustomStorage(false);
-      }
+        // Check if storage is custom
+        if (item.storage && !STORAGE_OPTIONS.includes(item.storage)) {
+          setIsCustomStorage(true);
+        } else {
+          setIsCustomStorage(false);
+        }
 
-      // Check if color is custom
-      if (item.color && !COLOR_OPTIONS.includes(item.color)) {
-        setIsCustomColor(true);
-      } else {
-        setIsCustomColor(false);
-      }
+        // Check if color is custom
+        if (item.color && !COLOR_OPTIONS.includes(item.color)) {
+          setIsCustomColor(true);
+        } else {
+          setIsCustomColor(false);
+        }
 
-      // Check if sale method is custom
-      if (item.saleMethod && !SALE_METHODS.includes(item.saleMethod)) {
-        setIsCustomSaleMethod(true);
-      } else {
-        setIsCustomSaleMethod(false);
-      }
+        // Check if sale method is custom
+        if (item.saleMethod && !SALE_METHODS.includes(item.saleMethod)) {
+          setIsCustomSaleMethod(true);
+        } else {
+          setIsCustomSaleMethod(false);
+        }
+      }, 0);
     } else {
       form.reset({
         itemName: "",
@@ -718,11 +725,13 @@ export function InventoryFormModal({
         image: undefined,
         categoryId: categoryId ?? "",
       });
-      setIsCustomBrand(false);
-      setIsCustomCondition(false);
-      setIsCustomStorage(false);
-      setIsCustomColor(false);
-      setIsCustomSaleMethod(false);
+      setTimeout(() => {
+        setIsCustomBrand(false);
+        setIsCustomCondition(false);
+        setIsCustomStorage(false);
+        setIsCustomColor(false);
+        setIsCustomSaleMethod(false);
+      }, 0);
     }
   }, [item, form, isOpen, forceType, categoryId]);
 
@@ -771,13 +780,14 @@ export function InventoryFormModal({
 
   const handleDownloadInvoice = async (values: CreateInventoryInput) => {
     try {
-      const invoiceNumber = `#INV-${Math.floor(Math.random() * 100000)}`;
+      const invoiceNumber = generateRandomInvoiceNumber();
       const blob = await pdf(
         <SalesInvoicePDF
           data={
             {
               ...values,
               invoiceNumber,
+              currency,
             } as SalesInvoicePDFProps["data"]
           }
         />,
@@ -1083,8 +1093,10 @@ export function InventoryFormModal({
   useEffect(() => {
     if (!isOpen) {
       stopScanning();
-      resetBarcodeFields();
-      setScannedItemId(null);
+      setTimeout(() => {
+        resetBarcodeFields();
+        setScannedItemId(null);
+      }, 0);
     }
   }, [isOpen]);
 
@@ -1570,7 +1582,7 @@ export function InventoryFormModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-white mb-2 block ml-1 ">
-                        Cost Price ($)
+                        Cost Price ({currency})
                       </FormLabel>
                       <FormControl>
                         <div className="relative group">
@@ -1598,7 +1610,7 @@ export function InventoryFormModal({
                   render={({ field }) => (
                     <FormItem>
                       <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-white mb-2 block ml-1">
-                        Expected Price ($)
+                        Expected Price ({currency})
                       </FormLabel>
                       <FormControl>
                         <div className="relative group">
@@ -2219,7 +2231,7 @@ export function InventoryFormModal({
                     render={({ field }) => (
                       <FormItem>
                         <FormLabel className="text-[10px] font-black uppercase tracking-widest text-slate-700 dark:text-white mb-2 block ml-1">
-                          Actual Sale Price ($)
+                          Actual Sale Price ({currency})
                         </FormLabel>
                         <FormControl>
                           <div className="relative group">

@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import { X, Download, Loader2, Check, Edit2 } from "lucide-react";
 import type { CartItem } from "../types";
 import Image from "next/image";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface InvoicePreviewModalProps {
   isOpen: boolean;
@@ -14,8 +15,6 @@ interface InvoicePreviewModalProps {
   isGeneratingInvoice: boolean;
 }
 
-const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
-
 export default function InvoicePreviewModal({
   isOpen,
   onClose,
@@ -25,6 +24,7 @@ export default function InvoicePreviewModal({
   onDownload,
   isGeneratingInvoice,
 }: InvoicePreviewModalProps) {
+  const { currencySymbol, formatCurrency } = useCurrency();
   if (!isOpen) return null;
 
   const handlePriceChange = (cartItemId: string, newPrice: string) => {
@@ -258,7 +258,7 @@ export default function InvoicePreviewModal({
                               className="text-slate-400 mr-1 opacity-60"
                             />
                             <span className="text-[10px] font-bold text-slate-400 mr-0.5">
-                              $
+                              {currencySymbol}
                             </span>
                             <input
                               type="number"

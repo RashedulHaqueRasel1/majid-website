@@ -16,6 +16,7 @@ import {
 import { Input } from "@/components/ui/input";
 import { Button } from "@/components/ui/button";
 import { Loader2 } from "lucide-react";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface SubscriptionFeature {
   name: string;
@@ -81,6 +82,7 @@ export default function AddFunds() {
   const [selectedPlan, setSelectedPlan] =
     React.useState<SubscriptionPlan | null>(null);
   const [amount, setAmount] = React.useState("");
+  const { currency, convertAmount, formatCurrency } = useCurrency();
 
   const { data: subscriptionData, isLoading } = useSubscriptions();
   const plans = subscriptionData?.data || [];
@@ -89,7 +91,7 @@ export default function AddFunds() {
 
   const handleAmountChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const value = e.target.value;
-    const maxAmount = selectedPlan?.price;
+    const maxAmount = convertAmount(selectedPlan?.price || 0);
 
     if (!value) {
       setAmount("");
@@ -110,19 +112,26 @@ export default function AddFunds() {
     const numAmount = parseFloat(amount);
     const minAmount = selectedPlan?.price || 2;
     const maxAmount = selectedPlan?.price || 2;
+    const minAmountInUserCurrency = convertAmount(minAmount);
+    const maxAmountInUserCurrency = convertAmount(maxAmount);
 
-    if (isNaN(numAmount) || numAmount < minAmount) {
-      toast.error(`Please enter a valid amount (minimum $${minAmount})`);
+    if (isNaN(numAmount) || numAmount < minAmountInUserCurrency) {
+      toast.error(
+        `Please enter a valid amount (minimum ${formatCurrency(minAmount)})`,
+      );
       return;
     }
 
-    if (numAmount > maxAmount) {
-      toast.error(`Amount cannot be greater than $${maxAmount}`);
+    if (numAmount > maxAmountInUserCurrency) {
+      toast.error(`Amount cannot be greater than ${formatCurrency(maxAmount)}`);
       return;
     }
 
     createPayment(
-      { amount: numAmount, subscriptionId: selectedPlan?._id || "" },
+      {
+        amount: convertAmount(numAmount, currency, "USD"),
+        subscriptionId: selectedPlan?._id || "",
+      },
       {
         onSuccess: (res) => {
           if (res?.data?.url) {
@@ -184,7 +193,7 @@ export default function AddFunds() {
                     </h2>
                     <div className="flex items-baseline gap-1">
                       <span className="text-3xl font-black text-slate-950 dark:text-white">
-                        {plan.priceLabel}
+                        {formatCurrency(plan.price)}
                       </span>
                     </div>
                     <p className="h-8 text-xs font-medium text-slate-600 dark:text-slate-300">
@@ -238,7 +247,7 @@ export default function AddFunds() {
                     onClick={() => {
                       if (plan.price > 0 && !plan.customPricing) {
                         setSelectedPlan(plan);
-                        setAmount(plan.price.toString());
+                        setAmount(convertAmount(plan.price).toFixed(2));
                         setIsModalOpen(true);
                       } else if (plan.customPricing) {
                         toast.info(
@@ -269,21 +278,21 @@ export default function AddFunds() {
             <DialogTitle>Top Up Wallet</DialogTitle>
             <DialogDescription>
               Enter the amount you would like to top up. Minimum amount for{" "}
-              {selectedPlan?.name || "this plan"} is ${selectedPlan?.price || 2}
-              .
+              {selectedPlan?.name || "this plan"} is{" "}
+              {formatCurrency(selectedPlan?.price || 2)}.
             </DialogDescription>
           </DialogHeader>
 
           <div className="space-y-4 py-4">
             <div className="space-y-2">
-              <label className="text-sm font-medium">Amount (USD)</label>
+              <label className="text-sm font-medium">Amount ({currency})</label>
               <Input
                 type="number"
-                placeholder={`e.g. ${selectedPlan?.price || 15}`}
+                placeholder={`e.g. ${convertAmount(selectedPlan?.price || 15).toFixed(2)}`}
                 value={amount}
                 onChange={handleAmountChange}
-                min={selectedPlan?.price || 2}
-                max={selectedPlan?.price || 2}
+                min={convertAmount(selectedPlan?.price || 2)}
+                max={convertAmount(selectedPlan?.price || 2)}
                 step="0.01"
               />
             </div>

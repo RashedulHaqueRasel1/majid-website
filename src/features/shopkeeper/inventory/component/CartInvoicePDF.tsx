@@ -9,6 +9,7 @@ import {
   View,
 } from "@react-pdf/renderer";
 import type { CartItem, Shopkeeper } from "../types";
+import { formatCurrency as baseFormatCurrency } from "@/lib/currency";
 
 const colors = {
   teal: "#155E63",
@@ -248,8 +249,6 @@ export interface CartInvoicePDFProps {
   editedPrices?: Record<string, number>;
 }
 
-const formatCurrency = (value: number) => `$${value.toFixed(2)}`;
-
 export default function CartInvoicePDF({
   cartItems,
   invoiceNumber,
@@ -282,6 +281,9 @@ export default function CartInvoicePDF({
   const shopName = shopkeeper?.shopName || "imoscan";
   const contactEmail = shopkeeper?.email || "info@companyname.com";
   const contactPhone = shopkeeper?.phone || "+1 234 567 8000";
+  const currencyCode = shopkeeper?.currency || "USD";
+  const formatCurrency = (value: number) =>
+    baseFormatCurrency(value, currencyCode);
 
   return (
     <Document>

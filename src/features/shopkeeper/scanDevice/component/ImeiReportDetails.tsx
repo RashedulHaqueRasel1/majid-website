@@ -12,6 +12,7 @@ import {
   Tag,
 } from "lucide-react";
 import { IMEIResult } from "../types/scanDevice.types";
+import { useCurrency } from "@/hooks/useCurrency";
 
 type ReportRow = {
   label: string;
@@ -258,10 +259,10 @@ export function ImeiReportDetails({
   caption = "Structured IMEI scan details",
   meta,
 }: ImeiReportDetailsProps) {
+  const { formatCurrency } = useCurrency();
   const resultData = getObject(result);
   const providerData = getObject(resultData?.providerData) as
-    | ProviderDataShape
-    | undefined;
+    ProviderDataShape | undefined;
   const riskMeter = getObject(resultData?.riskMeter);
   const aiInsight = getObject(resultData?.aiInsight);
   const marketValue = getObject(resultData?.marketValue);
@@ -285,8 +286,24 @@ export function ImeiReportDetails({
   const providerStatus = getText(
     providerData?.status || resultData?.deviceStatus,
   );
-  const providerPrice = getText(providerData?.price);
-  const providerBalance = getText(providerData?.balance);
+  const providerPriceValue =
+    typeof providerData?.price === "string"
+      ? Number(providerData.price)
+      : undefined;
+  const providerBalanceValue =
+    typeof providerData?.balance === "number"
+      ? providerData.balance
+      : typeof providerData?.balance === "string"
+        ? Number(providerData.balance)
+        : undefined;
+  const providerPrice =
+    providerPriceValue != null && Number.isFinite(providerPriceValue)
+      ? formatCurrency(providerPriceValue)
+      : getText(providerData?.price);
+  const providerBalance =
+    providerBalanceValue != null && Number.isFinite(providerBalanceValue)
+      ? formatCurrency(providerBalanceValue)
+      : getText(providerData?.balance);
   const providerReference = getText(providerData?.id);
   const providerIp = getText(providerData?.ip, "");
 
@@ -321,7 +338,7 @@ export function ImeiReportDetails({
             label: "Market Value",
             value:
               marketAmount != null
-                ? `${marketCurrency} ${marketAmount.toFixed(2)}`
+                ? formatCurrency(marketAmount, marketCurrency)
                 : marketCurrency,
           },
           {

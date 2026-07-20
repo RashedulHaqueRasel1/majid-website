@@ -27,6 +27,9 @@ import { pdf } from "@react-pdf/renderer";
 import QRCode from "qrcode";
 import CartInvoicePDF from "./CartInvoicePDF";
 import InvoicePreviewModal from "./InvoicePreviewModal";
+import { useCurrency } from "@/hooks/useCurrency";
+
+const generateInvoiceNumber = () => `INV-${Date.now().toString().slice(-6)}`;
 
 export default function ShopkeeperCart() {
   const router = useRouter();
@@ -46,6 +49,7 @@ export default function ShopkeeperCart() {
   const [isGeneratingInvoice, setIsGeneratingInvoice] = useState(false);
   const [isPreviewModalOpen, setIsPreviewModalOpen] = useState(false);
   const [editedPrices, setEditedPrices] = useState<Record<string, number>>({});
+  const { formatCurrency } = useCurrency();
 
   const cartItems = useMemo(() => cartData?.data || [], [cartData]);
 
@@ -84,7 +88,7 @@ export default function ShopkeeperCart() {
 
     try {
       setIsGeneratingInvoice(true);
-      const invoiceNumber = `INV-${Date.now().toString().slice(-6)}`;
+      const invoiceNumber = generateInvoiceNumber();
       const shopkeeper = cartItems[0]?.shopkeeperId;
       const qrCodeDataUrl = await QRCode.toDataURL(
         JSON.stringify({
@@ -186,8 +190,8 @@ export default function ShopkeeperCart() {
               Cart Items
             </h1>
             <p className="mt-1 text-sm font-bold text-[#64748B] dark:text-slate-300">
-              {totalQuantity} units in cart ({cartItems.length} models) - $
-              {totalValue.toLocaleString()} total value
+              {totalQuantity} units in cart ({cartItems.length} models) -{" "}
+              {formatCurrency(totalValue)} total value
             </p>
           </div>
         </div>
@@ -196,10 +200,7 @@ export default function ShopkeeperCart() {
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <SummaryTile label="Models" value={cartItems.length} />
             <SummaryTile label="Units" value={totalQuantity} />
-            <SummaryTile
-              label="Value"
-              value={`$${totalValue.toLocaleString()}`}
-            />
+            <SummaryTile label="Value" value={formatCurrency(totalValue)} />
           </div>
           <button
             onClick={() => setIsPreviewModalOpen(true)}
@@ -311,6 +312,7 @@ function CartProductCard({
   onDelete: (cartId: string) => void;
   editedPrice?: number;
 }) {
+  const { formatCurrency } = useCurrency();
   const item = cartItem.itemId;
   const originalPrice = item?.expectedPrice || 0;
   const currentPrice = editedPrice !== undefined ? editedPrice : originalPrice;
@@ -372,11 +374,11 @@ function CartProductCard({
               </p>
               <div className="flex items-center gap-2">
                 <p className="text-xl font-black text-[#0F172A] dark:text-white">
-                  ${currentPrice.toLocaleString()}
+                  {formatCurrency(currentPrice)}
                 </p>
                 {originalPrice > currentPrice && (
                   <p className="text-xs font-bold text-slate-400 line-through">
-                    ${originalPrice.toLocaleString()}
+                    {formatCurrency(originalPrice)}
                   </p>
                 )}
               </div>
@@ -387,7 +389,7 @@ function CartProductCard({
                 Total
               </div>
               <p className="text-sm font-black text-[#0F172A] dark:text-white">
-                ${lineTotal.toLocaleString()}
+                {formatCurrency(lineTotal)}
               </p>
             </div>
           </div>

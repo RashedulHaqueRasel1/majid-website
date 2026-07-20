@@ -7,6 +7,7 @@ import {
   StyleSheet,
   Image,
 } from "@react-pdf/renderer";
+import { formatCurrency as baseFormatCurrency } from "@/lib/currency";
 
 const styles = StyleSheet.create({
   page: {
@@ -224,6 +225,7 @@ export interface SalesInvoicePDFProps {
     shopAddress?: string;
     shopPhone?: string;
     invoiceNumber?: string;
+    currency?: string;
   };
 }
 
@@ -234,6 +236,8 @@ const SalesInvoicePDF: React.FC<SalesInvoicePDFProps> = ({ data }) => {
     day: "numeric",
   });
   const subtotal = data.salePrice * data.saleQuantity;
+  const formatPdfCurrency = (value: number) =>
+    baseFormatCurrency(value, data.currency || "USD");
 
   return (
     <Document>
@@ -325,8 +329,10 @@ const SalesInvoicePDF: React.FC<SalesInvoicePDFProps> = ({ data }) => {
             </Text>
           </View>
           <Text style={styles.colQty}>{data.saleQuantity}</Text>
-          <Text style={styles.colPrice}>${data.salePrice.toFixed(2)}</Text>
-          <Text style={styles.colTotal}>${subtotal.toFixed(2)}</Text>
+          <Text style={styles.colPrice}>
+            {formatPdfCurrency(data.salePrice)}
+          </Text>
+          <Text style={styles.colTotal}>{formatPdfCurrency(subtotal)}</Text>
         </View>
 
         {/* Total Calculation */}
@@ -334,17 +340,19 @@ const SalesInvoicePDF: React.FC<SalesInvoicePDFProps> = ({ data }) => {
           <View style={styles.totalBox}>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Subtotal</Text>
-              <Text style={styles.totalValue}>${subtotal.toFixed(2)}</Text>
+              <Text style={styles.totalValue}>
+                {formatPdfCurrency(subtotal)}
+              </Text>
             </View>
             <View style={styles.totalRow}>
               <Text style={styles.totalLabel}>Tax (0%)</Text>
-              <Text style={styles.totalValue}>$0.00</Text>
+              <Text style={styles.totalValue}>{formatPdfCurrency(0)}</Text>
             </View>
             <Image src="/images/logo.png" style={styles.logo} />
             <View style={styles.grandTotalRow}>
               <Text style={styles.grandTotalLabel}>Grand Total</Text>
               <Text style={styles.grandTotalAmount}>
-                ${subtotal.toFixed(2)}
+                {formatPdfCurrency(subtotal)}
               </Text>
             </View>
           </View>

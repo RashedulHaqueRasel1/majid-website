@@ -9,6 +9,7 @@ import Image from "next/image";
 import { CreateSoldProductSchema, CreateSoldProductInput } from "../../types";
 import { useCreateSoldProduct } from "../../hooks/useSoldProducts";
 import { toast } from "sonner";
+import { useCurrency } from "@/hooks/useCurrency";
 
 interface SoldProductFormModalProps {
   isOpen: boolean;
@@ -20,6 +21,7 @@ export function SoldProductFormModal({
   onClose,
 }: SoldProductFormModalProps) {
   const [imagePreview, setImagePreview] = React.useState<string | null>(null);
+  const { currency } = useCurrency();
 
   const {
     register,
@@ -178,7 +180,7 @@ export function SoldProductFormModal({
             <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-[#64748B] uppercase tracking-widest ml-1">
-                  Purchase Price ($)
+                  Purchase Price ({currency})
                 </label>
                 <input
                   type="number"
@@ -189,7 +191,7 @@ export function SoldProductFormModal({
 
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-[#64748B] uppercase tracking-widest ml-1">
-                  Selling Price ($)
+                  Selling Price ({currency})
                 </label>
                 <input
                   type="number"
@@ -200,7 +202,7 @@ export function SoldProductFormModal({
 
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-[#64748B] uppercase tracking-widest ml-1">
-                  Paid Amount ($)
+                  Paid Amount ({currency})
                 </label>
                 <input
                   type="number"
@@ -211,7 +213,7 @@ export function SoldProductFormModal({
 
               <div className="space-y-2">
                 <label className="text-[11px] font-black text-[#64748B] uppercase tracking-widest ml-1">
-                  Remaining Due ($)
+                  Remaining Due ({currency})
                 </label>
                 <input
                   type="number"

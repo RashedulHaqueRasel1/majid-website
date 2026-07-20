@@ -76,6 +76,12 @@ export interface CurrencyOption {
   symbol: string;
 }
 
+export interface ExchangeRatesResponse {
+  success: boolean;
+  base: string;
+  rates: Record<string, number>;
+}
+
 export const CURRENCY_LIST: CurrencyOption[] = [
   { code: "USD", name: "US Dollar", symbol: "$" },
   { code: "BDT", name: "Bangladeshi Taka", symbol: "৳" },
@@ -134,6 +140,10 @@ export function getCurrencySymbol(code: string): string {
   return CURRENCY_SYMBOLS[upper] || upper;
 }
 
+export function normalizeCurrencyCode(code?: string | null): string {
+  return (code || "USD").trim().toUpperCase();
+}
+
 export function formatCurrency(
   amount: number,
   currencyCode: string = "USD",
@@ -156,4 +166,67 @@ export function formatCurrency(
 
 export function getCurrencyByCode(code: string): CurrencyOption | undefined {
   return CURRENCY_LIST.find((c) => c.code === (code || "USD").toUpperCase());
+}
+
+export function getExchangeRate(
+  rates: Record<string, number> | undefined,
+  fromCurrency: string = "USD",
+  toCurrency: string = "USD",
+): number {
+  const from = normalizeCurrencyCode(fromCurrency);
+  const to = normalizeCurrencyCode(toCurrency);
+
+  if (from === to) {
+    return 1;
+  }
+
+  if (from === "USD") {
+    const directRate = Number(rates?.[to]);
+    return Number.isFinite(directRate) && directRate > 0 ? directRate : 1;
+  }
+
+  if (to === "USD") {
+    const fromRate = Number(rates?.[from]);
+    return Number.isFinite(fromRate) && fromRate > 0 ? 1 / fromRate : 1;
+  }
+
+  const usdToFrom = Number(rates?.[from]);
+  const usdToTo = Number(rates?.[to]);
+
+  if (!Number.isFinite(usdToFrom) || usdToFrom <= 0) {
+    return 1;
+  }
+
+  if (!Number.isFinite(usdToTo) || usdToTo <= 0) {
+    return 1;
+  }
+
+  return usdToTo / usdToFrom;
+}
+
+export function convertCurrencyAmount(
+  amount: number,
+  rates: Record<string, number> | undefined,
+  fromCurrency: string = "USD",
+  toCurrency: string = "USD",
+): number {
+  if (!Number.isFinite(amount)) {
+    return 0;
+  }
+
+  const rate = getExchangeRate(rates, fromCurrency, toCurrency);
+  return amount * rate;
+}
+
+export async function fetchExchangeRates(
+  baseCurrency: string = "USD",
+): Promise<ExchangeRatesResponse> {
+  const base = normalizeCurrencyCode(baseCurrency);
+  const response = await fetch(`/api/exchange-rates?base=${base}`);
+
+  if (!response.ok) {
+    throw new Error("Failed to fetch exchange rates");
+  }
+
+  return response.json();
 }

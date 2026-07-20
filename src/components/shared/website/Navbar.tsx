@@ -7,12 +7,14 @@ import { ModeToggle } from "./ModeToggle";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Badge } from "@/components/ui/badge";
 import { useMyProfile } from "@/features/shopkeeper/settings/hooks/useSettings";
+import { useCurrency } from "@/hooks/useCurrency";
 
 export default function Navbar() {
   const { data: session, status } = useSession();
   const { data: profileData } = useMyProfile({
     enabled: status === "authenticated",
   });
+  const { formatCurrency } = useCurrency();
   const [scrolled, setScrolled] = useState(false);
 
   useEffect(() => {
@@ -81,7 +83,9 @@ export default function Navbar() {
         <div className="flex min-w-0 items-center gap-1 sm:gap-2 md:gap-4">
           {status === "authenticated" && (
             <Badge variant={"outline"}>
-              <span>Credits: {profileData?.data?.balance.toFixed(2)}</span>
+              <span>
+                Credits: {formatCurrency(profileData?.data?.balance || 0)}
+              </span>
             </Badge>
           )}
 
