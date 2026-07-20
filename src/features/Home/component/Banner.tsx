@@ -26,6 +26,7 @@ import {
 } from "react";
 import { useSession } from "next-auth/react";
 import { useRouter } from "next/navigation";
+import { Archivo_Black } from "next/font/google";
 import { getServicesApi } from "@/features/shopkeeper/scanDevice/api/scanDevice.api";
 import {
   IMEIService,
@@ -33,6 +34,11 @@ import {
 } from "@/features/shopkeeper/scanDevice/types/scanDevice.types";
 import { ScannerModal } from "@/components/shared/website/ScannerModal";
 import { GuestLoginModal } from "@/components/shared/website/GuestLoginModal";
+
+const archivoBlack = Archivo_Black({
+  subsets: ["latin"],
+  weight: "400",
+});
 
 /**
  * ACCESSIBILITY / WCAG CHANGES MADE IN THIS FILE
@@ -275,7 +281,7 @@ export default function Banner() {
       <div className="absolute inset-0 z-0 bg-background">
         <div className="absolute left-1/2 top-[42%] h-[320px] w-[88%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[1] bg-[linear-gradient(90deg,rgba(183,255,72,0.96)_10%,rgba(138,226,116,0.82)_24%,rgba(102,200,194,0.56)_50%,rgba(62,146,255,0.84)_68%,rgba(31,105,235,0.96)_100%)] blur-[58px] md:h-[560px] md:w-[1120px] md:blur-[88px] lg:h-[720px] lg:w-[1280px] lg:blur-[108px]" />
         <div className="absolute left-1/2 top-[42%] h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[0.05] bg-[radial-gradient(ellipse_at_center,rgba(255,255,255,0.8)_0%,rgba(231,255,236,0.44)_28%,rgba(199,234,255,0.2)_52%,rgba(255,255,255,0)_78%)] blur-[22px] dark:hidden md:h-[480px] md:w-[920px] md:blur-[34px] lg:h-[560px] lg:w-[1060px] lg:blur-[42px]" />
-        <div className="absolute left-1/2 top-[42%] hidden h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[.5] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.18)_0%,rgba(103,232,249,0.14)_26%,rgba(59,130,246,0.12)_48%,rgba(255,255,255,0)_78%)] blur-[24px] dark:block md:h-[480px] md:w-[920px] md:blur-[36px] lg:h-[560px] lg:w-[1060px] lg:blur-[44px]" />
+        <div className="absolute left-1/2 top-[42%] hidden h-[300px] w-[82%] -translate-x-1/2 -translate-y-1/2 rounded-full opacity-[.05] bg-[radial-gradient(ellipse_at_center,rgba(148,163,184,0.18)_0%,rgba(103,232,249,0.14)_26%,rgba(59,130,246,0.12)_48%,rgba(255,255,255,0)_78%)] blur-[24px] dark:block md:h-[480px] md:w-[920px] md:blur-[36px] lg:h-[560px] lg:w-[1060px] lg:blur-[44px]" />
 
         {/* Fixed Light Mode Glass Panel: Removed opacity, used bg-alpha, added webkit-mask */}
         <div className="absolute left-1/2 top-[42%] h-[340px] w-[86%] -translate-x-1/2 -translate-y-1/2 rounded-full bg-white/[0.06] [mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] [-webkit-mask-image:radial-gradient(ellipse_68%_60%_at_50%_50%,black_0%,black_58%,rgba(0,0,0,0.68)_74%,transparent_100%)] backdrop-blur-[18px] dark:hidden md:h-[520px] md:w-[980px] lg:h-[610px] lg:w-[1160px]" />
@@ -302,7 +308,7 @@ export default function Banner() {
           initial={{ opacity: 0, y: 30 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.8 }}
-          className="w-full max-w-[1100px] text-[32px] font-black leading-[1.15] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:text-5xl md:text-6xl lg:text-[72px] lg:leading-[1.2]"
+          className={`${archivoBlack.className} w-full max-w-[1100px] text-[32px] leading-[1.15] text-white drop-shadow-[0_2px_10px_rgba(0,0,0,0.35)] sm:text-5xl md:text-6xl lg:text-[72px] lg:leading-[1.2]`}
         >
           <span className="hidden whitespace-nowrap lg:block">
             Verify Global <span className="text-[#BEFB6D]">IMEI</span>
@@ -322,7 +328,7 @@ export default function Banner() {
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ delay: 0.2 }}
-          className="mt-4 max-w-[760px] text-sm leading-6 text-black/50 drop-shadow-[0_1px_6px_rgba(0,0,0,0.3)] sm:text-lg lg:text-xl"
+          className="mt-4 max-w-[760px] text-sm leading-6 text-black/50 dark:text-white/50 drop-shadow-[0_1px_6px_rgba(0,0,0,0.3)] sm:text-lg lg:text-xl"
         >
           Advanced AI-powered diagnostics and blacklisting checks for secure{" "}
           <br className="hidden md:block" />
@@ -727,6 +733,9 @@ export default function Banner() {
           transition={{ delay: 0.6 }}
           className="mt-12 w-full max-w-4xl"
         >
+          <span className="text-lg font-bold text-foreground">
+            QUICK CHECKS
+          </span>
           <div className="flex w-full flex-wrap items-center justify-center gap-3 px-4">
             {quickChecks.map((tag, i) => {
               const Icon = tag.icon;
@@ -778,13 +787,13 @@ export default function Banner() {
             transition={{ delay: 1 }}
             role="status"
             aria-live="polite"
-            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-black/25 dark:bg-white/10 border border-white/30 backdrop-blur-sm"
+            className="mt-4 flex items-center gap-2 px-4 py-2 rounded-full bg-primary/10 dark:bg-white/10 border border-white/30 backdrop-blur-sm"
           >
             <CheckCircle2
-              className="h-3.5 w-3.5 text-white shrink-0"
+              className="h-3.5 w-3.5 dark:text-primary shrink-0"
               aria-hidden="true"
             />
-            <span className="text-[11px] font-bold text-white drop-shadow-[0_1px_3px_rgba(0,0,0,0.4)]">
+            <span className="text-[11px] font-bold dark:text-white text-black/50">
               2 free reports available — no account needed
             </span>
           </motion.div>
